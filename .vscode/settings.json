@@ -1,0 +1,7 @@
+{
+    "python.analysis.extraPaths": [
+        "./flet_app",
+        "./flet_app/pages",
+        "./flet_app/theme"
+    ]
+}
