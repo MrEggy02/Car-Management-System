@@ -16,11 +16,17 @@ class RepairDetailContent:
         self.repair_data = None
         self.primary_color = "#1565C0"
         self.primary_dark = "#0D47A1"
-    
-    def build(self):
-        self.load_repair_data()
+        self.parts_list = []
+        self.selected_part_id = None
+        self.qty_field = None
+        self.selected_stock = None
         
+    def build(self):
         header = self._build_header()
+        
+        # Load data first
+        self.load_repair_data()
+        self.load_parts()
         
         if not self.repair_data:
             loading = ft.Container(
@@ -29,7 +35,7 @@ class RepairDetailContent:
                     ft.Container(height=20),
                     ft.Text(get_text("loading"), size=16, color="#64748B"),
                 ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-                alignment=Alignment.CENTER,
+                alignment=ft.Alignment(0, 0),
                 expand=True,
             )
             return ft.Container(
@@ -49,7 +55,7 @@ class RepairDetailContent:
         content_area = ft.Container(
             content=scrollable_content,
             expand=True,
-            padding=ft.padding.all(32),
+            padding=ft.padding.all(24),
             bgcolor="#F5F7FA",
         )
         
@@ -93,12 +99,7 @@ class RepairDetailContent:
                         spacing=2,
                     ),
                     ft.Container(expand=True),
-                    ft.Container(
-                        content=ft.Icon(ft.Icons.CONSTRUCTION, size=28, color=ft.Colors.WHITE),
-                        bgcolor=ft.Colors.with_opacity(0.2, ft.Colors.WHITE),
-                        border_radius=15,
-                        padding=ft.padding.all(8),
-                    ),
+                    
                 ],
                 spacing=16,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -110,10 +111,7 @@ class RepairDetailContent:
                 colors=[self.primary_color, self.primary_dark],
             ),
             border_radius=ft.BorderRadius.only(bottom_left=20, bottom_right=20),
-            shadow=ft.BoxShadow(
-                blur_radius=15,
-                color=ft.Colors.with_opacity(0.2, ft.Colors.BLACK),
-            ),
+            
         )
     
     def load_repair_data(self):
@@ -123,6 +121,13 @@ class RepairDetailContent:
                 self.page.update()
         except Exception as ex:
             print(f"Error loading repair detail: {ex}")
+    
+    def load_parts(self):
+        try:
+            self.parts_list = self.client.get_parts()
+        except Exception as ex:
+            print(f"Error loading parts: {ex}")
+            self.parts_list = []
     
     def _build_content(self):
         data = self.repair_data
@@ -282,12 +287,13 @@ class RepairDetailContent:
             margin=ft.margin.only(bottom=20),
         )
         
-        # Parts Used Card
+        # Parts Used Card (With Add Part Button)
         parts_list = ft.Column(spacing=8)
         total_cost = 0
         
         if parts_usage:
             for part in parts_usage:
+                usage_id = part.get("id")
                 part_name = part.get("part_name", "-")
                 qty = part.get("qty", 0)
                 cost_price = part.get("cost_price", 0)
@@ -300,6 +306,13 @@ class RepairDetailContent:
                         ft.Text(part_name, size=13, expand=True),
                         ft.Text(f"{int(cost_price):,} KIP", size=12, color="#64748B"),
                         ft.Text(f"{int(total):,} KIP", size=13, weight=ft.FontWeight.BOLD, color="#1E293B", width=120),
+                        ft.IconButton(
+                            icon=ft.Icons.DELETE_OUTLINE,
+                            icon_size=16,
+                            icon_color=ft.Colors.RED_400,
+                            tooltip=get_text("return_part"),
+                            on_click=lambda e, uid=usage_id: self.return_part(uid),
+                        ),
                     ], spacing=8, vertical_alignment=ft.CrossAxisAlignment.CENTER),
                     padding=ft.padding.symmetric(vertical=6, horizontal=10),
                     bgcolor=ft.Colors.GREY_50,
@@ -311,9 +324,26 @@ class RepairDetailContent:
                 ft.Container(
                     content=ft.Text(get_text("no_parts_used"), size=13, color="#64748B"),
                     padding=ft.padding.all(20),
-                    alignment=Alignment.CENTER,
+                    alignment=ft.Alignment(0, 0),
                 )
             )
+        
+        # Add Part Button (only show if status is not completed)
+        add_part_btn = None
+        if status != "completed":
+            add_part_btn = ft.ElevatedButton(
+                content=ft.Row([
+                    ft.Icon(ft.Icons.ADD, size=18, color=ft.Colors.WHITE),
+                    ft.Text(get_text("add_part"), size=14, color=ft.Colors.WHITE),
+                ], spacing=6),
+                on_click=self.show_add_part_dialog,
+                style=ft.ButtonStyle(
+                    bgcolor=self.primary_color,
+                    shape=ft.RoundedRectangleBorder(radius=8),
+                ),
+            )
+        else:
+            add_part_btn = ft.Container()
         
         parts_card = ft.Card(
             content=ft.Container(
@@ -336,6 +366,8 @@ class RepairDetailContent:
                     ft.Divider(height=1, color=ft.Colors.GREY_100),
                     ft.Container(height=8),
                     parts_list,
+                    ft.Container(height=8),
+                    ft.Row([add_part_btn], alignment=ft.MainAxisAlignment.END),
                 ]),
                 padding=ft.padding.all(20),
             ),
@@ -377,6 +409,208 @@ class RepairDetailContent:
             action_row,
         ], spacing=20)
     
+    def show_add_part_dialog(self, e):
+        """Show dialog to add part to repair"""
+        # Create part dropdown with stock info
+        part_options = []
+        part_options.append(ft.dropdown.Option("", get_text("select_part")))
+        
+        for part in self.parts_list:
+            part_name = part.get("name", "-")
+            part_code = part.get("part_code", "")
+            stock_qty = part.get("stock_qty", 0)
+            part_options.append(
+                ft.dropdown.Option(
+                    str(part.get('id')),
+                    f"{part_code} - {part_name} (ຄົງເຫຼືອ: {stock_qty})"
+                )
+            )
+        
+        part_dropdown = ft.Dropdown(
+            label=get_text("select_part"),
+            hint_text=get_text("select_part_hint"),
+            options=part_options,
+            width=300,
+            border_radius=12,
+        )
+        
+        # Add on_change after creation (Flet 0.84.0 compatibility)
+        part_dropdown.on_change = self.on_part_select
+        
+        self.qty_field = ft.TextField(
+            label=get_text("quantity"),
+            value="1",
+            width=150,
+            input_filter=ft.NumbersOnlyInputFilter(),
+            border_radius=12,
+        )
+        
+        self.selected_stock = ft.Text("", size=12, color="#64748B", visible=False)
+        
+        def confirm_add_part(e):
+            if not part_dropdown.value or part_dropdown.value == "":
+                self.show_snack_bar(get_text("select_part_first"), is_error=True)
+                return
+            
+            part_id = int(part_dropdown.value)
+            qty = int(self.qty_field.value) if self.qty_field.value else 1
+            
+            if qty <= 0:
+                self.show_snack_bar(get_text("invalid_quantity"), is_error=True)
+                return
+            
+            # Find selected part to check stock
+            selected_part = None
+            for part in self.parts_list:
+                if part.get('id') == part_id:
+                    selected_part = part
+                    break
+            
+            if selected_part and qty > selected_part.get('stock_qty', 0):
+                self.show_snack_bar(f"{get_text('insufficient_stock')} (ຄົງເຫຼືອ: {selected_part.get('stock_qty', 0)})", is_error=True)
+                return
+            
+            try:
+                result = self.client.add_part_usage(self.repair_id, part_id, qty)
+                if result:
+                    dialog.open = False
+                    # Reload data
+                    self.load_repair_data()
+                    self.load_parts()
+                    # Refresh content
+                    new_content = self._build_content()
+                    parent = self.page.controls[0]
+                    if parent:
+                        content_area = parent.content.controls[1]
+                        content_area.content = ft.Column([new_content], scroll=ft.ScrollMode.AUTO, expand=True)
+                        content_area.update()
+                    self.show_snack_bar(f"✅ {get_text('part_withdrawn')}", is_error=False)
+            except Exception as ex:
+                self.show_snack_bar(f"Error: {str(ex)}", is_error=True)
+        
+        dialog = ft.AlertDialog(
+            modal=True,
+            shape=ft.RoundedRectangleBorder(radius=16),
+            bgcolor=ft.Colors.WHITE,
+            title=ft.Container(
+                content=ft.Row(
+                    [
+                        ft.Container(
+                            content=ft.Icon(ft.Icons.INVENTORY, size=24, color=ft.Colors.WHITE),
+                            bgcolor=self.primary_color,
+                            border_radius=12,
+                            padding=ft.padding.all(8),
+                        ),
+                        ft.Text(
+                            get_text("withdraw_part"),
+                            size=20,
+                            weight=ft.FontWeight.BOLD,
+                            color="#1E293B",
+                        ),
+                    ],
+                    spacing=12,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                ),
+                padding=ft.padding.all(20),
+                border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
+            ),
+            content=ft.Container(
+                content=ft.Column([
+                    part_dropdown,
+                    ft.Container(height=12),
+                    self.qty_field,
+                ]),
+                padding=ft.padding.all(24),
+                width=400,
+            ),
+            actions=[
+                ft.TextButton(get_text("cancel"), on_click=lambda e: self._close_dialog(dialog)),
+                ft.ElevatedButton(get_text("withdraw"), on_click=confirm_add_part, style=ft.ButtonStyle(bgcolor=self.primary_color, color=ft.Colors.WHITE)),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+        
+        self.page.overlay.append(dialog)
+        dialog.open = True
+        self.page.update()
+    
+    def on_part_select(self, e):
+        """When part is selected, show stock info"""
+        if e.control.value and e.control.value != "":
+            part_id = int(e.control.value)
+            for part in self.parts_list:
+                if part.get('id') == part_id:
+                    stock = part.get('stock_qty', 0)
+                    # Update the stock text in dialog if exists
+                    if hasattr(self, 'selected_stock') and self.selected_stock:
+                        self.selected_stock.value = f"{get_text('available_stock')}: {stock}"
+                        self.selected_stock.visible = True
+                        self.page.update()
+                    break
+    
+    def return_part(self, usage_id):
+        """Return part to stock"""
+        def confirm_return(e):
+            try:
+                result = self.client.delete_part_usage(self.repair_id, usage_id)
+                if result:
+                    dialog.open = False
+                    # Reload data
+                    self.load_repair_data()
+                    self.load_parts()
+                    # Refresh content
+                    new_content = self._build_content()
+                    parent = self.page.controls[0]
+                    if parent:
+                        content_area = parent.content.controls[1]
+                        content_area.content = ft.Column([new_content], scroll=ft.ScrollMode.AUTO, expand=True)
+                        content_area.update()
+                    self.show_snack_bar(f"✅ {get_text('part_returned')}", is_error=False)
+            except Exception as ex:
+                self.show_snack_bar(f"Error: {str(ex)}", is_error=True)
+        
+        dialog = ft.AlertDialog(
+            modal=True,
+            shape=ft.RoundedRectangleBorder(radius=16),
+            bgcolor=ft.Colors.WHITE,
+            title=ft.Container(
+                content=ft.Row(
+                    [
+                        ft.Container(
+                            content=ft.Icon(ft.Icons.WARNING_AMBER, size=24, color=ft.Colors.WHITE),
+                            bgcolor=ft.Colors.ORANGE_600,
+                            border_radius=12,
+                            padding=ft.padding.all(8),
+                        ),
+                        ft.Text(
+                            get_text("confirm_return"),
+                            size=20,
+                            weight=ft.FontWeight.BOLD,
+                            color="#1E293B",
+                        ),
+                    ],
+                    spacing=12,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                ),
+                padding=ft.padding.all(20),
+                border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
+            ),
+            content=ft.Container(
+                content=ft.Text(get_text("return_part_warning"), size=14, color="#64748B"),
+                padding=ft.padding.all(24),
+                width=350,
+            ),
+            actions=[
+                ft.TextButton(get_text("cancel"), on_click=lambda e: self._close_dialog(dialog)),
+                ft.ElevatedButton(get_text("return"), on_click=confirm_return, style=ft.ButtonStyle(bgcolor=ft.Colors.ORANGE_600, color=ft.Colors.WHITE)),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+        
+        self.page.overlay.append(dialog)
+        dialog.open = True
+        self.page.update()
+    
     def show_update_status_dialog(self, e):
         """Show dialog to update repair status"""
         current_status = self.repair_data.get("status", "waiting")
@@ -399,9 +633,15 @@ class RepairDetailContent:
             if new_status and new_status != current_status:
                 try:
                     self.client.update_repair_status(self.repair_id, new_status)
-                    dialog.open = False
-                    self.page.update()
+                    self._close_dialog(dialog)
                     self.load_repair_data()
+                    # Refresh content
+                    new_content = self._build_content()
+                    parent = self.page.controls[0]
+                    if parent:
+                        content_area = parent.content.controls[1]
+                        content_area.content = ft.Column([new_content], scroll=ft.ScrollMode.AUTO, expand=True)
+                        content_area.update()
                     self.show_snack_bar(f"✅ {get_text('status_updated_to')} {get_text(new_status)}", is_error=False)
                 except Exception as ex:
                     self.show_snack_bar(f"Error: {str(ex)}", is_error=True)
@@ -445,7 +685,7 @@ class RepairDetailContent:
                 width=350,
             ),
             actions=[
-                ft.TextButton(get_text("cancel"), on_click=lambda e: self.close_dialog(dialog)),
+                ft.TextButton(get_text("cancel"), on_click=lambda e: self._close_dialog(dialog)),
                 ft.ElevatedButton(get_text("update"), on_click=update_status, style=ft.ButtonStyle(bgcolor=self.primary_color, color=ft.Colors.WHITE)),
             ],
             actions_alignment=ft.MainAxisAlignment.END,
@@ -455,7 +695,7 @@ class RepairDetailContent:
         dialog.open = True
         self.page.update()
     
-    def close_dialog(self, dialog):
+    def _close_dialog(self, dialog):
         dialog.open = False
         self.page.update()
     

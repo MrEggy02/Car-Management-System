@@ -1,4 +1,3 @@
-# api_client.py
 import requests
 import os
 from typing import Dict, Any, List, Optional
@@ -58,30 +57,38 @@ class APIClient:
                     error_msg = response.text or f"HTTP {response.status_code}"
                 raise Exception(error_msg)
         except requests.exceptions.ConnectionError:
-            raise Exception("ไม่สามารถเชื่อมต่อกับ Server ได้ กรุณาเปิด Backend")
+            raise Exception("ບໍ່ສາມາດເຊື່ອມຕໍ່ກັບ Server ໄດ້ ກະລຸນາເປີດ Backend")
+        except requests.exceptions.Timeout:
+            raise Exception("ການເຊື່ອມຕໍ່ໝົດເວລາ ກະລຸນາລອງໃໝ່")
+        except Exception as e:
+            raise Exception(str(e))
 
     # ========== Authentication ==========
     def login(self, username: str, password: str) -> Dict:
         self.username = username
         self.password = password
-        return self._request("POST", "/login")
+        # ต้องส่ง username และ password ไปด้วย
+        return self._request("POST", "/login", data={"username": username, "password": password})
 
     # ========== Process 1.1: Employees ==========
     def get_employees(self) -> List[Dict]:
         return self._request("GET", "/employees")
 
     def add_employee(
-        self, username: str, password: str, fullname: str, role: str, phone: str = ""
+        self, 
+        name: str, 
+        phone: str = "", 
+        role: str = "mechanic",
+        status: str = "active"
     ) -> Dict:
         return self._request(
             "POST",
             "/employees",
             data={
-                "username": username,
-                "password": password,
-                "fullname": fullname,
-                "role": role,
+                "name": name,
                 "phone": phone,
+                "role": role,
+                "status": status,
             },
         )
 
@@ -92,27 +99,27 @@ class APIClient:
     def delete_employee(self, employee_id: int) -> Dict:
         return self._request("DELETE", f"/employees/{employee_id}")
 
+    def get_mechanics(self) -> List[Dict]:
+        """Get all mechanics (employees with role = mechanic)"""
+        return self._request("GET", "/employees/mechanics")
+
     # ========== Process 1.2: Shop Info ==========
     def get_shop(self) -> Dict:
         return self._request("GET", "/shop")
 
     def update_shop(
         self,
-        shop_name: str,
+        name: str,
         address: str,
         phone: str,
-        email: str = "",
-        tax_id: str = "",
     ) -> Dict:
         return self._request(
             "PUT",
             "/shop",
             data={
-                "shop_name": shop_name,
+                "name": name,
                 "address": address,
                 "phone": phone,
-                "email": email,
-                "tax_id": tax_id,
             },
         )
 
@@ -233,28 +240,34 @@ class APIClient:
 
     def add_service(
         self,
-        service_name: str,
-        description: str = "",
+        name: str,
         price: float = 0,
-        estimated_hours: int = 1,
+        description: str = "",
+        estimated_time: int = 0
     ) -> Dict:
         return self._request(
             "POST",
             "/services",
             data={
-                "service_name": service_name,
-                "description": description,
+                "name": name,
                 "price": price,
-                "estimated_hours": estimated_hours,
+                "description": description,
+                "estimated_time": estimated_time,
             },
         )
 
     def update_service(self, service_id: int, data: Dict) -> Dict:
-        """Update service information"""
+        """ອັບເດດຂໍ້ມູນບໍລິການ"""
         return self._request("PUT", f"/services/{service_id}", data=data)
 
     def delete_service(self, service_id: int) -> Dict:
+        """ລຶບບໍລິການ"""
         return self._request("DELETE", f"/services/{service_id}")
+
+    def search_services(self, keyword: str = "") -> List[Dict]:
+        """Search for services"""
+        params = {"keyword": keyword} if keyword else None
+        return self._request("GET", "/search-services", params=params)
 
     # ========== Process 1.5: Parts ==========
     def get_parts(self) -> List[Dict]:
@@ -263,21 +276,17 @@ class APIClient:
 
     def add_part(
         self,
-        part_code: str,
         name: str,
-        brand: str = "",
         cost_price: float = 0,
         sell_price: float = 0,
         stock_qty: int = 0,
         min_stock: int = 5,
-        unit: str = "piece",
-        supplier_id: int = None,
+        unit: str = "ຊິ້ນ",
+        supplier_id: Optional[int] = None
     ) -> Dict:
         """Add new part"""
         data = {
-            "part_code": part_code,
             "name": name,
-            "brand": brand,
             "cost_price": cost_price,
             "sell_price": sell_price,
             "stock_qty": stock_qty,
@@ -289,22 +298,21 @@ class APIClient:
         return self._request("POST", "/parts", data=data)
 
     def update_part(self, part_id: int, data: Dict) -> Dict:
-        """Update part"""
+        """ອັບເດດຂໍ້ມູນອາໄຫຼ່"""
         return self._request("PUT", f"/parts/{part_id}", data=data)
 
     def delete_part(self, part_id: int) -> Dict:
-        """Delete part"""
+        """ລຶບອາໄຫຼ່"""
         return self._request("DELETE", f"/parts/{part_id}")
 
+    def get_low_stock_parts(self) -> List[Dict]:
+        """ດຶງຂໍ້ມູນອາໄຫຼ່ທີ່ສະຕ໋ອກໃກ້ໝົດ"""
+        return self._request("GET", "/parts/low-stock")
+
     def search_parts(self, keyword: str = "") -> List[Dict]:
-        """Search for parts"""
+        """ຄົ້ນຫາອາໄຫຼ່"""
         params = {"keyword": keyword} if keyword else None
         return self._request("GET", "/search-parts", params=params)
-
-    def search_services(self, keyword: str = "") -> List[Dict]:
-        """Search for services"""
-        params = {"keyword": keyword} if keyword else None
-        return self._request("GET", "/search-services", params=params)
 
     # ========== Process 1.6: Promotions ==========
     def get_promotions(self) -> List[Dict]:
@@ -313,26 +321,28 @@ class APIClient:
 
     def add_promotion(
         self,
-        promo_code: str,
-        promo_name: str,
+        name: str,
         discount_type: str,
-        discount_value: float,
-        start_date: str,
-        end_date: str,
-        is_active: bool = True,
+        value: float,
+        min_qty: int = 1,
+        min_amount: float = 0,
+        start_date: str = None,
+        end_date: str = None,
+        status: str = "active"
     ) -> Dict:
         """Add new promotion"""
         return self._request(
             "POST",
             "/promotions",
             data={
-                "promo_code": promo_code,
-                "promo_name": promo_name,
+                "name": name,
                 "discount_type": discount_type,
-                "discount_value": discount_value,
+                "value": value,
+                "min_qty": min_qty,
+                "min_amount": min_amount,
                 "start_date": start_date,
                 "end_date": end_date,
-                "is_active": is_active,
+                "status": status,
             },
         )
 
@@ -344,8 +354,69 @@ class APIClient:
         """Delete promotion"""
         return self._request("DELETE", f"/promotions/{promo_id}")
 
-    # ========== Process 2: Customers & Vehicles ==========
+    def validate_promotion(self, promo_name: str, total_amount: float, quantity: int = 1) -> Dict:
+        """Validate promotion by name and calculate discount"""
+        return self._request(
+            "POST", 
+            "/promotions/validate", 
+            data={"promo_name": promo_name, "total_amount": total_amount, "quantity": quantity}
+        )
 
+    def get_active_promotions(self) -> List[Dict]:
+        """Get active promotions (not expired)"""
+        return self._request("GET", "/promotions/active")
+
+    # ========== Promotion Items (New) ==========
+    def get_promotion_items(self, promotion_id: int) -> List[Dict]:
+        """ດຶງຂໍ້ມູນລາຍການຂອງໂປຣໂມຊັນ"""
+        return self._request("GET", f"/promotions/{promotion_id}/items")
+
+    def add_promotion_item(self, promotion_id: int, item_type: str, item_id: int) -> Dict:
+        """ເພີ່ມລາຍການໃສ່ໂປຣໂມຊັນ"""
+        return self._request(
+            "POST",
+            f"/promotions/{promotion_id}/items",
+            data={
+                "item_type": item_type,
+                "item_id": item_id
+            }
+        )
+
+    def delete_promotion_item(self, promotion_id: int, item_id: int) -> Dict:
+        """ລຶບລາຍການອອກຈາກໂປຣໂມຊັນ"""
+        return self._request("DELETE", f"/promotions/{promotion_id}/items/{item_id}")
+
+    def clear_promotion_items(self, promotion_id: int) -> Dict:
+        """ລຶບທຸກລາຍການອອກຈາກໂປຣໂມຊັນ"""
+        return self._request("DELETE", f"/promotions/{promotion_id}/items")
+
+    def get_available_parts_for_promotion(self, promotion_id: int, search: str = "") -> List[Dict]:
+        """ດຶງຂໍ້ມູນ Parts ທີ່ຍັງບໍ່ໄດ້ເພີ່ມໃສ່ໂປຣໂມຊັນ"""
+        params = {"search": search} if search else None
+        return self._request("GET", f"/promotions/{promotion_id}/available-parts", params=params)
+
+    def get_available_services_for_promotion(self, promotion_id: int, search: str = "") -> List[Dict]:
+        """ດຶງຂໍ້ມູນ Services ທີ່ຍັງບໍ່ໄດ້ເພີ່ມໃສ່ໂປຣໂມຊັນ"""
+        params = {"search": search} if search else None
+        return self._request("GET", f"/promotions/{promotion_id}/available-services", params=params)
+
+    def validate_promotion_for_items(self, promotion_id: int, part_ids: List[int] = None, service_ids: List[int] = None) -> Dict:
+        """ກວດສອບວ່າໂປຣໂມຊັນໃຊ້ກັບລາຍການທີ່ລະບຸໄດ້ຫຼືບໍ່"""
+        import json
+        item_ids = {
+            "parts": part_ids or [],
+            "services": service_ids or []
+        }
+        return self._request(
+            "POST",
+            "/promotions/validate-for-items",
+            data={
+                "promotion_id": promotion_id,
+                "item_ids": json.dumps(item_ids)
+            }
+        )
+
+    # ========== Process 2: Customers & Vehicles ==========
     def get_customers(self) -> List[Dict]:
         """Get all customers"""
         return self._request("GET", "/customers")
@@ -391,7 +462,6 @@ class APIClient:
         return self._request("POST", "/register_customer", data=data)
 
     # ========== Process 3: Job Orders ==========
-
     def create_job_order(
         self,
         customer_id: int,
@@ -431,7 +501,6 @@ class APIClient:
         return self._request("DELETE", f"/job-orders/{order_id}")
 
     # ========== Process 4: Quotations ==========
-
     def get_quotations(self, job_order_id: int = None) -> List[Dict]:
         """Get all quotations, optionally filtered by job_order_id"""
         params = {"job_order_id": job_order_id} if job_order_id else None
@@ -483,7 +552,6 @@ class APIClient:
         return self._request("DELETE", f"/quotations/{quotation_id}")
 
     # ========== Process 5: Repair Management ==========
-
     def get_repair_orders(self, job_order_id: int = None, status: str = None) -> List[Dict]:
         """Get repair orders, optionally filtered by job_order_id or status"""
         params = {}
@@ -529,8 +597,115 @@ class APIClient:
         return self._request("DELETE", f"/repair-orders/{repair_id}/parts-usage/{usage_id}")
 
     def get_mechanics(self) -> List[Dict]:
-        """Get all mechanics (employees with role = technician)"""
+        """Get all mechanics (employees with role = mechanic)"""
         return self._request("GET", "/employees/mechanics")
+
+    # ========== Process 6: Invoice Management ==========
+    def get_invoices(self, job_order_id: int = None, payment_status: str = None) -> List[Dict]:
+        """Get all invoices, optionally filtered by job_order_id or payment_status"""
+        params = {}
+        if job_order_id:
+            params["job_order_id"] = job_order_id
+        if payment_status:
+            params["payment_status"] = payment_status
+        return self._request("GET", "/invoices", params=params)
+
+    def get_invoice(self, invoice_id: int) -> Dict:
+        """Get a single invoice by ID"""
+        return self._request("GET", f"/invoices/{invoice_id}")
+
+    def get_invoice_info_by_job_order(self, job_order_id: int) -> Dict:
+        """Get invoice information for a job order (parts used + services)"""
+        return self._request("GET", f"/job-orders/{job_order_id}/invoice-info")
+
+    def create_invoice(
+        self,
+        job_order_id: int,
+        total_amount: float,
+        total_discount: float,
+        final_total: float,
+        payment_method: str = "cash",
+        payment_status: str = "pending",
+        received_amount: float = 0,
+        change_amount: float = 0
+    ) -> Dict:
+        """Create a new invoice"""
+        return self._request("POST", "/invoices", data={
+            "job_order_id": job_order_id,
+            "total_amount": total_amount,
+            "total_discount": total_discount,
+            "final_total": final_total,
+            "payment_method": payment_method,
+            "payment_status": payment_status,
+            "received_amount": received_amount,
+            "change_amount": change_amount
+        })
+
+    def record_payment(self, invoice_id: int, payment_method: str, received_amount: float, change_amount: float) -> Dict:
+        """Record payment for an invoice"""
+        return self._request("PUT", f"/invoices/{invoice_id}/payment", data={
+            "payment_method": payment_method,
+            "received_amount": received_amount,
+            "change_amount": change_amount
+        })
+
+    def update_invoice_status(self, invoice_id: int, payment_status: str) -> Dict:
+        """Update invoice payment status"""
+        return self._request("PUT", f"/invoices/{invoice_id}/status", data={
+            "payment_status": payment_status
+        })
+
+    def delete_invoice(self, invoice_id: int) -> Dict:
+        """Delete an invoice"""
+        return self._request("DELETE", f"/invoices/{invoice_id}")
+
+    # ========== Process 7: Stock Management (Purchase Orders) ==========
+    def get_purchase_orders(self, status: str = None) -> List[Dict]:
+        """Get all purchase orders, optionally filtered by status"""
+        params = {"status": status} if status else None
+        return self._request("GET", "/purchase-orders", params=params)
+
+    def get_purchase_order(self, po_id: int) -> Dict:
+        """Get a single purchase order with items"""
+        return self._request("GET", f"/purchase-orders/{po_id}")
+
+    def create_purchase_order(self, supplier_id: int, items: List[Dict]) -> Dict:
+        """Create a new purchase order"""
+        import json
+        return self._request("POST", "/purchase-orders", data={
+            "supplier_id": supplier_id,
+            "items": json.dumps(items)
+        })
+
+    def update_purchase_order_status(self, po_id: int, status: str) -> Dict:
+        """Update purchase order status"""
+        return self._request("PUT", f"/purchase-orders/{po_id}/status", data={
+            "status": status
+        })
+
+    def receive_purchase_order(self, po_id: int, received_items: List[Dict]) -> Dict:
+        """Receive items from purchase order"""
+        import json
+        return self._request("POST", f"/purchase-orders/{po_id}/receive", data={
+            "received_items": json.dumps(received_items)
+        })
+
+    def delete_purchase_order(self, po_id: int) -> Dict:
+        """Delete a purchase order"""
+        return self._request("DELETE", f"/purchase-orders/{po_id}")
+
+    def get_low_stock_parts(self) -> List[Dict]:
+        """Get parts with low stock (stock_qty <= min_stock)"""
+        return self._request("GET", "/parts/low-stock")
+
+    def get_stock_movements(self, part_id: int = None, limit: int = 50) -> List[Dict]:
+        """Get stock movements history"""
+        params = {}
+        if part_id:
+            params["part_id"] = part_id
+        if limit:
+            params["limit"] = limit
+        return self._request("GET", "/stock-movements", params=params)
 
     # ========== Legacy/Backward Compatibility ==========
     def register_customer_with_car(self, customer_data: Dict, car_data: Dict) -> Dict:
@@ -556,3 +731,56 @@ class APIClient:
     def update_car_info(self, car_id: int, car_data: Dict) -> Dict:
         """Legacy method - use update_vehicle instead"""
         return self.update_vehicle(car_id, car_data)
+    
+    
+    # ========== Process 8: Reports ==========
+    
+    
+    def get_revenue_report(self, start_date: str = None, end_date: str = None) -> Dict:
+        """Get revenue report"""
+        params = {}
+        if start_date:
+           params["start_date"] = start_date
+        if end_date:
+           params["end_date"] = end_date
+        return self._request("GET", "/reports/revenue", params=params)
+    
+    def get_repair_summary_report(self, start_date: str = None, end_date: str = None) -> Dict:
+        """Get repair summary report"""
+        params = {}
+        if start_date:
+           params["start_date"] = start_date
+        if end_date:
+           params["end_date"] = end_date
+        return self._request("GET", "/reports/repair-summary", params=params)
+    
+    def get_parts_usage_report(self, start_date: str = None, end_date: str = None) -> Dict:
+        """Get parts usage report"""
+        params = {}
+        if start_date:
+           params["start_date"] = start_date
+        if end_date:
+           params["end_date"] = end_date
+        return self._request("GET", "/reports/parts-usage", params=params)
+    
+    def get_top_services_report(self, start_date: str = None, end_date: str = None) -> Dict:
+        """Get top services report"""
+        params = {}
+        if start_date:
+           params["start_date"] = start_date
+        if end_date:
+           params["end_date"] = end_date
+        return self._request("GET", "/reports/top-services", params=params)
+     
+    def get_promotion_usage_report(self, start_date: str = None, end_date: str = None) -> Dict:
+        """Get promotion usage report"""
+        params = {}
+        if start_date:
+           params["start_date"] = start_date
+        if end_date:
+           params["end_date"] = end_date
+        return self._request("GET", "/reports/promotion-usage", params=params)
+    
+    def get_dashboard_summary(self) -> Dict:
+        """Get dashboard summary statistics"""
+        return self._request("GET", "/reports/dashboard-summary")

@@ -319,6 +319,7 @@ def login_page(page: ft.Page, on_login_success):
                             username_error,  # Error message under username
                             password,
                             password_error,  # Error message under password
+                            ft.Container(height=16),  # Added more spacing
                             error_text,
                             login_btn,
                         ],
@@ -330,9 +331,9 @@ def login_page(page: ft.Page, on_login_success):
                 ft.Container(
                     content=ft.Row(
                         [
-                            ft.Icon(ft.Icons.SETTINGS, size=14, color=TEXT_GRAY),
-                            ft.Text("v1.0.0", size=12, color=TEXT_GRAY),
-                            ft.Icon(ft.Icons.CARD_MEMBERSHIP, size=14, color=TEXT_GRAY),
+                           
+                            ft.Text("v1.0.0", size=14, color=TEXT_GRAY),
+                           
                         ],
                         alignment=ft.MainAxisAlignment.CENTER,
                         spacing=8,
@@ -368,8 +369,8 @@ def login_page(page: ft.Page, on_login_success):
     # Add blur effect overlay
     blur_overlay = ft.Container(
         expand=True,
-        bgcolor=ft.Colors.with_opacity(0.0, ft.Colors.WHITE_30),
-        blur=ft.Blur(0, 0),
+        bgcolor=ft.Colors.with_opacity(0.3, ft.Colors.WHITE_30),
+        blur=ft.Blur(0, 5),
     )
     
     # Stack everything together

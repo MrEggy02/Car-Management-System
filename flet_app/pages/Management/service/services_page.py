@@ -1,4 +1,3 @@
-# pages/services_page.py
 import flet as ft
 import sys
 import os
@@ -79,12 +78,11 @@ class ServicesContent:
                 colors=[self.primary_color, self.primary_dark],
             ),
             border_radius=ft.BorderRadius.only(bottom_left=20, bottom_right=20),
-           
         )
         
         # Search Bar with beautiful design
         self.search_input = ft.TextField(
-            hint_text=f"🔍 {get_text('search')} {get_text('services_title')}...",
+            hint_text=f" {get_text('search')} {get_text('services_title')}...",
             border_radius=12,
             bgcolor=ft.Colors.WHITE,
             filled=True,
@@ -135,11 +133,8 @@ class ServicesContent:
             expand=True,
         )
         
-        # Pagination container (will be updated by update_pagination)
-        self.pagination_container = ft.Container(
-            padding=ft.padding.symmetric(vertical=16, horizontal=20),
-            bgcolor="#F5F7FA",
-        )
+        # Pagination container
+        self.update_pagination_controls()
         
         # Main content area
         main_content = ft.Container(
@@ -177,25 +172,25 @@ class ServicesContent:
                 ),
                 ft.Container(
                     content=ft.Text(get_text('services_name'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=180,
+                    width=200,
                     alignment=ft.Alignment(-1, 0),
                     padding=ft.padding.only(left=10),
                 ),
                 ft.Container(
                     content=ft.Text(get_text('services_description'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=220,
+                    width=250,
                     alignment=ft.Alignment(-1, 0),
                     padding=ft.padding.only(left=10),
                 ),
                 ft.Container(
                     content=ft.Text(get_text('services_price'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=120,
+                    width=130,
                     alignment=ft.Alignment(1, 0),
                     padding=ft.padding.only(right=10),
                 ),
                 ft.Container(
-                    content=ft.Text(get_text('services_hours'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=100,
+                    content=ft.Text(get_text('services_time'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
+                    width=120,
                     alignment=ft.Alignment(0, 0),
                 ),
                 ft.Container(
@@ -209,13 +204,28 @@ class ServicesContent:
             border_radius=ft.BorderRadius.only(top_left=12, top_right=12),
         )
     
+    def _format_time(self, minutes):
+        """Format minutes to readable time string"""
+        if not minutes or minutes <= 0:
+            return "-"
+        
+        if minutes < 60:
+            return f"{minutes} {get_text('minutes')}"
+        else:
+            hours = minutes // 60
+            mins = minutes % 60
+            if mins > 0:
+                return f"{hours} {get_text('hour')} {mins} {get_text('minute')}"
+            else:
+                return f"{hours} {get_text('hour')}"
+    
     def _create_table_row(self, service, index, row_number):
         """Create a single table row"""
         service_id = service.get('id')
-        service_name = service.get('service_name', '-')
+        name = service.get('name', '-')
         description = service.get('description', '-')
         price = service.get('price', 0)
-        estimated_hours = service.get('estimated_hours', 0)
+        estimated_time = service.get('estimated_time', 0)
         
         # Row background color (alternate)
         row_bg = ft.Colors.GREY_50 if index % 2 == 0 else ft.Colors.WHITE
@@ -238,11 +248,8 @@ class ServicesContent:
         desc_display = description if description != '-' else get_text("no_description")
         desc_color = ft.Colors.GREY_600 if description != '-' else ft.Colors.GREY_400
         
-        # Hours display
-        if estimated_hours == 1:
-            hours_text = f"{get_text('hours_single')}"
-        else:
-            hours_text = f"{get_text('hours_plural').format(estimated_hours)}"
+        # Format time
+        time_text = self._format_time(estimated_time)
         
         # Price column with category badge
         price_column = ft.Column([
@@ -263,7 +270,7 @@ class ServicesContent:
         # Description with tooltip if truncated
         desc_container = ft.Container(
             content=ft.Text(desc_display, size=12, color=desc_color, max_lines=2),
-            width=220,
+            width=250,
             alignment=ft.Alignment(-1, 0),
             padding=ft.padding.only(left=10),
         )
@@ -293,7 +300,7 @@ class ServicesContent:
         
         row = ft.Container(
             content=ft.Row([
-                # Row number column with badge styling
+                # Row number column
                 ft.Container(
                     content=ft.Container(
                         content=ft.Text(str(row_number), size=13, weight=ft.FontWeight.W_500, color="#1565C0"),
@@ -305,35 +312,35 @@ class ServicesContent:
                     width=50,
                     alignment=ft.Alignment(0, 0),
                 ),
-                # Service Name column
+                # Name column
                 ft.Container(
-                    content=ft.Text(service_name, size=13, weight=ft.FontWeight.W_500, color=ft.Colors.BLACK, max_lines=1),
-                    width=180,
+                    content=ft.Text(name, size=13, weight=ft.FontWeight.W_500, color=ft.Colors.BLACK, max_lines=1),
+                    width=200,
                     alignment=ft.Alignment(-1, 0),
                     padding=ft.padding.only(left=10),
-                    tooltip=service_name,
+                    tooltip=name,
                 ),
                 # Description column
                 desc_container,
                 # Price column
                 ft.Container(
                     content=price_column,
-                    width=120,
+                    width=130,
                     alignment=ft.Alignment(1, 0),
                     padding=ft.padding.only(right=10),
                 ),
-                # Hours column
+                # Time column
                 ft.Container(
                     content=ft.Container(
                         content=ft.Row([
                             ft.Icon(ft.Icons.SCHEDULE, size=14, color=ft.Colors.GREY_600),
-                            ft.Text(hours_text, size=12, color=ft.Colors.GREY_700),
+                            ft.Text(time_text, size=12, color=ft.Colors.GREY_700),
                         ], spacing=4),
                         bgcolor=ft.Colors.GREY_50,
                         border_radius=6,
                         padding=ft.padding.symmetric(horizontal=8, vertical=4),
                     ),
-                    width=100,
+                    width=120,
                     alignment=ft.Alignment(0, 0),
                 ),
                 # Actions column
@@ -366,7 +373,7 @@ class ServicesContent:
             expand=True,
         )
     
-    def update_pagination(self):
+    def update_pagination_controls(self):
         """Update pagination controls"""
         if not self.filtered_services:
             self.total_pages = 1
@@ -381,37 +388,39 @@ class ServicesContent:
         prev_disabled = self.current_page <= 1
         next_disabled = self.current_page >= self.total_pages
         
-        self.pagination_container.content = ft.Row([
-            ft.Text(f"{get_text('showing')} {len(self.filtered_services)} {get_text('of')} {len(self.services_data)} {get_text('results')}", size=12, color="#64748B"),
-            ft.Container(expand=True),
-            ft.Container(
-                content=ft.Row([
-                    ft.IconButton(
-                        icon=ft.Icons.CHEVRON_LEFT,
-                        icon_size=20,
-                        on_click=self.prev_page,
-                        disabled=prev_disabled,
-                        style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
-                    ),
-                    ft.Container(
-                        content=ft.Text(f"{self.current_page}/{self.total_pages}", size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
-                        padding=ft.padding.symmetric(horizontal=15),
-                    ),
-                    ft.IconButton(
-                        icon=ft.Icons.CHEVRON_RIGHT,
-                        icon_size=20,
-                        on_click=self.next_page,
-                        disabled=next_disabled,
-                        style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
-                    ),
-                ]),
-                bgcolor=ft.Colors.WHITE,
-                border_radius=10,
-                padding=ft.padding.symmetric(horizontal=8, vertical=4),
-            ),
-        ], vertical_alignment=ft.CrossAxisAlignment.CENTER)
-        
-        self.page.update()
+        self.pagination_container.content = ft.Container(
+            content=ft.Row([
+                ft.Text(f"{get_text('showing')} {len(self.filtered_services)} {get_text('of')} {len(self.services_data)} {get_text('results')}", size=12, color="#64748B"),
+                ft.Container(expand=True),
+                ft.Container(
+                    content=ft.Row([
+                        ft.IconButton(
+                            icon=ft.Icons.CHEVRON_LEFT,
+                            icon_size=20,
+                            on_click=self.prev_page,
+                            disabled=prev_disabled,
+                            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
+                        ),
+                        ft.Container(
+                            content=ft.Text(f"{self.current_page}/{self.total_pages}", size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
+                            padding=ft.padding.symmetric(horizontal=15),
+                        ),
+                        ft.IconButton(
+                            icon=ft.Icons.CHEVRON_RIGHT,
+                            icon_size=20,
+                            on_click=self.next_page,
+                            disabled=next_disabled,
+                            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
+                        ),
+                    ]),
+                    bgcolor=ft.Colors.WHITE,
+                    border_radius=10,
+                    padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                ),
+            ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
+            padding=ft.padding.symmetric(vertical=16, horizontal=20),
+            bgcolor="#F5F7FA",
+        )
     
     def prev_page(self, e=None):
         """Go to previous page"""
@@ -436,7 +445,7 @@ class ServicesContent:
         else:
             self.filtered_services = [
                 service for service in self.services_data
-                if query in service.get('service_name', '').lower()
+                if query in service.get('name', '').lower()
                 or query in service.get('description', '').lower()
             ]
         
@@ -461,7 +470,7 @@ class ServicesContent:
                 row = self._create_table_row(service, start_idx + i, row_number)
                 self.table_rows.controls.append(row)
         
-        self.update_pagination()
+        self.update_pagination_controls()
         self.page.update()
     
     async def _delayed_load(self):
@@ -533,12 +542,12 @@ class ServicesContent:
             print(f"DEBUG: Error closing dialog: {ex}")
     
     def show_add_dialog(self, e=None):
-        """Show add service dialog with modern UI"""
+        """Show add service dialog"""
         print("DEBUG: show_add_dialog called")
         
         name = ft.TextField(
             label=f"{get_text('services_name')} *",
-            hint_text="เช่น เปลี่ยนถ่ายน้ำมันเครื่อง",
+            hint_text="ເຊັ່ນ: ປ່ຽນນ້ຳມັນເຄື່ອງ",
             border_radius=12,
             bgcolor=ft.Colors.WHITE,
             filled=True,
@@ -549,9 +558,9 @@ class ServicesContent:
             focused_border_color=self.primary_color,
         )
         
-        desc = ft.TextField(
+        description = ft.TextField(
             label=get_text("services_description"),
-            hint_text="รายละเอียดบริการ เช่น ใช้น้ำมันเครื่อง Fully Synthetic",
+            hint_text="ລາຍລະອຽດບໍລິການ ເຊັ່ນ: ໃຊ້ນ້ຳມັນ Fully Synthetic",
             multiline=True,
             min_lines=3,
             max_lines=5,
@@ -577,13 +586,13 @@ class ServicesContent:
             focused_border_color=self.primary_color,
         )
         
-        hours = ft.TextField(
-            label=get_text("services_hours"),
-            hint_text="1",
+        estimated_time = ft.TextField(
+            label=get_text("services_time"),
+            hint_text="ນາທີ (ຕົວຢ່າງ: 60)",
             border_radius=12,
             bgcolor=ft.Colors.WHITE,
             filled=True,
-            value="1",
+            value="0",
             prefix_icon=ft.Icons.SCHEDULE,
             content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
             border_color=ft.Colors.GREY_300,
@@ -591,13 +600,13 @@ class ServicesContent:
         )
         
         def save(e):
-            if name.value and price.value:
+            if name.value:
                 try:
                     self.client.add_service(
-                        name.value,
-                        desc.value,
-                        float(price.value),
-                        int(hours.value) if hours.value else 1
+                        name=name.value,
+                        price=float(price.value) if price.value else 0,
+                        description=description.value,
+                        estimated_time=int(estimated_time.value) if estimated_time.value else 0
                     )
                     self._close_dialog()
                     self.load_data()
@@ -631,7 +640,7 @@ class ServicesContent:
                                     color="#1E293B",
                                 ),
                                 ft.Text(
-                                    "เพิ่มบริการใหม่เข้าสู่ระบบ",
+                                    "ເພີ່ມບໍລິການໃໝ່ເຂົ້າສູ່ລະບົບ",
                                     size=13,
                                     color="#64748B",
                                 ),
@@ -650,16 +659,16 @@ class ServicesContent:
                     [
                         name,
                         ft.Container(height=12),
-                        desc,
+                        description,
                         ft.Container(height=12),
-                        ft.Row([price, hours], spacing=12),
+                        ft.Row([price, estimated_time], spacing=12),
                     ],
                     spacing=0,
                     scroll=ft.ScrollMode.AUTO,
                 ),
                 padding=ft.padding.all(24),
                 width=520,
-                height=450,
+                height=480,
             ),
             actions=[
                 ft.Container(
@@ -710,7 +719,7 @@ class ServicesContent:
         self._open_dialog(dialog)
     
     def edit_service(self, service_id):
-        """Edit service dialog with modern UI"""
+        """Edit service dialog"""
         
         # Find service from stored data
         service = None
@@ -725,7 +734,7 @@ class ServicesContent:
         
         name = ft.TextField(
             label=f"{get_text('services_name')} *",
-            value=service.get('service_name', ''),
+            value=service.get('name', ''),
             border_radius=12,
             bgcolor=ft.Colors.WHITE,
             filled=True,
@@ -735,7 +744,7 @@ class ServicesContent:
             focused_border_color=self.primary_color,
         )
         
-        desc = ft.TextField(
+        description = ft.TextField(
             label=get_text("services_description"),
             value=service.get('description', ''),
             multiline=True,
@@ -762,9 +771,9 @@ class ServicesContent:
             focused_border_color=self.primary_color,
         )
         
-        hours = ft.TextField(
-            label=get_text("services_hours"),
-            value=str(service.get('estimated_hours', 1)),
+        estimated_time = ft.TextField(
+            label=get_text("services_time"),
+            value=str(service.get('estimated_time', 0)),
             border_radius=12,
             bgcolor=ft.Colors.WHITE,
             filled=True,
@@ -776,15 +785,15 @@ class ServicesContent:
         
         def save_edit(e):
             try:
-                if not name.value or not price.value:
+                if not name.value:
                     self.show_snackbar(get_text("fill_all_fields"))
                     return
                 
                 self.client.update_service(service_id, {
-                    'service_name': name.value,
-                    'description': desc.value,
-                    'price': float(price.value),
-                    'estimated_hours': int(hours.value) if hours.value else 1
+                    'name': name.value,
+                    'description': description.value,
+                    'price': float(price.value) if price.value else 0,
+                    'estimated_time': int(estimated_time.value) if estimated_time.value else 0
                 })
                 self._close_dialog()
                 self.load_data()
@@ -816,7 +825,7 @@ class ServicesContent:
                                     color="#1E293B",
                                 ),
                                 ft.Text(
-                                    "แก้ไขข้อมูลบริการ",
+                                    "ແກ້ໄຂຂໍ້ມູນບໍລິການ",
                                     size=13,
                                     color="#64748B",
                                 ),
@@ -835,16 +844,16 @@ class ServicesContent:
                     [
                         name,
                         ft.Container(height=12),
-                        desc,
+                        description,
                         ft.Container(height=12),
-                        ft.Row([price, hours], spacing=12),
+                        ft.Row([price, estimated_time], spacing=12),
                     ],
                     spacing=0,
                     scroll=ft.ScrollMode.AUTO,
                 ),
                 padding=ft.padding.all(24),
                 width=520,
-                height=450,
+                height=480,
             ),
             actions=[
                 ft.Container(
@@ -904,7 +913,7 @@ class ServicesContent:
                 service = s
                 break
         
-        service_name = service.get('service_name', get_text('this_service')) if service else get_text('this_service')
+        service_name = service.get('name', get_text('this_service')) if service else get_text('this_service')
         WARNING_COLOR = "#DC2626"
         
         def confirm(e):
@@ -940,7 +949,7 @@ class ServicesContent:
                                     color="#1E293B",
                                 ),
                                 ft.Text(
-                                    "กรุณายืนยันการลบข้อมูล",
+                                    "ກະລຸນາຢືນຢັນການລຶບຂໍ້ມູນ",
                                     size=13,
                                     color="#64748B",
                                 ),
@@ -963,7 +972,7 @@ class ServicesContent:
                         ),
                         ft.Container(height=8),
                         ft.Text(
-                            f"คุณต้องการลบ '{service_name}' หรือไม่?",
+                            f"ທ່ານຕ້ອງການລຶບ '{service_name}' ແທ້ບໍ?",
                             size=16,
                             weight=ft.FontWeight.W_500,
                             color="#1E293B",

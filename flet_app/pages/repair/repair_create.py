@@ -48,17 +48,7 @@ class RepairCreateContent:
         return ft.Container(
             content=ft.Row(
                 [
-                    ft.IconButton(
-                        icon=ft.Icons.ARROW_BACK,
-                        icon_size=24,
-                        icon_color=ft.Colors.WHITE,
-                        on_click=self.go_back,
-                        tooltip=get_text("back"),
-                        style=ft.ButtonStyle(
-                            bgcolor=ft.Colors.with_opacity(0.2, ft.Colors.WHITE),
-                            shape=ft.RoundedRectangleBorder(radius=10),
-                        ),
-                    ),
+                    
                     ft.Column(
                         [
                             ft.Text(
@@ -76,12 +66,7 @@ class RepairCreateContent:
                         spacing=2,
                     ),
                     ft.Container(expand=True),
-                    ft.Container(
-                        content=ft.Icon(ft.Icons.CONSTRUCTION, size=28, color=ft.Colors.WHITE),
-                        bgcolor=ft.Colors.with_opacity(0.2, ft.Colors.WHITE),
-                        border_radius=15,
-                        padding=ft.padding.all(8),
-                    ),
+                    
                 ],
                 spacing=16,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -93,10 +78,7 @@ class RepairCreateContent:
                 colors=[self.primary_color, self.primary_dark],
             ),
             border_radius=ft.BorderRadius.only(bottom_left=20, bottom_right=20),
-            shadow=ft.BoxShadow(
-                blur_radius=15,
-                color=ft.Colors.with_opacity(0.2, ft.Colors.BLACK),
-            ),
+            
         )
     
     def _build_selection_content(self):
@@ -175,6 +157,9 @@ class RepairCreateContent:
         self.load_job_order()
         self.load_mechanics()
         
+        # Check if repair order already exists
+        existing_repair = self.check_existing_repair()
+        
         # Job Info Card
         job_info_card = ft.Card(
             content=ft.Container(
@@ -235,7 +220,7 @@ class RepairCreateContent:
         self.create_btn = ft.ElevatedButton(
             content=ft.Row([
                 ft.Icon(ft.Icons.CONSTRUCTION, size=18, color=ft.Colors.WHITE),
-                ft.Text("สร้างใบสั่งซ่อม", size=16, color=ft.Colors.WHITE, weight=ft.FontWeight.BOLD),
+                ft.Text(get_text("create_repair_order_btn"), size=16, color=ft.Colors.WHITE, weight=ft.FontWeight.BOLD),
             ], spacing=8),
             on_click=self.create_repair_order,
             style=ft.ButtonStyle(
@@ -246,6 +231,14 @@ class RepairCreateContent:
             ),
             width=280,
             height=50,
+        )
+        
+        # Warning message if repair already exists
+        self.warning_text = ft.Text(
+            "",
+            size=13,
+            visible=False,
+            color=ft.Colors.ORANGE_600,
         )
         
         mechanic_card = ft.Card(
@@ -279,10 +272,24 @@ class RepairCreateContent:
             margin=ft.margin.only(bottom=20),
         )
         
+        # If repair already exists, show message and disable create button
+        if existing_repair:
+            self.warning_text.value = get_text("repair_already_exists_warning").format(repair_id=existing_repair)
+            self.warning_text.visible = True
+            self.warning_text.color = ft.Colors.ORANGE_600
+            self.create_btn.disabled = True
+            self.create_btn.style = ft.ButtonStyle(
+                bgcolor=ft.Colors.GREY_400,
+                shape=ft.RoundedRectangleBorder(radius=12),
+                padding=ft.padding.symmetric(horizontal=32, vertical=16),
+            )
+            self.mechanic_dropdown.disabled = True
+        
         scrollable_content = ft.Column(
             [
                 job_info_card,
                 mechanic_card,
+                self.warning_text,
                 ft.Container(
                     content=self.create_btn,
                     alignment=ft.Alignment(0, 0),
@@ -306,6 +313,16 @@ class RepairCreateContent:
         
         return content_area
     
+    def check_existing_repair(self):
+        """Check if repair order already exists for this job"""
+        try:
+            repair_orders = self.client.get_repair_orders(job_order_id=self.selected_job_id)
+            if repair_orders and len(repair_orders) > 0:
+                return repair_orders[0].get('id')
+            return None
+        except:
+            return None
+    
     def load_approved_jobs(self):
         try:
             all_quotations = self.client.get_quotations()
@@ -324,6 +341,13 @@ class RepairCreateContent:
             approved_jobs = []
             for job in all_jobs:
                 if job.get('id') in approved_job_ids:
+                    # Also check if repair already exists
+                    try:
+                        existing_repairs = self.client.get_repair_orders(job_order_id=job.get('id'))
+                        has_repair = existing_repairs and len(existing_repairs) > 0
+                        job['has_repair'] = has_repair
+                    except:
+                        job['has_repair'] = False
                     approved_jobs.append(job)
             
             self.job_list = approved_jobs
@@ -353,8 +377,9 @@ class RepairCreateContent:
                 job_no = job.get('job_no', 'N/A')
                 customer_name = job.get('customer_name', '-')
                 plate_number = job.get('plate_number', '-')
+                has_repair = job.get('has_repair', False)
                 
-                # Create job card - NO alignment.center, using Row layout
+                # Create job card
                 icon_container = ft.Container(
                     content=ft.Icon(ft.Icons.CONSTRUCTION, size=28, color=self.primary_color),
                     width=50,
@@ -369,16 +394,28 @@ class RepairCreateContent:
                     ft.Text(plate_number, size=12, color="#94A3B8"),
                 ], spacing=4, expand=True)
                 
-                select_button = ft.ElevatedButton(
-                    get_text("select"),
-                    on_click=lambda e, jid=job_id, jno=job_no: self.select_job(jid, jno),
-                    style=ft.ButtonStyle(
-                        bgcolor=self.primary_color,
-                        color=ft.Colors.WHITE,
-                        padding=ft.padding.symmetric(horizontal=20, vertical=10),
-                        shape=ft.RoundedRectangleBorder(radius=10),
-                    ),
-                )
+                # Show different button if repair already exists
+                if has_repair:
+                    select_button = ft.Container(
+                        content=ft.Row([
+                            ft.Icon(ft.Icons.CHECK_CIRCLE, size=16, color=ft.Colors.GREEN_600),
+                            ft.Text(get_text("already_created"), size=12, color=ft.Colors.GREEN_600),
+                        ], spacing=4),
+                        padding=ft.padding.symmetric(horizontal=15, vertical=8),
+                        bgcolor=ft.Colors.GREEN_50,
+                        border_radius=10,
+                    )
+                else:
+                    select_button = ft.ElevatedButton(
+                        get_text("select"),
+                        on_click=lambda e, jid=job_id, jno=job_no: self.select_job(jid, jno),
+                        style=ft.ButtonStyle(
+                            bgcolor=self.primary_color,
+                            color=ft.Colors.WHITE,
+                            padding=ft.padding.symmetric(horizontal=20, vertical=10),
+                            shape=ft.RoundedRectangleBorder(radius=10),
+                        ),
+                    )
                 
                 job_card = ft.Card(
                     content=ft.Container(
@@ -464,7 +501,7 @@ class RepairCreateContent:
     
     def update_mechanic_dropdown(self):
         options = []
-        options.append(ft.dropdown.Option("", "--- เลือกช่าง ---"))
+        options.append(ft.dropdown.Option("", get_text("select_mechanic_placeholder")))
         for mechanic in self.mechanics:
             options.append(
                 ft.dropdown.Option(
@@ -478,7 +515,7 @@ class RepairCreateContent:
     def create_repair_order(self, e):
         # Validate
         if not self.mechanic_dropdown.value or self.mechanic_dropdown.value == "":
-            self.show_snack_bar("กรุณาเลือกช่างก่อน", is_error=True)
+            self.show_snack_bar(get_text("please_select_mechanic"), is_error=True)
             return
         
         selected_mechanic_id = int(self.mechanic_dropdown.value)
@@ -498,12 +535,19 @@ class RepairCreateContent:
             else:
                 self.create_btn.content.controls[0].name = ft.Icons.CONSTRUCTION
                 self.create_btn.disabled = False
-                self.show_snack_bar("สร้างใบสั่งซ่อมไม่สำเร็จ", is_error=True)
+                self.show_snack_bar(get_text("create_repair_order_failed"), is_error=True)
         except Exception as ex:
+            error_msg = str(ex)
             print(f"DEBUG: Exception = {ex}")
             self.create_btn.content.controls[0].name = ft.Icons.CONSTRUCTION
             self.create_btn.disabled = False
-            self.show_snack_bar(f"Error: {str(ex)}", is_error=True)
+            
+            if "already exists" in error_msg.lower():
+                self.show_snack_bar(get_text("repair_already_exists"), is_error=True)
+                # Go back to job list
+                self.go_back(None)
+            else:
+                self.show_snack_bar(f"{get_text('error')}: {error_msg}", is_error=True)
         
         self.page.update()
     
@@ -522,7 +566,7 @@ class RepairCreateContent:
                         ),
                         ft.Container(height=16),
                         ft.Text(
-                            "✅ สร้างใบสั่งซ่อมสำเร็จ",
+                            get_text("repair_order_created_success"),
                             size=22,
                             weight=ft.FontWeight.BOLD,
                             color="#1E293B",
@@ -530,7 +574,7 @@ class RepairCreateContent:
                         ),
                         ft.Container(height=8),
                         ft.Text(
-                            f"เลขที่ใบสั่งซ่อม: R{self.repair_id:04d}",
+                            f"{get_text('repair_number')}: R{self.repair_id:04d}",
                             size=14,
                             weight=ft.FontWeight.W_500,
                             color=self.primary_color,
@@ -538,7 +582,7 @@ class RepairCreateContent:
                         ),
                         ft.Container(height=8),
                         ft.Text(
-                            "กรุณาไปที่หน้ารายการซ่อมเพื่อจัดการต่อ",
+                            get_text("go_to_repair_list_message"),
                             size=13,
                             color="#64748B",
                             text_align=ft.TextAlign.CENTER,
@@ -552,7 +596,7 @@ class RepairCreateContent:
             ),
             actions=[
                 ft.ElevatedButton(
-                    "ไปยังรายการซ่อม",
+                    get_text("go_to_repair_list"),
                     on_click=lambda e: self.go_to_repair_list(popup),
                     style=ft.ButtonStyle(
                         bgcolor=self.primary_color,
@@ -574,10 +618,10 @@ class RepairCreateContent:
     
     def go_back(self, e):
         try:
-            self.navigate("dashboard")
+            self.navigate("repair_create")
         except Exception as ex:
             print(f"Error navigating back: {ex}")
-            self.navigate("dashboard")
+            self.navigate("repair_create")
     
     def show_snack_bar(self, message: str, is_error: bool = False):
         self.page.snack_bar = ft.SnackBar(

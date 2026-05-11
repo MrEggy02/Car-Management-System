@@ -2,7 +2,22 @@ from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from auth import security
 from routers import (
-    employees, shop, suppliers, services, parts, promotions, customers, cars, vehicles , job_orders , quotations , repair_orders
+    employees,
+    shop,
+    suppliers, 
+    services,
+    parts, 
+    promotions,
+    customers, 
+    cars,
+    vehicles ,
+    job_orders , 
+    quotations ,
+    repair_orders , 
+    invoices , 
+    purchase_orders ,
+    promotion_items,
+    reports,
 )
 
 app = FastAPI(title="J&P Auto Maxing API", version="2.0")
@@ -29,6 +44,10 @@ app.include_router(vehicles.router)
 app.include_router(job_orders.router)
 app.include_router(quotations.router)
 app.include_router(repair_orders.router)
+app.include_router(invoices.router)
+app.include_router(purchase_orders.router)
+app.include_router(promotion_items.router)
+app.include_router(reports.router)
 
 # Auth endpoints
 @app.post("/login")

@@ -24,13 +24,13 @@ def get_repair_orders(
                    c.name as customer_name,
                    c.phone as customer_phone,
                    v.plate_number, v.brand, v.model,
-                   u.fullname as mechanic_name,  -- เปลี่ยนจาก employees เป็น users
+                   u.fullname as mechanic_name,
                    q.total_price as quotation_total
             FROM repair_orders ro
             LEFT JOIN job_orders jo ON ro.job_order_id = jo.id
             LEFT JOIN customers c ON jo.customer_id = c.id
             LEFT JOIN vehicles v ON jo.vehicle_id = v.id
-            LEFT JOIN users u ON ro.mechanic_id = u.id  -- เปลี่ยนจาก employees เป็น users
+            LEFT JOIN users u ON ro.mechanic_id = u.id
             LEFT JOIN quotations q ON jo.id = q.job_order_id AND q.status = 'approved'
             WHERE 1=1
         """
@@ -74,12 +74,12 @@ def get_repair_order(repair_id: int, user: dict = Depends(authenticate_user)):
                    jo.job_no, jo.problem_description,
                    c.name as customer_name, c.phone as customer_phone,
                    v.plate_number, v.brand, v.model, v.year, v.color,
-                   u.fullname as mechanic_name  -- เปลี่ยนจาก employees เป็น users
+                   u.fullname as mechanic_name
             FROM repair_orders ro
             LEFT JOIN job_orders jo ON ro.job_order_id = jo.id
             LEFT JOIN customers c ON jo.customer_id = c.id
             LEFT JOIN vehicles v ON jo.vehicle_id = v.id
-            LEFT JOIN users u ON ro.mechanic_id = u.id  -- เปลี่ยนจาก employees เป็น users
+            LEFT JOIN users u ON ro.mechanic_id = u.id
             WHERE ro.id = %s
         """, (repair_id,))
         
@@ -111,17 +111,28 @@ def create_repair_order(
     mechanic_id: int = Form(None),
     user: dict = Depends(authenticate_user)
 ):
-    """Create a new repair order from a job order"""
+    """Create a new repair order from a job order (can only create once per job order)"""
     db = get_db()
     cursor = db.cursor()
     try:
         # Check if repair order already exists for this job order
-        cursor.execute("SELECT id FROM repair_orders WHERE job_order_id = %s", (job_order_id,))
+        cursor.execute("SELECT id, mechanic_id, status FROM repair_orders WHERE job_order_id = %s", (job_order_id,))
         existing = cursor.fetchone()
-        if existing:
-            raise HTTPException(status_code=400, detail="Repair order already exists for this job order")
         
-        # Create repair order
+        if existing:
+            # If exists, return existing repair order info (cannot create new)
+            existing_id = existing[0]
+            existing_mechanic_id = existing[1]
+            existing_status = existing[2]
+            
+            print(f"DEBUG: Repair order already exists for job_order_id={job_order_id}, id={existing_id}")
+            
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Repair order already exists for this job order (ID: {existing_id}). Please use existing repair order."
+            )
+        
+        # Create new repair order
         cursor.execute("""
             INSERT INTO repair_orders (job_order_id, mechanic_id, status, start_date)
             VALUES (%s, %s, %s, %s)
@@ -130,9 +141,12 @@ def create_repair_order(
         db.commit()
         repair_id = cursor.lastrowid
         
+        print(f"DEBUG: Created new repair order id={repair_id} for job_order_id={job_order_id}")
+        
         return {
             "id": repair_id,
-            "message": "Repair order created successfully"
+            "message": "Repair order created successfully",
+            "is_new": True
         }
     except HTTPException:
         raise
@@ -324,7 +338,6 @@ def get_mechanics(user: dict = Depends(authenticate_user)):
     db = get_db()
     cursor = db.cursor(dictionary=True)
     try:
-        # เปลี่ยนจาก employees เป็น users
         cursor.execute("""
             SELECT id, username, fullname, phone 
             FROM users 

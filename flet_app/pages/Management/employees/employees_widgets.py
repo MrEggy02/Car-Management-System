@@ -14,26 +14,34 @@ ROLE_CONFIGS = {
         "avatar_color": "#1565C0",
         "icon": ft.Icons.SHIELD
     },
-    "technician": {
-        "text": "role_technician",
+    "mechanic": {
+        "text": "role_mechanic",
         "color": "#E65100",
         "bg_color": "#FFF3E0",
         "avatar_color": "#E65100",
         "icon": ft.Icons.BUILD
     },
-    "reception": {
-        "text": "role_reception",
+    "cashier": {
+        "text": "role_cashier",
         "color": "#2E7D32",
         "bg_color": "#E8F5E9",
         "avatar_color": "#2E7D32",
         "icon": ft.Icons.PHONE
+    }
+}
+
+STATUS_CONFIGS = {
+    "active": {
+        "text": "status_active",
+        "color": "#2E7D32",
+        "bg_color": "#E8F5E9",
+        "icon": ft.Icons.CHECK_CIRCLE
     },
-    "manager": {
-        "text": "role_manager",
-        "color": "#6A1B9A",
-        "bg_color": "#F3E5F5",
-        "avatar_color": "#6A1B9A",
-        "icon": ft.Icons.BAR_CHART
+    "inactive": {
+        "text": "status_inactive",
+        "color": "#DC2626",
+        "bg_color": "#FFEEEE",
+        "icon": ft.Icons.DO_NOT_DISTURB
     }
 }
 
@@ -44,10 +52,10 @@ def create_table_header():
         content=ft.Row(
             [
                 ft.Container(content=ft.Text("#", size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=50, alignment=ft.Alignment(0, 0)),
-                ft.Container(content=ft.Text(get_text("employees_username"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=120, alignment=ft.Alignment(-1, 0), padding=ft.padding.only(left=10)),
-                ft.Container(content=ft.Text(get_text("employees_fullname"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=160, alignment=ft.Alignment(-1, 0), padding=ft.padding.only(left=10)),
+                ft.Container(content=ft.Text(get_text("employees_name"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=180, alignment=ft.Alignment(-1, 0), padding=ft.padding.only(left=10)),
                 ft.Container(content=ft.Text(get_text("employees_role"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=140, alignment=ft.Alignment(-1, 0), padding=ft.padding.only(left=10)),
-                ft.Container(content=ft.Text(get_text("employees_phone"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=140, alignment=ft.Alignment(0, 0)),
+                ft.Container(content=ft.Text(get_text("employees_phone"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=150, alignment=ft.Alignment(0, 0)),
+                ft.Container(content=ft.Text(get_text("employees_status"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=120, alignment=ft.Alignment(0, 0)),
                 ft.Container(content=ft.Text(get_text("action"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=120, alignment=ft.Alignment(0, 0)),
             ],
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -59,7 +67,7 @@ def create_table_header():
 
 def create_role_badge(role):
     """Create role badge widget"""
-    config = ROLE_CONFIGS.get(role, ROLE_CONFIGS["admin"])
+    config = ROLE_CONFIGS.get(role, ROLE_CONFIGS["mechanic"])
     role_text = get_text(config["text"])
     
     return ft.Container(
@@ -67,6 +75,24 @@ def create_role_badge(role):
             [
                 ft.Icon(config["icon"], size=14, color=config["color"]),
                 ft.Text(role_text, size=12, color=config["color"], weight=ft.FontWeight.W_500),
+            ],
+            spacing=4,
+        ),
+        bgcolor=config["bg_color"],
+        border_radius=12,
+        padding=ft.padding.symmetric(horizontal=10, vertical=4),
+    )
+
+def create_status_badge(status):
+    """Create status badge widget"""
+    config = STATUS_CONFIGS.get(status, STATUS_CONFIGS["active"])
+    status_text = get_text(config["text"])
+    
+    return ft.Container(
+        content=ft.Row(
+            [
+                ft.Icon(config["icon"], size=14, color=config["color"]),
+                ft.Text(status_text, size=12, color=config["color"], weight=ft.FontWeight.W_500),
             ],
             spacing=4,
         ),
@@ -119,10 +145,10 @@ def create_empty_state():
 def create_table_row(emp, index, row_number, on_edit, on_delete):
     """Create a single table row"""
     emp_id = emp.get("id")
-    fullname = emp.get("fullname", "-")
-    username = emp.get("username", "-")
+    name = emp.get("name", "-")
     role = emp.get("role", "-")
     phone = emp.get("phone", "-")
+    status = emp.get("status", "active")
     
     row_bg = ft.Colors.GREY_50 if index % 2 == 0 else ft.Colors.WHITE
     
@@ -150,19 +176,8 @@ def create_table_row(emp, index, row_number, on_edit, on_delete):
                     alignment=ft.Alignment(0, 0),
                 ),
                 ft.Container(
-                    content=ft.Container(
-                        content=ft.Text(f"@{username}", size=12, color=ft.Colors.GREY_700, weight=ft.FontWeight.W_500, max_lines=1),
-                        bgcolor=ft.Colors.GREY_100,
-                        border_radius=4,
-                        padding=ft.padding.symmetric(horizontal=6, vertical=2),
-                    ),
-                    width=120,
-                    alignment=ft.Alignment(-1, 0),
-                    padding=ft.padding.only(left=10),
-                ),
-                ft.Container(
-                    content=ft.Text(fullname, size=13, weight=ft.FontWeight.W_500, color=ft.Colors.BLACK, max_lines=1),
-                    width=160,
+                    content=ft.Text(name, size=13, weight=ft.FontWeight.W_500, color=ft.Colors.BLACK, max_lines=1),
+                    width=180,
                     alignment=ft.Alignment(-1, 0),
                     padding=ft.padding.only(left=10),
                 ),
@@ -174,7 +189,12 @@ def create_table_row(emp, index, row_number, on_edit, on_delete):
                 ),
                 ft.Container(
                     content=ft.Text(phone_display, size=12, color=phone_color, max_lines=1),
-                    width=140,
+                    width=150,
+                    alignment=ft.Alignment(0, 0),
+                ),
+                ft.Container(
+                    content=create_status_badge(status),
+                    width=120,
                     alignment=ft.Alignment(0, 0),
                 ),
                 ft.Container(
@@ -196,39 +216,13 @@ def create_table_row(emp, index, row_number, on_edit, on_delete):
 def create_add_dialog(on_save, on_close):
     """Create add employee dialog"""
     
-    username = ft.TextField(
-        label=get_text("employees_username"),
-        hint_text="เช่น john_doe",
-        border_radius=12,
-        bgcolor=ft.Colors.WHITE,
-        filled=True,
-        autofocus=True,
-        prefix_icon=ft.Icons.PERSON_OUTLINE,
-        content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
-        border_color=ft.Colors.GREY_300,
-        focused_border_color=PRIMARY_COLOR,
-    )
-    
-    password = ft.TextField(
-        label=get_text("employees_password"),
-        hint_text="••••••••",
-        password=True,
-        can_reveal_password=True,
-        border_radius=12,
-        bgcolor=ft.Colors.WHITE,
-        filled=True,
-        prefix_icon=ft.Icons.LOCK_OUTLINE,
-        content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
-        border_color=ft.Colors.GREY_300,
-        focused_border_color=PRIMARY_COLOR,
-    )
-    
-    fullname = ft.TextField(
-        label=get_text("employees_fullname"),
+    name = ft.TextField(
+        label=get_text("employees_name"),
         hint_text="เช่น สมชาย ใจดี",
         border_radius=12,
         bgcolor=ft.Colors.WHITE,
         filled=True,
+        autofocus=True,
         prefix_icon=ft.Icons.BADGE,
         content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
         border_color=ft.Colors.GREY_300,
@@ -241,14 +235,14 @@ def create_add_dialog(on_save, on_close):
         border_radius=12,
         bgcolor=ft.Colors.WHITE,
         filled=True,
+        value="mechanic",
         content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
         border_color=ft.Colors.GREY_300,
         focused_border_color=PRIMARY_COLOR,
         options=[
             ft.dropdown.Option("admin", f"👑 {get_text('role_admin')}"),
-            ft.dropdown.Option("technician", f"🔧 {get_text('role_technician')}"),
-            ft.dropdown.Option("reception", f"📞 {get_text('role_reception')}"),
-            ft.dropdown.Option("manager", f"📊 {get_text('role_manager')}"),
+            ft.dropdown.Option("mechanic", f"🔧 {get_text('role_mechanic')}"),
+            ft.dropdown.Option("cashier", f"💰 {get_text('role_cashier')}"),
         ],
     )
     
@@ -264,9 +258,25 @@ def create_add_dialog(on_save, on_close):
         focused_border_color=PRIMARY_COLOR,
     )
     
+    status = ft.Dropdown(
+        label=get_text("employees_status"),
+        hint_text="เลือกสถานะ",
+        border_radius=12,
+        bgcolor=ft.Colors.WHITE,
+        filled=True,
+        value="active",
+        content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
+        border_color=ft.Colors.GREY_300,
+        focused_border_color=PRIMARY_COLOR,
+        options=[
+            ft.dropdown.Option("active", f"✅ {get_text('status_active')}"),
+            ft.dropdown.Option("inactive", f"❌ {get_text('status_inactive')}"),
+        ],
+    )
+    
     def save(e):
-        if username.value and password.value and fullname.value and role.value:
-            on_save(username.value, password.value, fullname.value, role.value, phone.value)
+        if name.value and role.value:
+            on_save(name.value, role.value, phone.value, status.value)
     
     return ft.AlertDialog(
         modal=True,
@@ -298,18 +308,17 @@ def create_add_dialog(on_save, on_close):
         content=ft.Container(
             content=ft.Column(
                 [
-                    username, ft.Container(height=12),
-                    password, ft.Container(height=12),
-                    fullname, ft.Container(height=12),
+                    name, ft.Container(height=12),
                     role, ft.Container(height=12),
-                    phone,
+                    phone, ft.Container(height=12),
+                    status,
                 ],
                 spacing=0,
                 scroll=ft.ScrollMode.AUTO,
             ),
             padding=ft.padding.all(24),
             width=520,
-            height=520,
+            height=450,
         ),
         actions=[
             ft.Container(
@@ -339,20 +348,9 @@ def create_add_dialog(on_save, on_close):
 def create_edit_dialog(emp, on_save, on_close):
     """Create edit employee dialog"""
     
-    username = ft.TextField(
-        label=get_text("employees_username"),
-        value=emp.get("username", ""),
-        read_only=True,
-        border_radius=12,
-        bgcolor=ft.Colors.GREY_100,
-        filled=True,
-        prefix_icon=ft.Icons.PERSON_OUTLINE,
-        content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
-    )
-    
-    fullname = ft.TextField(
-        label=get_text("employees_fullname"),
-        value=emp.get("fullname", ""),
+    name = ft.TextField(
+        label=get_text("employees_name"),
+        value=emp.get("name", ""),
         border_radius=12,
         bgcolor=ft.Colors.WHITE,
         filled=True,
@@ -369,9 +367,8 @@ def create_edit_dialog(emp, on_save, on_close):
         content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
         options=[
             ft.dropdown.Option("admin", f"👑 {get_text('role_admin')}"),
-            ft.dropdown.Option("technician", f"🔧 {get_text('role_technician')}"),
-            ft.dropdown.Option("reception", f"📞 {get_text('role_reception')}"),
-            ft.dropdown.Option("manager", f"📊 {get_text('role_manager')}"),
+            ft.dropdown.Option("mechanic", f"🔧 {get_text('role_mechanic')}"),
+            ft.dropdown.Option("cashier", f"💰 {get_text('role_cashier')}"),
         ],
     )
     
@@ -385,26 +382,26 @@ def create_edit_dialog(emp, on_save, on_close):
         content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
     )
     
-    password = ft.TextField(
-        label=get_text("new_password_optional"),
-        hint_text=get_text("leave_blank_if_no_change"),
-        password=True,
-        can_reveal_password=True,
+    status = ft.Dropdown(
+        label=get_text("employees_status"),
+        value=emp.get("status", "active"),
         border_radius=12,
         bgcolor=ft.Colors.WHITE,
         filled=True,
-        prefix_icon=ft.Icons.LOCK_OUTLINE,
         content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
+        options=[
+            ft.dropdown.Option("active", f"✅ {get_text('status_active')}"),
+            ft.dropdown.Option("inactive", f"❌ {get_text('status_inactive')}"),
+        ],
     )
     
     def save(e):
         update_data = {
-            "fullname": fullname.value,
+            "name": name.value,
             "role": role.value,
             "phone": phone.value,
+            "status": status.value,
         }
-        if password.value:
-            update_data["password"] = password.value
         on_save(update_data)
     
     return ft.AlertDialog(
@@ -426,18 +423,17 @@ def create_edit_dialog(emp, on_save, on_close):
         content=ft.Container(
             content=ft.Column(
                 [
-                    username, ft.Container(height=12),
-                    fullname, ft.Container(height=12),
+                    name, ft.Container(height=12),
                     role, ft.Container(height=12),
                     phone, ft.Container(height=12),
-                    password,
+                    status,
                 ],
                 spacing=0,
                 scroll=ft.ScrollMode.AUTO,
             ),
             padding=ft.padding.all(24),
             width=520,
-            height=550,
+            height=500,
         ),
         actions=[
             ft.Container(

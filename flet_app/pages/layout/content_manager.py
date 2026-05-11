@@ -52,6 +52,26 @@ class ContentManager:
             content = self._get_repair_create_content()
         elif index == 17:
             content = self._get_repair_list_content()
+        elif index == 18:
+            content = self._get_repair_detail_content()
+        elif index == 19:
+            content = self._get_invoice_create_content()
+        elif index == 20:
+            content = self._get_invoice_list_content()
+        elif index == 21:
+            content = self._get_invoice_detail_content()
+        elif index == 22:
+            content = self._get_purchase_order_create_content()
+        elif index == 23:
+            content = self._get_purchase_order_list_content()
+        elif index == 24:
+            content = self._get_purchase_order_detail_content()
+        elif index == 25:
+            content = self._get_purchase_order_receive_content()
+        elif index == 26:
+            content = self._get_stock_movement_content()
+        elif index == 27:
+            content = self._get_promotion_items_content()
         else:
             content = self._get_placeholder(f"📄 {get_text('under_development')}")
         
@@ -69,6 +89,25 @@ class ContentManager:
         def navigate(page_name, *args, **kwargs):
             self.parent.navigate_to(page_name, **kwargs)
         return EmployeesContent(self.parent.page, self.parent.client, self.parent.user, navigate).build()
+    
+    def _get_invoice_detail_content(self):
+        """Get invoice detail page"""
+        from pages.invoices.invoice_detail import InvoiceDetailContent
+        
+        def navigate(page_name, *args, **kwargs):
+            self.parent.navigate_to(page_name, **kwargs)
+        
+        invoice_id = getattr(self.parent, '_invoice_id', None)
+        if invoice_id:
+            delattr(self.parent, '_invoice_id')
+            
+        return InvoiceDetailContent(
+            self.parent.page, 
+            self.parent.client, 
+            self.parent.user, 
+            navigate, 
+            invoice_id=invoice_id
+        ).build()
     
     def _get_services_content(self):
         try:
@@ -222,6 +261,167 @@ class ContentManager:
             self.parent.navigate_to(page_name, **kwargs)
         return RepairListContent(self.parent.page, self.parent.client, self.parent.user, navigate).build()
     
+    def _get_repair_detail_content(self):
+        """Get repair detail page"""
+        from pages.repair.repair_detail import RepairDetailContent
+        
+        def navigate(page_name, *args, **kwargs):
+            self.parent.navigate_to(page_name, **kwargs)
+        
+        repair_id = getattr(self.parent, '_repair_id', None)
+        if repair_id:
+            delattr(self.parent, '_repair_id')
+        
+        return RepairDetailContent(
+            self.parent.page, 
+            self.parent.client, 
+            self.parent.user, 
+            navigate, 
+            repair_id=repair_id
+        ).build()
+    
+    def _get_invoice_create_content(self):
+        """Get invoice create page (Process 6)"""
+        from pages.invoices.invoice_create import InvoiceCreateContent
+        
+        def navigate(page_name, *args, **kwargs):
+            self.parent.navigate_to(page_name, **kwargs)
+        
+        job_order_id = getattr(self.parent, '_job_order_id', None)
+        if job_order_id:
+            delattr(self.parent, '_job_order_id')
+        
+        return InvoiceCreateContent(
+            self.parent.page, 
+            self.parent.client, 
+            self.parent.user, 
+            navigate, 
+            job_order_id=job_order_id,
+            content_container=self.current_view
+        ).build()
+    
+    def _get_invoice_list_content(self):
+        """Get invoice list page (Process 6)"""
+        from pages.invoices.invoice_list import InvoiceListContent
+        
+        def navigate(page_name, *args, **kwargs):
+            self.parent.navigate_to(page_name, **kwargs)
+        
+        return InvoiceListContent(
+            self.parent.page, 
+            self.parent.client, 
+            self.parent.user, 
+            navigate
+        ).build()
+    
+    # ========== Process 7: Stock Management (Purchase Orders) ==========
+    
+    def _get_purchase_order_create_content(self):
+        """Get purchase order create page (Process 7.2)"""
+        from pages.purchase.purchase_order_create import PurchaseOrderCreateContent
+        
+        def navigate(page_name, *args, **kwargs):
+            self.parent.navigate_to(page_name, **kwargs)
+        
+        return PurchaseOrderCreateContent(
+            self.parent.page, 
+            self.parent.client, 
+            self.parent.user, 
+            navigate,
+            content_container=self.current_view
+        ).build()
+    
+    def _get_purchase_order_list_content(self):
+        """Get purchase order list page (Process 7.2)"""
+        from pages.purchase.purchase_order_list import PurchaseOrderListContent
+        
+        def navigate(page_name, *args, **kwargs):
+            self.parent.navigate_to(page_name, **kwargs)
+        
+        return PurchaseOrderListContent(
+            self.parent.page, 
+            self.parent.client, 
+            self.parent.user, 
+            navigate
+        ).build()
+    
+    def _get_purchase_order_detail_content(self):
+        """Get purchase order detail page"""
+        from pages.purchase.purchase_order_detail import PurchaseOrderDetailContent
+        
+        def navigate(page_name, *args, **kwargs):
+            self.parent.navigate_to(page_name, **kwargs)
+        
+        po_id = getattr(self.parent, '_po_id', None)
+        if po_id:
+            delattr(self.parent, '_po_id')
+        
+        return PurchaseOrderDetailContent(
+            self.parent.page, 
+            self.parent.client, 
+            self.parent.user, 
+            navigate, 
+            po_id=po_id
+        ).build()
+    
+    def _get_purchase_order_receive_content(self):
+        """Get purchase order receive page (Process 7.3)"""
+        from pages.purchase.purchase_order_receive import PurchaseOrderReceiveContent
+        
+        def navigate(page_name, *args, **kwargs):
+            self.parent.navigate_to(page_name, **kwargs)
+        
+        po_id = getattr(self.parent, '_po_id', None)
+        if po_id:
+            delattr(self.parent, '_po_id')
+        
+        return PurchaseOrderReceiveContent(
+            self.parent.page, 
+            self.parent.client, 
+            self.parent.user, 
+            navigate, 
+            po_id=po_id
+        ).build()
+    
+    def _get_stock_movement_content(self):
+        """Get stock movement history page"""
+        from pages.purchase.stock_movement import StockMovementContent
+        
+        def navigate(page_name, *args, **kwargs):
+            self.parent.navigate_to(page_name, **kwargs)
+        
+        return StockMovementContent(
+            self.parent.page, 
+            self.parent.client, 
+            self.parent.user, 
+            navigate
+        ).build()
+    
+    # ========== Process 6.5: Promotion Items ==========
+    
+    def _get_promotion_items_content(self):
+        """Get promotion items management page"""
+        from pages.promotion_items import PromotionItemsContent
+        
+        def navigate(page_name, *args, **kwargs):
+            self.parent.navigate_to(page_name, **kwargs)
+        
+        promotion_id = getattr(self.parent, '_promotion_id', None)
+        promotion_name = getattr(self.parent, '_promotion_name', None)
+        if promotion_id:
+            delattr(self.parent, '_promotion_id')
+        if promotion_name:
+            delattr(self.parent, '_promotion_name')
+        
+        return PromotionItemsContent(
+            self.parent.page, 
+            self.parent.client, 
+            self.parent.user, 
+            navigate, 
+            promotion_id=promotion_id,
+            promotion_name=promotion_name
+        ).build()
+    
     def _get_placeholder(self, title):
         return ft.Container(
             content=ft.Column(
@@ -235,3 +435,40 @@ class ContentManager:
             expand=True,
             alignment=Alignment.CENTER,
         )
+    def _get_purchase_order_receive_content(self):
+        """Get purchase order receive page (Process 7.3)"""
+        from pages.purchase.purchase_order_receive import PurchaseOrderReceiveContent
+    
+        def navigate(page_name, *args, **kwargs):
+            self.parent.navigate_to(page_name, **kwargs)
+    
+        po_id = getattr(self.parent, '_po_id', None)
+        if po_id:
+            delattr(self.parent, '_po_id')
+    
+        return PurchaseOrderReceiveContent(
+            self.parent.page, 
+            self.parent.client, 
+            self.parent.user, 
+            navigate, 
+            po_id=po_id
+        ).build()   
+    
+    def _get_purchase_order_detail_content(self):
+        """Get purchase order detail page"""
+        from pages.purchase.purchase_order_detail import PurchaseOrderDetailContent
+    
+        def navigate(page_name, *args, **kwargs):
+            self.parent.navigate_to(page_name, **kwargs)
+    
+        po_id = getattr(self.parent, '_po_id', None)
+        if po_id:
+            delattr(self.parent, '_po_id')
+    
+        return PurchaseOrderDetailContent(
+            self.parent.page, 
+            self.parent.client, 
+            self.parent.user, 
+            navigate, 
+            po_id=po_id
+        ).build()     

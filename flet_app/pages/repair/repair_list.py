@@ -56,17 +56,6 @@ class RepairListContent:
         return ft.Container(
             content=ft.Row(
                 [
-                    ft.IconButton(
-                        icon=ft.Icons.ARROW_BACK,
-                        icon_size=24,
-                        icon_color=ft.Colors.WHITE,
-                        on_click=lambda e: self.navigate("dashboard"),
-                        tooltip=get_text("back"),
-                        style=ft.ButtonStyle(
-                            bgcolor=ft.Colors.with_opacity(0.2, ft.Colors.WHITE),
-                            shape=ft.RoundedRectangleBorder(radius=10),
-                        ),
-                    ),
                     ft.Column(
                         [
                             ft.Text(
@@ -108,10 +97,6 @@ class RepairListContent:
                 colors=[self.primary_color, self.primary_dark],
             ),
             border_radius=ft.BorderRadius.only(bottom_left=20, bottom_right=20),
-            shadow=ft.BoxShadow(
-                blur_radius=15,
-                color=ft.Colors.with_opacity(0.2, ft.Colors.BLACK),
-            ),
         )
     
     def _build_search_bar(self):
@@ -131,7 +116,6 @@ class RepairListContent:
             expand=True,
         )
         
-        # Add on_change after creation
         self.status_filter.on_change = self.filter_repairs
         
         self.search_field = ft.TextField(
@@ -164,42 +148,36 @@ class RepairListContent:
         )
     
     def _build_table(self):
-        # Table Header
         table_header = ft.Container(
             content=ft.Row([
                 ft.Container(
                     content=ft.Text(get_text("repair_no"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
                     width=100,
-                    alignment=ft.Alignment(-1, 0),
                     padding=ft.padding.only(left=10),
                 ),
                 ft.Container(
                     content=ft.Text(get_text("job_number"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
                     width=100,
-                    alignment=ft.Alignment(-1, 0),
                     padding=ft.padding.only(left=10),
                 ),
                 ft.Container(
                     content=ft.Text(get_text("customer_name"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
                     width=130,
-                    alignment=ft.Alignment(-1, 0),
                     padding=ft.padding.only(left=10),
                 ),
                 ft.Container(
                     content=ft.Text(get_text("plate_number"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
                     width=100,
-                    alignment=ft.Alignment(-1, 0),
                     padding=ft.padding.only(left=10),
                 ),
                 ft.Container(
                     content=ft.Text(get_text("mechanic"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
                     width=120,
-                    alignment=ft.Alignment(-1, 0),
                     padding=ft.padding.only(left=10),
                 ),
                 ft.Container(
                     content=ft.Text(get_text("status"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=100,
+                    width=110,
                     alignment=ft.Alignment(0, 0),
                 ),
                 ft.Container(
@@ -234,7 +212,6 @@ class RepairListContent:
         )
     
     def load_repair_orders(self):
-        self.loading_indicator = True
         self.table_rows.controls.clear()
         self.page.update()
         
@@ -268,18 +245,21 @@ class RepairListContent:
     def search_repairs(self, e):
         keyword = self.search_field.value.lower() if self.search_field.value else ""
         if keyword:
-            self.filtered_orders = [
-                r for r in self.repair_orders
-                if keyword in f"R{str(r.get('id', 0)):04d}".lower()
-                or keyword in r.get("job_no", "").lower()
-                or keyword in r.get("customer_name", "").lower()
-                or keyword in r.get("plate_number", "").lower()
-                or keyword in r.get("mechanic_name", "").lower()
-            ]
+            self.filtered_orders = []
+            for r in self.repair_orders:
+                # Build repair number as string without format code
+                repair_id = r.get('id', 0)
+                repair_no = f"R{repair_id:04d}" if isinstance(repair_id, int) else f"R{str(repair_id)}"
+                
+                if (keyword in repair_no.lower() or
+                    keyword in r.get("job_no", "").lower() or
+                    keyword in r.get("customer_name", "").lower() or
+                    keyword in r.get("plate_number", "").lower() or
+                    keyword in r.get("mechanic_name", "").lower()):
+                    self.filtered_orders.append(r)
         else:
             self.filtered_orders = self.repair_orders.copy()
         
-        # Re-apply status filter
         if self.status_filter.value != "all":
             self.filtered_orders = [r for r in self.filtered_orders if r.get("status") == self.status_filter.value]
         
@@ -320,7 +300,7 @@ class RepairListContent:
     
     def _create_repair_row(self, order: Dict, index: int):
         repair_id = order.get("id")
-        repair_no = f"R{repair_id:04d}"
+        repair_no = f"R{repair_id:04d}" if isinstance(repair_id, int) else f"R{str(repair_id)}"
         job_no = order.get("job_no", "-")
         customer_name = order.get("customer_name", "-")
         plate_number = order.get("plate_number", "-")
@@ -347,14 +327,17 @@ class RepairListContent:
             "completed": get_text("completed")
         }
         
+        # Status badge with click to change
         status_badge = ft.Container(
             content=ft.Row([
                 ft.Icon(ft.Icons.CIRCLE, size=8, color=ft.Colors.WHITE),
                 ft.Text(status_texts.get(status, status), size=11, color=ft.Colors.WHITE),
+                ft.Icon(ft.Icons.ARROW_DROP_DOWN, size=16, color=ft.Colors.WHITE),
             ], spacing=4),
             bgcolor=status_colors.get(status, "#607D8B"),
             border_radius=12,
             padding=ft.padding.symmetric(horizontal=10, vertical=4),
+            on_click=lambda e, rid=repair_id, cur_status=status: self.show_update_status_dialog(rid, cur_status),
         )
         
         view_btn = ft.Container(
@@ -367,51 +350,36 @@ class RepairListContent:
             border_radius=6,
         )
         
-        update_btn = ft.Container(
-            content=ft.Row([
-                ft.Icon(ft.Icons.EDIT_OUTLINED, size=16, color="#1565C0"),
-                ft.Text(get_text("update_status"), size=12, color="#1565C0"),
-            ], spacing=4),
-            on_click=lambda e, rid=repair_id, cur_status=status: self.show_update_status_dialog(rid, cur_status),
-            padding=ft.padding.symmetric(horizontal=8, vertical=4),
-            border_radius=6,
-        )
-        
         row = ft.Container(
             content=ft.Row([
                 ft.Container(
                     content=ft.Text(repair_no, size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
                     width=100,
-                    alignment=ft.Alignment(-1, 0),
                     padding=ft.padding.only(left=10),
                 ),
                 ft.Container(
                     content=ft.Text(job_no, size=13, color="#1E293B"),
                     width=100,
-                    alignment=ft.Alignment(-1, 0),
                     padding=ft.padding.only(left=10),
                 ),
                 ft.Container(
                     content=ft.Text(customer_name, size=13, color="#1E293B", max_lines=1),
                     width=130,
-                    alignment=ft.Alignment(-1, 0),
                     padding=ft.padding.only(left=10),
                 ),
                 ft.Container(
                     content=ft.Text(plate_number, size=12, color="#64748B", max_lines=1),
                     width=100,
-                    alignment=ft.Alignment(-1, 0),
                     padding=ft.padding.only(left=10),
                 ),
                 ft.Container(
                     content=ft.Text(mechanic_name, size=12, color="#64748B", max_lines=1),
                     width=120,
-                    alignment=ft.Alignment(-1, 0),
                     padding=ft.padding.only(left=10),
                 ),
                 ft.Container(
                     content=status_badge,
-                    width=100,
+                    width=110,
                     alignment=ft.Alignment(0, 0),
                 ),
                 ft.Container(
@@ -420,7 +388,7 @@ class RepairListContent:
                     alignment=ft.Alignment(0, 0),
                 ),
                 ft.Container(
-                    content=ft.Row([view_btn, update_btn], spacing=4),
+                    content=view_btn,
                     width=120,
                     alignment=ft.Alignment(0, 0),
                 ),
@@ -487,6 +455,7 @@ class RepairListContent:
             self.display_repairs()
     
     def view_repair_detail(self, repair_id: int):
+        """ดูรายละเอียดการซ่อม"""
         self.navigate("repair_detail", repair_id=repair_id)
     
     def show_update_status_dialog(self, repair_id: int, current_status: str):

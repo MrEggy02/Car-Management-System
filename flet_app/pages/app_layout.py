@@ -31,6 +31,8 @@ class AppLayout:
         self.job_order_menu_expanded = False
         self.quotation_menu_expanded = False
         self.repair_menu_expanded = False
+        self.invoice_menu_expanded = False
+        self.purchase_menu_expanded = False
         self.current_dialog = None
         self.sidebar_visible = True
         self.sidebar_width = 280
@@ -93,6 +95,8 @@ class AppLayout:
         job_order_menu_expanded = self.job_order_menu_expanded
         quotation_menu_expanded = self.quotation_menu_expanded
         repair_menu_expanded = self.repair_menu_expanded
+        invoice_menu_expanded = self.invoice_menu_expanded
+        purchase_menu_expanded = self.purchase_menu_expanded
 
         # Clear page
         self.page.controls.clear()
@@ -104,6 +108,8 @@ class AppLayout:
         self.job_order_menu_expanded = job_order_menu_expanded
         self.quotation_menu_expanded = quotation_menu_expanded
         self.repair_menu_expanded = repair_menu_expanded
+        self.invoice_menu_expanded = invoice_menu_expanded
+        self.purchase_menu_expanded = purchase_menu_expanded
 
         # Rebuild everything
         self.sidebar = self.sidebar_manager.build()
@@ -185,6 +191,22 @@ class AppLayout:
         self.repair_menu_expanded = not self.repair_menu_expanded
         if hasattr(self.sidebar_manager, 'repair_submenu_column') and self.sidebar_manager.repair_submenu_column:
             self.sidebar_manager.repair_submenu_column.visible = self.repair_menu_expanded
+            self.sidebar_manager.update_arrow_icons()
+        self.page.update()
+
+    def toggle_invoice_menu(self):
+        """Toggle invoice management submenu visibility"""
+        self.invoice_menu_expanded = not self.invoice_menu_expanded
+        if hasattr(self.sidebar_manager, 'invoice_submenu_column') and self.sidebar_manager.invoice_submenu_column:
+            self.sidebar_manager.invoice_submenu_column.visible = self.invoice_menu_expanded
+            self.sidebar_manager.update_arrow_icons()
+        self.page.update()
+
+    def toggle_purchase_menu(self):
+        """Toggle purchase management submenu visibility"""
+        self.purchase_menu_expanded = not self.purchase_menu_expanded
+        if hasattr(self.sidebar_manager, 'purchase_submenu_column') and self.sidebar_manager.purchase_submenu_column:
+            self.sidebar_manager.purchase_submenu_column.visible = self.purchase_menu_expanded
             self.sidebar_manager.update_arrow_icons()
         self.page.update()
 
@@ -286,6 +308,46 @@ class AppLayout:
                         btn_data["container"].bgcolor = None
                 self.page.update()
 
+    def on_invoice_submenu_hover(self, e, index):
+        """Handle hover effects for invoice submenu"""
+        if hasattr(self.sidebar_manager, 'invoice_submenu_buttons'):
+            btn_data = next(
+                (
+                    btn
+                    for btn in self.sidebar_manager.invoice_submenu_buttons
+                    if btn["index"] == index
+                ),
+                None,
+            )
+            if btn_data:
+                if e.data == "true":
+                    if index != self.current_index:
+                        btn_data["container"].bgcolor = self.hover_color
+                else:
+                    if index != self.current_index:
+                        btn_data["container"].bgcolor = None
+                self.page.update()
+
+    def on_purchase_submenu_hover(self, e, index):
+        """Handle hover effects for purchase submenu"""
+        if hasattr(self.sidebar_manager, 'purchase_submenu_buttons'):
+            btn_data = next(
+                (
+                    btn
+                    for btn in self.sidebar_manager.purchase_submenu_buttons
+                    if btn["index"] == index
+                ),
+                None,
+            )
+            if btn_data:
+                if e.data == "true":
+                    if index != self.current_index:
+                        btn_data["container"].bgcolor = self.hover_color
+                else:
+                    if index != self.current_index:
+                        btn_data["container"].bgcolor = None
+                self.page.update()
+
     def on_nav_hover(self, e, index):
         """Handle hover effects for main nav"""
         btn_data = (
@@ -339,10 +401,24 @@ class AppLayout:
                 self.sidebar_manager.update_arrow_icons()
                 self.page.update()
 
-        if index in range(16, 18) and not self.repair_menu_expanded:
+        if index in range(16, 19) and not self.repair_menu_expanded:
             self.repair_menu_expanded = True
             if hasattr(self.sidebar_manager, 'repair_submenu_column') and self.sidebar_manager.repair_submenu_column:
                 self.sidebar_manager.repair_submenu_column.visible = True
+                self.sidebar_manager.update_arrow_icons()
+                self.page.update()
+
+        if index in range(19, 21) and not self.invoice_menu_expanded:
+            self.invoice_menu_expanded = True
+            if hasattr(self.sidebar_manager, 'invoice_submenu_column') and self.sidebar_manager.invoice_submenu_column:
+                self.sidebar_manager.invoice_submenu_column.visible = True
+                self.sidebar_manager.update_arrow_icons()
+                self.page.update()
+
+        if index in range(22, 27) and not self.purchase_menu_expanded:
+            self.purchase_menu_expanded = True
+            if hasattr(self.sidebar_manager, 'purchase_submenu_column') and self.sidebar_manager.purchase_submenu_column:
+                self.sidebar_manager.purchase_submenu_column.visible = True
                 self.sidebar_manager.update_arrow_icons()
                 self.page.update()
 
@@ -354,7 +430,9 @@ class AppLayout:
         # Switch content
         self.content_manager.switch_content(index)
 
-    def navigate_to(self, page_name: str, customer_id: int = None, order_id: int = None, quotation_id: int = None, job_order_id: int = None, repair_id: int = None):
+    def navigate_to(self, page_name: str, customer_id: int = None, order_id: int = None, 
+                    quotation_id: int = None, job_order_id: int = None, repair_id: int = None,
+                    po_id: int = None, promotion_id: int = None, promotion_name: str = None):
         """Navigate to a specific page by name with optional parameters"""
         page_index_map = {
             "dashboard": 0,
@@ -373,6 +451,16 @@ class AppLayout:
             "quotation_list": 15,
             "repair_create": 16,
             "repair_list": 17,
+            "repair_detail": 18,
+            "invoice_create": 19,
+            "invoice_list": 20,
+            "invoice_detail": 21,
+            "purchase_order_create": 22,
+            "purchase_order_list": 23,
+            "purchase_order_detail": 24,
+            "purchase_order_receive": 25,
+            "stock_movement": 26,
+            "promotion_items": 27,
         }
 
         # Store IDs for pages
@@ -396,6 +484,19 @@ class AppLayout:
         
         if page_name == "repair_detail" and repair_id:
             self._repair_id = repair_id
+        
+        if page_name == "invoice_create" and job_order_id:
+            self._job_order_id = job_order_id
+        
+        if page_name == "purchase_order_detail" and po_id:
+            self._po_id = po_id
+        
+        if page_name == "purchase_order_receive" and po_id:
+            self._po_id = po_id
+        
+        if page_name == "promotion_items":
+            self._promotion_id = promotion_id
+            self._promotion_name = promotion_name
 
         if page_name in page_index_map:
             self.on_nav_click(page_index_map[page_name])

@@ -87,7 +87,6 @@ class JobOrderListContent:
                 colors=[self.primary_color, self.primary_dark],
             ),
             border_radius=ft.BorderRadius.only(bottom_left=20, bottom_right=20),
-            
         )
         
         # Filter section
@@ -102,7 +101,6 @@ class JobOrderListContent:
                 ft.dropdown.Option("quoting", get_text("quoting")),
                 ft.dropdown.Option("repairing", get_text("repairing")),
                 ft.dropdown.Option("finished", get_text("finished")),
-                ft.dropdown.Option("closed", get_text("closed")),
                 ft.dropdown.Option("cancelled", get_text("cancelled")),
             ],
             value="all",
@@ -117,13 +115,13 @@ class JobOrderListContent:
             prefix_icon=ft.Icons.SEARCH,
             content_padding=ft.padding.symmetric(horizontal=16, vertical=14),
             expand=True,
-            on_change=self.search_orders,
             border_color=ft.Colors.GREY_200,
             focused_border_color=self.primary_color,
         )
         
-        # Add on_change after creation
-        self.status_filter.on_change = self.filter_orders
+        # CRITICAL: Set on_change handlers for real-time filtering
+        self.status_filter.on_change = self.apply_filters_from_event
+        self.search_field.on_change = self.apply_filters_from_event
         
         refresh_button = ft.IconButton(
             icon=ft.Icons.REFRESH,
@@ -261,30 +259,19 @@ class JobOrderListContent:
         
         try:
             orders = self.client.get_job_orders()
-            print(f"DEBUG: Loaded orders from API: {orders}")  # Debug print
+            print(f"DEBUG: Loaded orders from API: {len(orders) if orders else 0}")
             
             if orders:
                 self.job_orders = orders
-                self.filtered_orders = orders.copy()
             else:
                 self.job_orders = []
-                self.filtered_orders = []
-            
-            print(f"DEBUG: Total orders: {len(self.job_orders)}")  # Debug print
             
             # Update stats
             self._update_stats()
             
-            if self.filtered_orders and len(self.filtered_orders) > 0:
-                self.loading_indicator.visible = False
-                for order in self.filtered_orders:
-                    self.orders_list.controls.append(
-                        self._create_order_card(order)
-                    )
-            else:
-                self.loading_indicator.visible = False
-                self.empty_state.visible = True
-            
+            # Apply filters and display immediately
+            self.apply_filters()
+            self.loading_indicator.visible = False
             self.page.update()
             
         except Exception as ex:
@@ -313,37 +300,38 @@ class JobOrderListContent:
             self.stats_container.content.controls[1].content.controls[1].controls[0].value = str(pending)
             self.stats_container.content.controls[2].content.controls[1].controls[0].value = str(repairing)
             self.stats_container.content.controls[3].content.controls[1].controls[0].value = str(completed)
+        self.page.update()
     
-    def filter_orders(self, e):
-        """Filter orders by status"""
-        status = e.control.value
-        if status and status != "all":
-            self.filtered_orders = [o for o in self.job_orders if o.get("status") == status]
-        else:
-            self.filtered_orders = self.job_orders.copy()
-        self.display_orders()
+    def apply_filters_from_event(self, e):
+        """Called when dropdown or search changes - instantly update display"""
+        print(f"DEBUG: Filter changed - status: {self.status_filter.value}, search: {self.search_field.value}")
+        self.apply_filters()
+        self.page.update()
     
-    def search_orders(self, e):
-        """Search orders by keyword"""
-        keyword = e.control.value.lower() if e.control.value else ""
+    def apply_filters(self):
+        """Apply both status filter and search filter - instantly update UI"""
+        selected_status = self.status_filter.value
+        keyword = self.search_field.value.lower() if self.search_field.value else ""
+        
+        # Start with all orders
+        filtered = self.job_orders.copy()
+        
+        # Apply status filter
+        if selected_status and selected_status != "all":
+            filtered = [o for o in filtered if o.get("status") == selected_status]
+        
+        # Apply search filter
         if keyword:
-            self.filtered_orders = [
-                o for o in self.job_orders
+            filtered = [
+                o for o in filtered
                 if keyword in o.get("job_no", "").lower()
                 or keyword in o.get("customer_name", "").lower()
                 or keyword in o.get("plate_number", "").lower()
             ]
-        else:
-            self.filtered_orders = self.job_orders.copy()
         
-        # Re-apply status filter
-        if self.status_filter.value != "all":
-            self.filtered_orders = [o for o in self.filtered_orders if o.get("status") == self.status_filter.value]
+        self.filtered_orders = filtered
         
-        self.display_orders()
-    
-    def display_orders(self):
-        """Display filtered orders"""
+        # Clear and rebuild the list
         self.orders_list.controls.clear()
         
         if self.filtered_orders and len(self.filtered_orders) > 0:
@@ -353,6 +341,36 @@ class JobOrderListContent:
                 )
             self.empty_state.visible = False
         else:
+            # Show appropriate "no data" message
+            if selected_status != "all" and keyword:
+                status_names = {
+                    "pending": get_text("pending"),
+                    "quoting": get_text("quoting"),
+                    "repairing": get_text("repairing"),
+                    "finished": get_text("finished"),
+                    "cancelled": get_text("cancelled")
+                }
+                status_name = status_names.get(selected_status, selected_status)
+                message = get_text("no_orders_for_status_and_search").format(
+                    status=status_name,
+                    search=keyword
+                )
+            elif selected_status != "all":
+                status_names = {
+                    "pending": get_text("pending"),
+                    "quoting": get_text("quoting"),
+                    "repairing": get_text("repairing"),
+                    "finished": get_text("finished"),
+                    "cancelled": get_text("cancelled")
+                }
+                status_name = status_names.get(selected_status, selected_status)
+                message = get_text("no_orders_for_status").format(status=status_name)
+            elif keyword:
+                message = get_text("no_orders_for_search").format(search=keyword)
+            else:
+                message = get_text("no_orders_found")
+            
+            self.empty_state.content.controls[1].value = message
             self.empty_state.visible = True
         
         self.page.update()
@@ -457,6 +475,17 @@ class JobOrderListContent:
                             side=ft.BorderSide(1, ft.Colors.GREY_300),
                         ),
                     ),
+                    ft.OutlinedButton(
+                        content=ft.Row([
+                            ft.Icon(ft.Icons.RECEIPT, size=16, color=ft.Colors.GREEN_600),
+                            ft.Text(get_text("create_invoice"), size=12, color=ft.Colors.GREEN_600),
+                        ], spacing=4),
+                        on_click=lambda e, oid=order_id: self.create_invoice(oid),
+                        style=ft.ButtonStyle(
+                            shape=ft.RoundedRectangleBorder(radius=8),
+                            side=ft.BorderSide(1, ft.Colors.GREEN_600),
+                        ),
+                    ),
                 ], alignment=ft.MainAxisAlignment.END, spacing=10),
             ]),
             padding=ft.padding.all(16),
@@ -537,6 +566,10 @@ class JobOrderListContent:
         self.page.overlay.append(dialog)
         dialog.open = True
         self.page.update()
+    
+    def create_invoice(self, job_order_id: int):
+        """Create invoice for this job order"""
+        self.navigate("invoice_create", job_order_id=job_order_id)
     
     def close_dialog(self, dialog):
         dialog.open = False

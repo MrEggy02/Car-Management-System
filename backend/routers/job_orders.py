@@ -267,3 +267,69 @@ def delete_job_order(order_id: int, user: dict = Depends(authenticate_user)):
     finally:
         cursor.close()
         db.close()
+        
+@router.get("/job-orders/{job_order_id}/invoice-info")
+def get_invoice_info_by_job_order(
+    job_order_id: int, 
+    user: dict = Depends(authenticate_user)
+):
+    """Get invoice information for a job order (parts used + services)"""
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+    try:
+        # Get job order info with quotation total
+        cursor.execute("""
+            SELECT 
+                jo.id, jo.job_no, jo.problem_description,
+                c.name as customer_name, c.phone as customer_phone,
+                v.plate_number, v.brand, v.model, v.year, v.color,
+                q.id as quotation_id, q.total_price as quotation_total
+            FROM job_orders jo
+            LEFT JOIN customers c ON jo.customer_id = c.id
+            LEFT JOIN vehicles v ON jo.vehicle_id = v.id
+            LEFT JOIN quotations q ON jo.id = q.job_order_id AND q.status = 'approved'
+            WHERE jo.id = %s
+        """, (job_order_id,))
+        
+        job_info = cursor.fetchone()
+        if not job_info:
+            raise HTTPException(status_code=404, detail="Job order not found")
+        
+        # Get parts used from repair
+        cursor.execute("""
+            SELECT 
+                pu.*, p.name as part_name, p.part_code, p.sell_price
+            FROM parts_usage pu
+            LEFT JOIN parts p ON pu.part_id = p.id
+            LEFT JOIN repair_orders ro ON pu.repair_id = ro.id
+            WHERE ro.job_order_id = %s
+        """, (job_order_id,))
+        
+        parts_usage = cursor.fetchall()
+        
+        # Get services from quotation items (if any)
+        if job_info.get('quotation_id'):
+            cursor.execute("""
+                SELECT 
+                    qi.*, s.service_name as name, s.price as unit_price
+                FROM quotation_items qi
+                LEFT JOIN services s ON qi.ref_id = s.id
+                WHERE qi.quotation_id = %s AND qi.item_type = 'service'
+            """, (job_info.get('quotation_id'),))
+            services = cursor.fetchall()
+        else:
+            services = []
+        
+        return {
+            "job_info": job_info,
+            "parts_usage": parts_usage,
+            "services": services
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error getting invoice info: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        db.close()

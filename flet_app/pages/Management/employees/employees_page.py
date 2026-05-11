@@ -82,7 +82,7 @@ class EmployeesContent:
         
         # Search bar with beautiful design
         self.search_input = ft.TextField(
-            hint_text=f"🔍 {get_text('search_employees')}",
+            hint_text=f" {get_text('search_employees')}",
             border_radius=12,
             bgcolor=ft.Colors.WHITE,
             filled=True,
@@ -245,10 +245,9 @@ class EmployeesContent:
         else:
             self.filtered_employees = [
                 emp for emp in self.employees_data
-                if query in emp.get('fullname', '').lower()
-                or query in emp.get('username', '').lower()
+                if query in emp.get('name', '').lower()
                 or query in emp.get('role', '').lower()
-                or query in emp.get('phone', '').lower()
+                or (emp.get('phone') and query in emp.get('phone', '').lower())
             ]
         
         self.display_employees(self.filtered_employees)
@@ -298,9 +297,9 @@ class EmployeesContent:
             print(f"DEBUG: Error closing dialog: {ex}")
     
     def show_add_dialog(self, e=None):
-        def on_save(username, password, fullname, role, phone):
+        def on_save(name, role, phone, status):
             try:
-                self.client.add_employee(username, password, fullname, role, phone)
+                self.client.add_employee(name, phone, role, status)
                 self._close_dialog()
                 self.load_data()
                 self.show_snackbar(f"✅ {get_text('add_success')}")
@@ -334,7 +333,7 @@ class EmployeesContent:
     
     def delete_employee(self, emp_id):
         emp = next((e for e in self.employees_data if e.get('id') == emp_id), None)
-        emp_name = emp.get('fullname', get_text('this_employee')) if emp else get_text('this_employee')
+        emp_name = emp.get('name', get_text('this_employee')) if emp else get_text('this_employee')
         
         def on_confirm(e):
             try:

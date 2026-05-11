@@ -10,3 +10,5 @@ from . import vehicles
 from . import job_orders
 from . import quotations
 from . import repair_orders
+from . import invoices 
+from . import promotion_items 

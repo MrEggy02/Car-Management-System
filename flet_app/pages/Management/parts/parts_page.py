@@ -1,4 +1,3 @@
-# pages/parts_page.py
 import flet as ft
 import sys
 import os
@@ -22,7 +21,7 @@ class PartsContent:
         self.filtered_parts = []
         self.search_input = None
         self.current_page = 1
-        self.items_per_page = 20
+        self.items_per_page = 25
         self.total_pages = 1
         self.primary_color = "#1565C0"
         self.primary_dark = "#0D47A1"
@@ -79,12 +78,11 @@ class PartsContent:
                 colors=[self.primary_color, self.primary_dark],
             ),
             border_radius=ft.BorderRadius.only(bottom_left=20, bottom_right=20),
-            
         )
         
         # Search Bar with beautiful design
         self.search_input = ft.TextField(
-            hint_text=f"🔍 {get_text('search')} {get_text('parts_title')}...",
+            hint_text=f" {get_text('search')} {get_text('parts_title')}...",
             border_radius=12,
             bgcolor=ft.Colors.WHITE,
             filled=True,
@@ -135,11 +133,8 @@ class PartsContent:
             expand=True,
         )
         
-        # Pagination container (will be updated by update_pagination)
-        self.pagination_container = ft.Container(
-            padding=ft.padding.symmetric(vertical=16, horizontal=20),
-            bgcolor="#F5F7FA",
-        )
+        # Pagination container
+        self.update_pagination_controls()
         
         # Main content area
         main_content = ft.Container(
@@ -176,43 +171,43 @@ class PartsContent:
                     alignment=ft.Alignment(0, 0),
                 ),
                 ft.Container(
-                    content=ft.Text(get_text('parts_code'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=100,
-                    alignment=ft.Alignment(-1, 0),
-                    padding=ft.padding.only(left=10),
-                ),
-                ft.Container(
                     content=ft.Text(get_text('parts_name'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=150,
-                    alignment=ft.Alignment(-1, 0),
-                    padding=ft.padding.only(left=10),
-                ),
-                ft.Container(
-                    content=ft.Text(get_text('parts_brand'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=100,
+                    width=200,
                     alignment=ft.Alignment(-1, 0),
                     padding=ft.padding.only(left=10),
                 ),
                 ft.Container(
                     content=ft.Text(get_text('parts_stock'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=80,
+                    width=120,
                     alignment=ft.Alignment(0, 0),
                 ),
                 ft.Container(
                     content=ft.Text(get_text('cost_price'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=110,
+                    width=140,
                     alignment=ft.Alignment(1, 0),
                     padding=ft.padding.only(right=10),
                 ),
                 ft.Container(
                     content=ft.Text(get_text('sell_price'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=110,
+                    width=140,
                     alignment=ft.Alignment(1, 0),
                     padding=ft.padding.only(right=10),
                 ),
                 ft.Container(
+                    content=ft.Text(get_text('profit'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
+                    width=120,
+                    alignment=ft.Alignment(1, 0),
+                    padding=ft.padding.only(right=10),
+                ),
+                ft.Container(
+                    content=ft.Text(get_text('supplier'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
+                    width=150,
+                    alignment=ft.Alignment(-1, 0),
+                    padding=ft.padding.only(left=10),
+                ),
+                ft.Container(
                     content=ft.Text(get_text('status'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=90,
+                    width=100,
                     alignment=ft.Alignment(0, 0),
                 ),
                 ft.Container(
@@ -229,25 +224,81 @@ class PartsContent:
     def _create_table_row(self, part, index, row_number):
         """Create a single table row"""
         part_id = part.get('id')
-        part_name = part.get('name', '-')
-        part_code = part.get('part_code', '-')
-        brand = part.get('brand', '-') or '-'
+        name = part.get('name', '-')
         stock_qty = part.get('stock_qty', 0)
         min_stock = part.get('min_stock', 5)
-        sell_price = part.get('sell_price', 0)
         cost_price = part.get('cost_price', 0)
+        sell_price = part.get('sell_price', 0)
         unit = part.get('unit', get_text('unit'))
+        supplier_name = part.get('supplier_name', '-')
         
-        is_low_stock = stock_qty < min_stock
+        is_low_stock = stock_qty <= min_stock
+        profit = sell_price - cost_price
+        profit_margin = (profit / sell_price * 100) if sell_price > 0 else 0
+        
         row_bg = ft.Colors.GREY_50 if index % 2 == 0 else ft.Colors.WHITE
         
+        # Stock status badge
+        if is_low_stock:
+            stock_badge = ft.Container(
+                content=ft.Row([
+                    ft.Icon(ft.Icons.WARNING, size=14, color=ft.Colors.WHITE),
+                    ft.Text(f"{stock_qty} {unit}", size=12, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500),
+                ], spacing=4),
+                bgcolor=ft.Colors.RED_500,
+                border_radius=12,
+                padding=ft.padding.symmetric(horizontal=10, vertical=4),
+            )
+        elif stock_qty == 0:
+            stock_badge = ft.Container(
+                content=ft.Row([
+                    ft.Icon(ft.Icons.CANCEL, size=14, color=ft.Colors.WHITE),
+                    ft.Text(f"{stock_qty} {unit}", size=12, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500),
+                ], spacing=4),
+                bgcolor=ft.Colors.GREY_600,
+                border_radius=12,
+                padding=ft.padding.symmetric(horizontal=10, vertical=4),
+            )
+        else:
+            stock_badge = ft.Container(
+                content=ft.Row([
+                    ft.Icon(ft.Icons.CHECK_CIRCLE, size=14, color=ft.Colors.WHITE),
+                    ft.Text(f"{stock_qty} {unit}", size=12, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500),
+                ], spacing=4),
+                bgcolor=ft.Colors.GREEN_600,
+                border_radius=12,
+                padding=ft.padding.symmetric(horizontal=10, vertical=4),
+            )
+        
+        # Profit badge
+        if profit > 0:
+            profit_color = ft.Colors.GREEN_700
+            profit_bg = "#E8F5E9"
+        elif profit < 0:
+            profit_color = ft.Colors.RED_600
+            profit_bg = "#FFEBEE"
+        else:
+            profit_color = ft.Colors.GREY_600
+            profit_bg = "#F5F5F5"
+        
+        profit_badge = ft.Container(
+            content=ft.Column([
+                ft.Text(f"+{int(profit):,} KIP", size=12, weight=ft.FontWeight.W_600, color=profit_color),
+                ft.Text(f"({profit_margin:.1f}%)", size=9, color=profit_color),
+            ], spacing=0, horizontal_alignment=ft.CrossAxisAlignment.END),
+            bgcolor=profit_bg,
+            border_radius=8,
+            padding=ft.padding.symmetric(horizontal=8, vertical=4),
+        )
+        
+        # Status badge
         if is_low_stock:
             status_badge = ft.Container(
                 content=ft.Row([
                     ft.Icon(ft.Icons.WARNING, size=14, color=ft.Colors.WHITE),
-                    ft.Text(get_text("stock_warning"), size=11, color=ft.Colors.WHITE),
+                    ft.Text(get_text("low_stock"), size=11, color=ft.Colors.WHITE),
                 ], spacing=4),
-                bgcolor=ft.Colors.RED_500,
+                bgcolor=ft.Colors.ORANGE_600,
                 border_radius=12,
                 padding=ft.padding.symmetric(horizontal=10, vertical=4),
             )
@@ -255,13 +306,14 @@ class PartsContent:
             status_badge = ft.Container(
                 content=ft.Row([
                     ft.Icon(ft.Icons.CHECK_CIRCLE, size=14, color=ft.Colors.WHITE),
-                    ft.Text(get_text("normal_stock"), size=11, color=ft.Colors.WHITE),
+                    ft.Text(get_text("normal"), size=11, color=ft.Colors.WHITE),
                 ], spacing=4),
                 bgcolor=ft.Colors.GREEN_600,
                 border_radius=12,
                 padding=ft.padding.symmetric(horizontal=10, vertical=4),
             )
         
+        # Action buttons
         edit_btn = ft.Container(
             content=ft.Row([
                 ft.Icon(ft.Icons.EDIT_OUTLINED, size=16, color="#1565C0"),
@@ -284,7 +336,7 @@ class PartsContent:
         
         row = ft.Container(
             content=ft.Row([
-                # Row number column with badge styling
+                # Row number
                 ft.Container(
                     content=ft.Container(
                         content=ft.Text(str(row_number), size=13, weight=ft.FontWeight.W_500, color="#1565C0"),
@@ -296,51 +348,60 @@ class PartsContent:
                     width=50,
                     alignment=ft.Alignment(0, 0),
                 ),
+                # Name
                 ft.Container(
-                    content=ft.Text(part_code, size=12, color=ft.Colors.GREY_700, max_lines=1),
-                    width=100,
+                    content=ft.Text(name, size=13, weight=ft.FontWeight.W_500, color=ft.Colors.BLACK, max_lines=1),
+                    width=200,
                     alignment=ft.Alignment(-1, 0),
                     padding=ft.padding.only(left=10),
+                    tooltip=name,
                 ),
+                # Stock
                 ft.Container(
-                    content=ft.Text(part_name, size=13, weight=ft.FontWeight.W_500, color=ft.Colors.BLACK, max_lines=1),
+                    content=stock_badge,
+                    width=120,
+                    alignment=ft.Alignment(0, 0),
+                ),
+                # Cost Price
+                ft.Container(
+                    content=ft.Text(f"{int(cost_price):,} KIP", size=12, color=ft.Colors.GREY_600),
+                    width=140,
+                    alignment=ft.Alignment(1, 0),
+                    padding=ft.padding.only(right=10),
+                ),
+                # Sell Price
+                ft.Container(
+                    content=ft.Text(f"{int(sell_price):,} KIP", size=13, weight=ft.FontWeight.W_600, color=ft.Colors.GREEN_700),
+                    width=140,
+                    alignment=ft.Alignment(1, 0),
+                    padding=ft.padding.only(right=10),
+                ),
+                # Profit
+                ft.Container(
+                    content=profit_badge,
+                    width=120,
+                    alignment=ft.Alignment(1, 0),
+                    padding=ft.padding.only(right=10),
+                ),
+                # Supplier
+                ft.Container(
+                    content=ft.Container(
+                        content=ft.Text(supplier_name, size=11, color="#64748B", max_lines=1),
+                        bgcolor=ft.Colors.GREY_100,
+                        border_radius=4,
+                        padding=ft.padding.symmetric(horizontal=6, vertical=2),
+                    ),
                     width=150,
                     alignment=ft.Alignment(-1, 0),
                     padding=ft.padding.only(left=10),
                 ),
-                ft.Container(
-                    content=ft.Text(brand, size=12, color=ft.Colors.GREY_600, max_lines=1),
-                    width=100,
-                    alignment=ft.Alignment(-1, 0),
-                    padding=ft.padding.only(left=10),
-                ),
-                ft.Container(
-                    content=ft.Text(
-                        f"{stock_qty} {unit}", 
-                        size=13, 
-                        weight=ft.FontWeight.W_500, 
-                        color=ft.Colors.RED_600 if is_low_stock else ft.Colors.BLACK
-                    ),
-                    width=80,
-                    alignment=ft.Alignment(0, 0),
-                ),
-                ft.Container(
-                    content=ft.Text(f"{int(cost_price):,}", size=12, color=ft.Colors.GREY_600),
-                    width=110,
-                    alignment=ft.Alignment(1, 0),
-                    padding=ft.padding.only(right=10),
-                ),
-                ft.Container(
-                    content=ft.Text(f"{int(sell_price):,}", size=13, weight=ft.FontWeight.W_500, color=ft.Colors.GREEN_700),
-                    width=110,
-                    alignment=ft.Alignment(1, 0),
-                    padding=ft.padding.only(right=10),
-                ),
+                # Status
                 ft.Container(
                     content=status_badge,
-                    width=90,
+                    width=100,
                     alignment=ft.Alignment(0, 0),
                 ),
+                # Actions
                 ft.Container(
                     content=ft.Row([edit_btn, delete_btn], spacing=4),
                     width=120,
@@ -369,7 +430,7 @@ class PartsContent:
             expand=True,
         )
     
-    def update_pagination(self):
+    def update_pagination_controls(self):
         """Update pagination controls"""
         if not self.filtered_parts:
             self.total_pages = 1
@@ -384,54 +445,53 @@ class PartsContent:
         prev_disabled = self.current_page <= 1
         next_disabled = self.current_page >= self.total_pages
         
-        self.pagination_container.content = ft.Row([
-            ft.Text(f"{get_text('showing')} {len(self.filtered_parts)} {get_text('of')} {len(self.parts_data)} {get_text('results')}", size=12, color="#64748B"),
-            ft.Container(expand=True),
-            ft.Container(
-                content=ft.Row([
-                    ft.IconButton(
-                        icon=ft.Icons.CHEVRON_LEFT,
-                        icon_size=20,
-                        on_click=self.prev_page,
-                        disabled=prev_disabled,
-                        style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
-                    ),
-                    ft.Container(
-                        content=ft.Text(f"{self.current_page}/{self.total_pages}", size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
-                        padding=ft.padding.symmetric(horizontal=15),
-                    ),
-                    ft.IconButton(
-                        icon=ft.Icons.CHEVRON_RIGHT,
-                        icon_size=20,
-                        on_click=self.next_page,
-                        disabled=next_disabled,
-                        style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
-                    ),
-                ]),
-                bgcolor=ft.Colors.WHITE,
-                border_radius=10,
-                padding=ft.padding.symmetric(horizontal=8, vertical=4),
-            ),
-        ], vertical_alignment=ft.CrossAxisAlignment.CENTER)
-        
+        self.pagination_container.content = ft.Container(
+            content=ft.Row([
+                ft.Text(f"{get_text('showing')} {len(self.filtered_parts)} {get_text('of')} {len(self.parts_data)} {get_text('results')}", size=12, color="#64748B"),
+                ft.Container(expand=True),
+                ft.Container(
+                    content=ft.Row([
+                        ft.IconButton(
+                            icon=ft.Icons.CHEVRON_LEFT,
+                            icon_size=20,
+                            on_click=self.prev_page,
+                            disabled=prev_disabled,
+                            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
+                        ),
+                        ft.Container(
+                            content=ft.Text(f"{self.current_page}/{self.total_pages}", size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
+                            padding=ft.padding.symmetric(horizontal=15),
+                        ),
+                        ft.IconButton(
+                            icon=ft.Icons.CHEVRON_RIGHT,
+                            icon_size=20,
+                            on_click=self.next_page,
+                            disabled=next_disabled,
+                            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
+                        ),
+                    ]),
+                    bgcolor=ft.Colors.WHITE,
+                    border_radius=10,
+                    padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                ),
+            ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
+            padding=ft.padding.symmetric(vertical=16, horizontal=20),
+            bgcolor="#F5F7FA",
+        )
         self.page.update()
     
     def prev_page(self, e=None):
-        """Go to previous page"""
         if self.current_page > 1:
             self.current_page -= 1
             self.display_parts(self.filtered_parts)
     
     def next_page(self, e=None):
-        """Go to next page"""
         if self.current_page < self.total_pages:
             self.current_page += 1
             self.display_parts(self.filtered_parts)
     
     def filter_parts(self, e=None):
-        """Filter parts based on search query"""
         query = self.search_input.value.lower() if self.search_input.value else ""
-        
         self.current_page = 1
         
         if not query:
@@ -440,14 +500,12 @@ class PartsContent:
             self.filtered_parts = [
                 part for part in self.parts_data
                 if query in part.get('name', '').lower()
-                or query in part.get('part_code', '').lower()
-                or query in part.get('brand', '').lower()
+                or (part.get('supplier_name') and query in part.get('supplier_name', '').lower())
             ]
         
         self.display_parts(self.filtered_parts)
     
     def display_parts(self, parts):
-        """Display parts in table format"""
         self.table_rows.controls.clear()
         
         if not parts:
@@ -456,8 +514,6 @@ class PartsContent:
             start_idx = (self.current_page - 1) * self.items_per_page
             end_idx = start_idx + self.items_per_page
             page_parts = parts[start_idx:end_idx]
-            
-            # Calculate global row number
             global_start = start_idx + 1
             
             for i, part in enumerate(page_parts):
@@ -465,16 +521,14 @@ class PartsContent:
                 row = self._create_table_row(part, start_idx + i, row_number)
                 self.table_rows.controls.append(row)
         
-        self.update_pagination()
+        self.update_pagination_controls()
         self.page.update()
     
     async def _delayed_load(self):
-        """Async delayed load"""
         await asyncio.sleep(0.2)
         self.load_data()
     
     def load_data(self):
-        """Load parts from API"""
         if self.is_loading:
             return
         self.is_loading = True
@@ -484,9 +538,7 @@ class PartsContent:
             self.parts_data = self.client.get_parts()
             self.filtered_parts = self.parts_data.copy()
             print(f"DEBUG: Loaded {len(self.parts_data)} parts")
-            
             self.display_parts(self.filtered_parts)
-            
         except Exception as e:
             print(f"DEBUG: Error loading parts: {e}")
             traceback.print_exc()
@@ -495,7 +547,6 @@ class PartsContent:
             self.is_loading = False
     
     def _safe_edit(self, part_id, event):
-        """Safe wrapper for edit button"""
         try:
             self.edit_part(part_id)
         except Exception as e:
@@ -504,7 +555,6 @@ class PartsContent:
             self.show_snackbar(f"{get_text('error')}: {e}")
     
     def _safe_delete(self, part_id, event):
-        """Safe wrapper for delete button"""
         try:
             self.delete_part(part_id)
         except Exception as e:
@@ -513,13 +563,11 @@ class PartsContent:
             self.show_snackbar(f"{get_text('error')}: {e}")
     
     def _open_dialog(self, dialog):
-        """Centralized dialog opening method"""
         try:
             if self.current_dialog:
                 self.current_dialog.open = False
                 if self.current_dialog in self.page.overlay:
                     self.page.overlay.remove(self.current_dialog)
-            
             self.current_dialog = dialog
             self.page.overlay.append(dialog)
             dialog.open = True
@@ -528,7 +576,6 @@ class PartsContent:
             print(f"DEBUG: Error opening dialog: {e}")
     
     def _close_dialog(self, e=None):
-        """Centralized dialog closing method"""
         try:
             if self.current_dialog:
                 self.current_dialog.open = False
@@ -537,61 +584,31 @@ class PartsContent:
             print(f"DEBUG: Error closing dialog: {ex}")
     
     def show_add_dialog(self, e=None):
-        """Show add part dialog with modern UI and supplier dropdown"""
-        print("DEBUG: show_add_dialog called")
+        """Show add part dialog"""
         
         # Load suppliers for dropdown
         suppliers = []
         try:
             suppliers = self.client.get_suppliers()
-            print(f"DEBUG: Loaded {len(suppliers)} suppliers for dropdown")
         except Exception as err:
-            print(f"DEBUG: Error loading suppliers: {err}")
+            print(f"Error loading suppliers: {err}")
         
-        # Create options for dropdown
         supplier_options = [
-            ft.dropdown.Option("", f"-- {get_text('no_supplier')} --")
+            ft.dropdown.Option("", f"-- {get_text('select_supplier')} --")
         ]
-        
         for sup in suppliers:
-            supplier_id = sup.get('id')
-            supplier_name = sup.get('name', 'Unknown')
             supplier_options.append(
-                ft.dropdown.Option(str(supplier_id), f"{supplier_name}")
+                ft.dropdown.Option(str(sup.get('id')), sup.get('name', 'Unknown'))
             )
         
-        code = ft.TextField(
-            label=f"{get_text('parts_code')} *",
-            hint_text="เช่น BRK-001",
+        name = ft.TextField(
+            label=f"{get_text('parts_name')} *",
+            hint_text="ເຊັ່ນ: ນ້ຳມັນເຄື່ອງ 10w-40",
             border_radius=12,
             bgcolor=ft.Colors.WHITE,
             filled=True,
             autofocus=True,
-            prefix_icon=ft.Icons.CODE,
-            content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
-            border_color=ft.Colors.GREY_300,
-            focused_border_color=self.primary_color,
-        )
-        
-        name = ft.TextField(
-            label=f"{get_text('parts_name')} *",
-            hint_text="เช่น ผ้าเบรคหน้า",
-            border_radius=12,
-            bgcolor=ft.Colors.WHITE,
-            filled=True,
             prefix_icon=ft.Icons.CATEGORY,
-            content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
-            border_color=ft.Colors.GREY_300,
-            focused_border_color=self.primary_color,
-        )
-        
-        brand = ft.TextField(
-            label=get_text("parts_brand"),
-            hint_text="เช่น Toyota, Honda, Bosch",
-            border_radius=12,
-            bgcolor=ft.Colors.WHITE,
-            filled=True,
-            prefix_icon=ft.Icons.BRANDING_WATERMARK,
             content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
             border_color=ft.Colors.GREY_300,
             focused_border_color=self.primary_color,
@@ -608,6 +625,7 @@ class PartsContent:
             content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
             border_color=ft.Colors.GREY_300,
             focused_border_color=self.primary_color,
+            expand=True,
         )
         
         sell_price = ft.TextField(
@@ -621,6 +639,7 @@ class PartsContent:
             content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
             border_color=ft.Colors.GREY_300,
             focused_border_color=self.primary_color,
+            expand=True,
         )
         
         stock_qty = ft.TextField(
@@ -634,6 +653,7 @@ class PartsContent:
             content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
             border_color=ft.Colors.GREY_300,
             focused_border_color=self.primary_color,
+            expand=True,
         )
         
         min_stock = ft.TextField(
@@ -647,11 +667,12 @@ class PartsContent:
             content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
             border_color=ft.Colors.GREY_300,
             focused_border_color=self.primary_color,
+            expand=True,
         )
         
         unit = ft.TextField(
             label=get_text("unit"),
-            hint_text="ชิ้น, ลิตร, เส้น",
+            hint_text="ຊິ້ນ, ກະປ໋ອງ, ລິດ",
             border_radius=12,
             bgcolor=ft.Colors.WHITE,
             filled=True,
@@ -664,7 +685,6 @@ class PartsContent:
         
         supplier_dropdown = ft.Dropdown(
             label=get_text("supplier"),
-            hint_text=f"-- {get_text('select_supplier')} --",
             border_radius=12,
             bgcolor=ft.Colors.WHITE,
             filled=True,
@@ -676,14 +696,12 @@ class PartsContent:
         )
         
         def save(e):
-            if code.value and name.value and sell_price.value:
+            if name.value and sell_price.value:
                 try:
                     supplier_id_val = int(supplier_dropdown.value) if supplier_dropdown.value and supplier_dropdown.value.strip() else None
                     
                     self.client.add_part(
-                        part_code=code.value,
                         name=name.value,
-                        brand=brand.value,
                         cost_price=float(cost_price.value) if cost_price.value else 0,
                         sell_price=float(sell_price.value) if sell_price.value else 0,
                         stock_qty=int(stock_qty.value) if stock_qty.value else 0,
@@ -716,17 +734,8 @@ class PartsContent:
                         ),
                         ft.Column(
                             [
-                                ft.Text(
-                                    get_text('parts_add'),
-                                    size=20,
-                                    weight=ft.FontWeight.BOLD,
-                                    color="#1E293B",
-                                ),
-                                ft.Text(
-                                    "เพิ่มอะไหล่ใหม่เข้าสู่ระบบ",
-                                    size=13,
-                                    color="#64748B",
-                                ),
+                                ft.Text(get_text('parts_add'), size=20, weight=ft.FontWeight.BOLD, color="#1E293B"),
+                                ft.Text("ເພີ່ມອາໄຫຼ່ໃໝ່", size=13, color="#64748B"),
                             ],
                             spacing=2,
                         ),
@@ -740,11 +749,7 @@ class PartsContent:
             content=ft.Container(
                 content=ft.Column(
                     [
-                        code,
-                        ft.Container(height=12),
                         name,
-                        ft.Container(height=12),
-                        brand,
                         ft.Container(height=12),
                         ft.Row([cost_price, sell_price], spacing=12),
                         ft.Container(height=12),
@@ -758,43 +763,21 @@ class PartsContent:
                     scroll=ft.ScrollMode.AUTO,
                 ),
                 padding=ft.padding.all(24),
-                width=560,
-                height=620,
+                width=550,
+                height=480,
             ),
             actions=[
                 ft.Container(
                     content=ft.Row(
                         [
                             ft.TextButton(
-                                content=ft.Row(
-                                    [
-                                        ft.Icon(ft.Icons.CLOSE, size=18, color="#64748B"),
-                                        ft.Text(get_text("cancel"), size=14, color="#64748B"),
-                                    ],
-                                    spacing=6,
-                                ),
+                                content=ft.Row([ft.Icon(ft.Icons.CLOSE, size=18, color="#64748B"), ft.Text(get_text("cancel"), size=14, color="#64748B")], spacing=6),
                                 on_click=self._close_dialog,
-                                style=ft.ButtonStyle(
-                                    overlay_color=ft.Colors.with_opacity(0.1, ft.Colors.GREY_400),
-                                    shape=ft.RoundedRectangleBorder(radius=10),
-                                ),
                             ),
                             ft.ElevatedButton(
-                                content=ft.Row(
-                                    [
-                                        ft.Icon(ft.Icons.SAVE, size=18, color=ft.Colors.WHITE),
-                                        ft.Text(get_text("save"), size=14, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500),
-                                    ],
-                                    spacing=6,
-                                ),
+                                content=ft.Row([ft.Icon(ft.Icons.SAVE, size=18, color=ft.Colors.WHITE), ft.Text(get_text("save"), size=14, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500)], spacing=6),
                                 on_click=save,
-                                style=ft.ButtonStyle(
-                                    bgcolor=self.primary_color,
-                                    color=ft.Colors.WHITE,
-                                    shape=ft.RoundedRectangleBorder(radius=10),
-                                    elevation=2,
-                                    padding=ft.padding.symmetric(horizontal=20, vertical=12),
-                                ),
+                                style=ft.ButtonStyle(bgcolor=self.primary_color, color=ft.Colors.WHITE, shape=ft.RoundedRectangleBorder(radius=10), elevation=2),
                             ),
                         ],
                         spacing=12,
@@ -810,7 +793,7 @@ class PartsContent:
         self._open_dialog(dialog)
     
     def edit_part(self, part_id):
-        """Edit part dialog with modern UI and supplier dropdown"""
+        """Edit part dialog"""
         
         part = None
         for p in self.parts_data:
@@ -822,36 +805,20 @@ class PartsContent:
             self.show_snackbar(f"❌ {get_text('error')}")
             return
         
-        # Load suppliers for dropdown
+        # Load suppliers
         suppliers = []
         try:
             suppliers = self.client.get_suppliers()
-            print(f"DEBUG: Loaded {len(suppliers)} suppliers for dropdown")
         except Exception as err:
-            print(f"DEBUG: Error loading suppliers: {err}")
+            print(f"Error loading suppliers: {err}")
         
-        # Create options for dropdown
         supplier_options = [
-            ft.dropdown.Option("", f"-- {get_text('no_supplier')} --")
+            ft.dropdown.Option("", f"-- {get_text('select_supplier')} --")
         ]
-        
         for sup in suppliers:
-            supplier_id = sup.get('id')
-            supplier_name = sup.get('name', 'Unknown')
             supplier_options.append(
-                ft.dropdown.Option(str(supplier_id), f"{supplier_name}")
+                ft.dropdown.Option(str(sup.get('id')), sup.get('name', 'Unknown'))
             )
-        
-        code = ft.TextField(
-            label=f"{get_text('parts_code')} *",
-            value=part.get('part_code', ''),
-            read_only=True,
-            border_radius=12,
-            bgcolor=ft.Colors.GREY_100,
-            filled=True,
-            prefix_icon=ft.Icons.CODE,
-            content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
-        )
         
         name = ft.TextField(
             label=f"{get_text('parts_name')} *",
@@ -860,18 +827,6 @@ class PartsContent:
             bgcolor=ft.Colors.WHITE,
             filled=True,
             prefix_icon=ft.Icons.CATEGORY,
-            content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
-            border_color=ft.Colors.GREY_300,
-            focused_border_color=self.primary_color,
-        )
-        
-        brand = ft.TextField(
-            label=get_text("parts_brand"),
-            value=part.get('brand', ''),
-            border_radius=12,
-            bgcolor=ft.Colors.WHITE,
-            filled=True,
-            prefix_icon=ft.Icons.BRANDING_WATERMARK,
             content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
             border_color=ft.Colors.GREY_300,
             focused_border_color=self.primary_color,
@@ -887,6 +842,7 @@ class PartsContent:
             content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
             border_color=ft.Colors.GREY_300,
             focused_border_color=self.primary_color,
+            expand=True,
         )
         
         sell_price = ft.TextField(
@@ -899,6 +855,7 @@ class PartsContent:
             content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
             border_color=ft.Colors.GREY_300,
             focused_border_color=self.primary_color,
+            expand=True,
         )
         
         stock_qty = ft.TextField(
@@ -911,6 +868,7 @@ class PartsContent:
             content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
             border_color=ft.Colors.GREY_300,
             focused_border_color=self.primary_color,
+            expand=True,
         )
         
         min_stock = ft.TextField(
@@ -923,6 +881,7 @@ class PartsContent:
             content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
             border_color=ft.Colors.GREY_300,
             focused_border_color=self.primary_color,
+            expand=True,
         )
         
         unit = ft.TextField(
@@ -941,7 +900,6 @@ class PartsContent:
         
         supplier_dropdown = ft.Dropdown(
             label=get_text("supplier"),
-            hint_text=f"-- {get_text('select_supplier')} --",
             border_radius=12,
             bgcolor=ft.Colors.WHITE,
             filled=True,
@@ -961,9 +919,7 @@ class PartsContent:
                 supplier_id_val = int(supplier_dropdown.value) if supplier_dropdown.value and supplier_dropdown.value.strip() else None
                 
                 self.client.update_part(part_id, {
-                    'part_code': code.value,
                     'name': name.value,
-                    'brand': brand.value,
                     'cost_price': float(cost_price.value) if cost_price.value else 0,
                     'sell_price': float(sell_price.value) if sell_price.value else 0,
                     'stock_qty': int(stock_qty.value) if stock_qty.value else 0,
@@ -986,28 +942,8 @@ class PartsContent:
             title=ft.Container(
                 content=ft.Row(
                     [
-                        ft.Container(
-                            content=ft.Icon(ft.Icons.EDIT, size=28, color=ft.Colors.WHITE),
-                            bgcolor=self.primary_color,
-                            border_radius=14,
-                            padding=ft.padding.all(8),
-                        ),
-                        ft.Column(
-                            [
-                                ft.Text(
-                                    get_text('parts_edit'),
-                                    size=20,
-                                    weight=ft.FontWeight.BOLD,
-                                    color="#1E293B",
-                                ),
-                                ft.Text(
-                                    "แก้ไขข้อมูลอะไหล่",
-                                    size=13,
-                                    color="#64748B",
-                                ),
-                            ],
-                            spacing=2,
-                        ),
+                        ft.Container(content=ft.Icon(ft.Icons.EDIT, size=28, color=ft.Colors.WHITE), bgcolor=self.primary_color, border_radius=14, padding=ft.padding.all(8)),
+                        ft.Column([ft.Text(get_text('parts_edit'), size=20, weight=ft.FontWeight.BOLD, color="#1E293B"), ft.Text("ແກ້ໄຂຂໍ້ມູນອາໄຫຼ່", size=13, color="#64748B")], spacing=2),
                     ],
                     spacing=12,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -1018,11 +954,7 @@ class PartsContent:
             content=ft.Container(
                 content=ft.Column(
                     [
-                        code,
-                        ft.Container(height=12),
                         name,
-                        ft.Container(height=12),
-                        brand,
                         ft.Container(height=12),
                         ft.Row([cost_price, sell_price], spacing=12),
                         ft.Container(height=12),
@@ -1036,44 +968,15 @@ class PartsContent:
                     scroll=ft.ScrollMode.AUTO,
                 ),
                 padding=ft.padding.all(24),
-                width=560,
-                height=620,
+                width=550,
+                height=500,
             ),
             actions=[
                 ft.Container(
                     content=ft.Row(
                         [
-                            ft.TextButton(
-                                content=ft.Row(
-                                    [
-                                        ft.Icon(ft.Icons.CLOSE, size=18, color="#64748B"),
-                                        ft.Text(get_text("cancel"), size=14, color="#64748B"),
-                                    ],
-                                    spacing=6,
-                                ),
-                                on_click=self._close_dialog,
-                                style=ft.ButtonStyle(
-                                    overlay_color=ft.Colors.with_opacity(0.1, ft.Colors.GREY_400),
-                                    shape=ft.RoundedRectangleBorder(radius=10),
-                                ),
-                            ),
-                            ft.ElevatedButton(
-                                content=ft.Row(
-                                    [
-                                        ft.Icon(ft.Icons.SAVE, size=18, color=ft.Colors.WHITE),
-                                        ft.Text(get_text("save"), size=14, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500),
-                                    ],
-                                    spacing=6,
-                                ),
-                                on_click=save_edit,
-                                style=ft.ButtonStyle(
-                                    bgcolor=self.primary_color,
-                                    color=ft.Colors.WHITE,
-                                    shape=ft.RoundedRectangleBorder(radius=10),
-                                    elevation=2,
-                                    padding=ft.padding.symmetric(horizontal=20, vertical=12),
-                                ),
-                            ),
+                            ft.TextButton(content=ft.Row([ft.Icon(ft.Icons.CLOSE, size=18, color="#64748B"), ft.Text(get_text("cancel"), size=14, color="#64748B")], spacing=6), on_click=self._close_dialog),
+                            ft.ElevatedButton(content=ft.Row([ft.Icon(ft.Icons.SAVE, size=18, color=ft.Colors.WHITE), ft.Text(get_text("save"), size=14, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500)], spacing=6), on_click=save_edit, style=ft.ButtonStyle(bgcolor=self.primary_color, color=ft.Colors.WHITE, shape=ft.RoundedRectangleBorder(radius=10), elevation=2)),
                         ],
                         spacing=12,
                         alignment=ft.MainAxisAlignment.END,
@@ -1117,28 +1020,8 @@ class PartsContent:
             title=ft.Container(
                 content=ft.Row(
                     [
-                        ft.Container(
-                            content=ft.Icon(ft.Icons.WARNING_AMBER, size=28, color=ft.Colors.WHITE),
-                            bgcolor=WARNING_COLOR,
-                            border_radius=14,
-                            padding=ft.padding.all(8),
-                        ),
-                        ft.Column(
-                            [
-                                ft.Text(
-                                    get_text("confirm"),
-                                    size=20,
-                                    weight=ft.FontWeight.BOLD,
-                                    color="#1E293B",
-                                ),
-                                ft.Text(
-                                    "กรุณายืนยันการลบข้อมูล",
-                                    size=13,
-                                    color="#64748B",
-                                ),
-                            ],
-                            spacing=2,
-                        ),
+                        ft.Container(content=ft.Icon(ft.Icons.WARNING_AMBER, size=28, color=ft.Colors.WHITE), bgcolor=WARNING_COLOR, border_radius=14, padding=ft.padding.all(8)),
+                        ft.Column([ft.Text(get_text("confirm"), size=20, weight=ft.FontWeight.BOLD, color="#1E293B"), ft.Text("ກະລຸນາຢືນຢັນການລຶບຂໍ້ມູນ", size=13, color="#64748B")], spacing=2),
                     ],
                     spacing=12,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -1149,25 +1032,11 @@ class PartsContent:
             content=ft.Container(
                 content=ft.Column(
                     [
-                        ft.Container(
-                            content=ft.Icon(ft.Icons.DELETE_OUTLINE, size=56, color=WARNING_COLOR),
-                            alignment=ft.Alignment(0, 0),
-                        ),
+                        ft.Container(content=ft.Icon(ft.Icons.DELETE_OUTLINE, size=56, color=WARNING_COLOR), alignment=ft.Alignment(0, 0)),
                         ft.Container(height=8),
-                        ft.Text(
-                            f"คุณต้องการลบ '{part_name}' หรือไม่?",
-                            size=16,
-                            weight=ft.FontWeight.W_500,
-                            color="#1E293B",
-                            text_align=ft.TextAlign.CENTER,
-                        ),
+                        ft.Text(f"ທ່ານຕ້ອງການລຶບ '{part_name}' ແທ້ບໍ?", size=16, weight=ft.FontWeight.W_500, color="#1E293B", text_align=ft.TextAlign.CENTER),
                         ft.Container(height=4),
-                        ft.Text(
-                            get_text("delete_warning"),
-                            size=13,
-                            color="#64748B",
-                            text_align=ft.TextAlign.CENTER,
-                        ),
+                        ft.Text(get_text("delete_warning"), size=13, color="#64748B", text_align=ft.TextAlign.CENTER),
                     ],
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     spacing=8,
@@ -1179,37 +1048,8 @@ class PartsContent:
                 ft.Container(
                     content=ft.Row(
                         [
-                            ft.TextButton(
-                                content=ft.Row(
-                                    [
-                                        ft.Icon(ft.Icons.CLOSE, size=18, color="#64748B"),
-                                        ft.Text(get_text("cancel"), size=14, color="#64748B"),
-                                    ],
-                                    spacing=6,
-                                ),
-                                on_click=self._close_dialog,
-                                style=ft.ButtonStyle(
-                                    overlay_color=ft.Colors.with_opacity(0.1, ft.Colors.GREY_400),
-                                    shape=ft.RoundedRectangleBorder(radius=10),
-                                ),
-                            ),
-                            ft.ElevatedButton(
-                                content=ft.Row(
-                                    [
-                                        ft.Icon(ft.Icons.DELETE, size=18, color=ft.Colors.WHITE),
-                                        ft.Text(get_text("delete"), size=14, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500),
-                                    ],
-                                    spacing=6,
-                                ),
-                                on_click=confirm,
-                                style=ft.ButtonStyle(
-                                    bgcolor=WARNING_COLOR,
-                                    color=ft.Colors.WHITE,
-                                    shape=ft.RoundedRectangleBorder(radius=10),
-                                    elevation=2,
-                                    padding=ft.padding.symmetric(horizontal=20, vertical=12),
-                                ),
-                            ),
+                            ft.TextButton(content=ft.Row([ft.Icon(ft.Icons.CLOSE, size=18, color="#64748B"), ft.Text(get_text("cancel"), size=14, color="#64748B")], spacing=6), on_click=self._close_dialog),
+                            ft.ElevatedButton(content=ft.Row([ft.Icon(ft.Icons.DELETE, size=18, color=ft.Colors.WHITE), ft.Text(get_text("delete"), size=14, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500)], spacing=6), on_click=confirm, style=ft.ButtonStyle(bgcolor=WARNING_COLOR, color=ft.Colors.WHITE, shape=ft.RoundedRectangleBorder(radius=10), elevation=2)),
                         ],
                         spacing=12,
                         alignment=ft.MainAxisAlignment.END,
@@ -1224,12 +1064,7 @@ class PartsContent:
         self._open_dialog(dialog)
     
     def show_snackbar(self, message):
-        """Show snackbar message"""
-        snack = ft.SnackBar(
-            content=ft.Text(message),
-            bgcolor=ft.Colors.GREY_800,
-            duration=3000,
-        )
+        snack = ft.SnackBar(content=ft.Text(message), bgcolor=ft.Colors.GREY_800, duration=3000)
         self.page.snack_bar = snack
         self.page.snack_bar.open = True
         self.page.update()

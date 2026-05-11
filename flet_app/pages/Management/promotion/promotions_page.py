@@ -1,4 +1,3 @@
-# pages/promotions_page.py
 import flet as ft
 import sys
 import os
@@ -31,9 +30,12 @@ class PromotionsContent:
         # Table data rows container
         self.table_rows = ft.Column(spacing=0, scroll=ft.ScrollMode.AUTO)
         self.pagination_container = ft.Container()
+        
+        # Cache for items
+        self.promotion_items_cache = {}
     
     def build(self):
-        """Build promotions management content with table layout"""
+        """Build promotions management content"""
         
         # Beautiful gradient header
         header = ft.Container(
@@ -80,12 +82,11 @@ class PromotionsContent:
                 colors=[self.primary_color, self.primary_dark],
             ),
             border_radius=ft.BorderRadius.only(bottom_left=20, bottom_right=20),
-           
         )
         
-        # Search Bar with beautiful design
+        # Search Bar
         self.search_input = ft.TextField(
-            hint_text=f"🔍 {get_text('search')} {get_text('promotions_title')}...",
+            hint_text=f" {get_text('search')} {get_text('promotions_title')}...",
             border_radius=12,
             bgcolor=ft.Colors.WHITE,
             filled=True,
@@ -102,7 +103,6 @@ class PromotionsContent:
             expand=True,
         )
         
-        # Control bar
         control_bar = ft.Container(
             content=search_container,
             padding=ft.padding.all(20),
@@ -112,7 +112,6 @@ class PromotionsContent:
         # Table Header
         table_header = self._create_table_header()
         
-        # Table scroll container
         table_scroll_container = ft.Container(
             content=self.table_rows,
             expand=True,
@@ -120,7 +119,6 @@ class PromotionsContent:
             bgcolor=ft.Colors.WHITE,
         )
         
-        # Table Container
         table_container = ft.Container(
             content=ft.Column([
                 table_header,
@@ -136,13 +134,8 @@ class PromotionsContent:
             expand=True,
         )
         
-        # Pagination container (will be updated by update_pagination)
-        self.pagination_container = ft.Container(
-            padding=ft.padding.symmetric(vertical=16, horizontal=20),
-            bgcolor="#F5F7FA",
-        )
+        self.update_pagination_controls()
         
-        # Main content area
         main_content = ft.Container(
             content=ft.Column([
                 table_container,
@@ -152,13 +145,11 @@ class PromotionsContent:
             bgcolor="#F5F7FA",
         )
         
-        # Main container
         main_container = ft.Container(
             content=main_content,
             expand=True,
         )
         
-        # Load data after UI is built
         self.page.run_task(self._delayed_load)
         
         return ft.Column([
@@ -171,134 +162,131 @@ class PromotionsContent:
         """Create table header row"""
         return ft.Container(
             content=ft.Row([
-                ft.Container(
-                    content=ft.Text("#", size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=50,
-                    alignment=ft.Alignment(0, 0),
-                ),
-                ft.Container(
-                    content=ft.Text(get_text('promo_code'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=110,
-                    alignment=ft.Alignment(-1, 0),
-                    padding=ft.padding.only(left=10),
-                ),
-                ft.Container(
-                    content=ft.Text(get_text('promo_name'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=150,
-                    alignment=ft.Alignment(-1, 0),
-                    padding=ft.padding.only(left=10),
-                ),
-                ft.Container(
-                    content=ft.Text(get_text('discount_type'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=110,
-                    alignment=ft.Alignment(-1, 0),
-                    padding=ft.padding.only(left=10),
-                ),
-                ft.Container(
-                    content=ft.Text(get_text('start_date'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=110,
-                    alignment=ft.Alignment(0, 0),
-                ),
-                ft.Container(
-                    content=ft.Text(get_text('end_date'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=110,
-                    alignment=ft.Alignment(0, 0),
-                ),
-                ft.Container(
-                    content=ft.Text(get_text('status'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=100,
-                    alignment=ft.Alignment(0, 0),
-                ),
-                ft.Container(
-                    content=ft.Text(get_text('actions'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=120,
-                    alignment=ft.Alignment(0, 0),
-                ),
+                ft.Container(content=ft.Text("#", size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=50, alignment=ft.Alignment(0, 0)),
+                ft.Container(content=ft.Text(get_text('promo_name'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=200, alignment=ft.Alignment(-1, 0), padding=ft.padding.only(left=10)),
+                ft.Container(content=ft.Text(get_text('discount_type'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=120, alignment=ft.Alignment(-1, 0), padding=ft.padding.only(left=10)),
+                ft.Container(content=ft.Text(get_text('discount_value'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=130, alignment=ft.Alignment(1, 0), padding=ft.padding.only(right=10)),
+                ft.Container(content=ft.Text(get_text('period'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=180, alignment=ft.Alignment(0, 0)),
+                ft.Container(content=ft.Text(get_text('status'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=100, alignment=ft.Alignment(0, 0)),
+                ft.Container(content=ft.Text(get_text('actions'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=180, alignment=ft.Alignment(0, 0)),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
             padding=ft.padding.symmetric(vertical=14, horizontal=10),
             bgcolor=ft.Colors.GREY_100,
             border_radius=ft.BorderRadius.only(top_left=12, top_right=12),
         )
     
-    def _create_table_row(self, promo, index, row_number):
-        """Create a single table row"""
-        promo_id = promo.get('id')
-        promo_name = promo.get('promo_name', '-')
-        promo_code = promo.get('promo_code', '-')
-        discount_type = promo.get('discount_type', 'percentage')
-        discount_value = promo.get('discount_value', 0)
-        start_date = promo.get('start_date', '-')
-        end_date = promo.get('end_date', '-')
-        is_active = promo.get('is_active', True)
-        
-        # Calculate days remaining
-        days_remaining = None
-        if end_date != '-':
-            try:
-                end = datetime.strptime(end_date, '%Y-%m-%d').date()
-                today = datetime.now().date()
-                days_remaining = (end - today).days
-            except:
-                pass
-        
-        # Determine if expiring soon
-        is_expiring_soon = days_remaining is not None and 0 <= days_remaining <= 7
-        is_expired = days_remaining is not None and days_remaining < 0
-        
-        # Row background color (alternate)
-        row_bg = ft.Colors.GREY_50 if index % 2 == 0 else ft.Colors.WHITE
-        
-        # Discount display
-        discount_symbol = "%" if discount_type == "percentage" else " KIP"
-        discount_display = f"{int(discount_value)}{discount_symbol}"
-        discount_label = get_text("percentage") if discount_type == "percentage" else get_text("fixed")
-        
-        # Status badge
-        if is_active and not is_expired:
-            if is_expiring_soon:
-                status_badge = ft.Container(
-                    content=ft.Row([
-                        ft.Icon(ft.Icons.WARNING, size=14, color=ft.Colors.WHITE),
-                        ft.Text(get_text("expiring_soon"), size=11, color=ft.Colors.WHITE),
-                    ], spacing=4),
-                    bgcolor=ft.Colors.ORANGE_600,
-                    border_radius=12,
-                    padding=ft.padding.symmetric(horizontal=8, vertical=4),
-                )
-            else:
-                status_badge = ft.Container(
-                    content=ft.Row([
-                        ft.Icon(ft.Icons.CHECK_CIRCLE, size=14, color=ft.Colors.WHITE),
-                        ft.Text(get_text("active"), size=11, color=ft.Colors.WHITE),
-                    ], spacing=4),
-                    bgcolor=ft.Colors.GREEN_600,
-                    border_radius=12,
-                    padding=ft.padding.symmetric(horizontal=10, vertical=4),
-                )
+    def _format_discount(self, discount_type, value):
+        """Format discount display"""
+        if discount_type == 'percent':
+            return f"{int(value)}%"
         else:
-            status_badge = ft.Container(
+            return f"{int(value):,} KIP"
+    
+    def _format_date(self, date_str):
+        """Format date string"""
+        if not date_str:
+            return "-"
+        try:
+            if isinstance(date_str, datetime):
+                return date_str.strftime('%d/%m/%Y')
+            date_obj = datetime.strptime(str(date_str), '%Y-%m-%d')
+            return date_obj.strftime('%d/%m/%Y')
+        except:
+            return str(date_str)[:10]
+    
+    def _get_status_badge(self, status, start_date, end_date):
+        """Get status badge with color"""
+        # Check if expired
+        try:
+            today = datetime.now().date()
+            if end_date:
+                end = datetime.strptime(str(end_date), '%Y-%m-%d').date()
+                if end < today:
+                    status = 'inactive'
+        except:
+            pass
+        
+        if status == 'active':
+            return ft.Container(
+                content=ft.Row([
+                    ft.Icon(ft.Icons.CHECK_CIRCLE, size=14, color=ft.Colors.WHITE),
+                    ft.Text(get_text("status_active"), size=11, color=ft.Colors.WHITE),
+                ], spacing=4),
+                bgcolor=ft.Colors.GREEN_600,
+                border_radius=12,
+                padding=ft.padding.symmetric(horizontal=10, vertical=4),
+            )
+        else:
+            return ft.Container(
                 content=ft.Row([
                     ft.Icon(ft.Icons.CANCEL, size=14, color=ft.Colors.WHITE),
-                    ft.Text(get_text("inactive"), size=11, color=ft.Colors.WHITE),
+                    ft.Text(get_text("status_inactive"), size=11, color=ft.Colors.WHITE),
                 ], spacing=4),
                 bgcolor=ft.Colors.RED_500,
                 border_radius=12,
                 padding=ft.padding.symmetric(horizontal=8, vertical=4),
             )
+    
+    def _create_table_row(self, promo, index, row_number):
+        """Create a single table row"""
+        promo_id = promo.get('id')
+        name = promo.get('name', '-')
+        discount_type = promo.get('discount_type', 'percent')
+        value = promo.get('value', 0)
+        min_qty = promo.get('min_qty', 1)
+        min_amount = promo.get('min_amount', 0)
+        start_date = promo.get('start_date')
+        end_date = promo.get('end_date')
+        status = promo.get('status', 'active')
         
-        # Days remaining text
-        if days_remaining is not None:
-            if days_remaining >= 0:
-                days_text = f"{days_remaining} {get_text('days_left')}"
-                days_color = ft.Colors.RED_600 if is_expiring_soon else ft.Colors.GREY_600
-            else:
-                days_text = get_text("expired")
-                days_color = ft.Colors.RED_600
+        row_bg = ft.Colors.GREY_50 if index % 2 == 0 else ft.Colors.WHITE
+        
+        discount_display = self._format_discount(discount_type, value)
+        discount_type_label = get_text("percentage") if discount_type == "percent" else get_text("fixed_amount")
+        
+        # Date range display
+        start_display = self._format_date(start_date)
+        end_display = self._format_date(end_date)
+        if start_display == "-" and end_display == "-":
+            period_display = "-"
         else:
-            days_text = "-"
-            days_color = ft.Colors.GREY_400
+            period_display = f"{start_display} - {end_display}"
+        
+        # Check if expired
+        is_expired = False
+        try:
+            today = datetime.now().date()
+            if end_date:
+                end = datetime.strptime(str(end_date), '%Y-%m-%d').date()
+                is_expired = end < today and status == 'active'
+        except:
+            pass
+        
+        if is_expired:
+            status = 'inactive'
+        
+        status_badge = self._get_status_badge(status, start_date, end_date)
+        
+        # Requirements text
+        req_text = ""
+        if min_qty > 1:
+            req_text += f"Min {min_qty} pcs"
+        if min_amount > 0:
+            if req_text:
+                req_text += " / "
+            req_text += f"Min {int(min_amount):,} KIP"
         
         # Action buttons
+        items_btn = ft.Container(
+            content=ft.Row([
+                ft.Icon(ft.Icons.LIST_ALT, size=16, color="#9C27B0"),
+                ft.Text(get_text("items"), size=12, color="#9C27B0"),
+            ], spacing=4),
+            on_click=lambda e, pid=promo_id, pname=name: self.show_items_dialog(pid, pname),
+            padding=ft.padding.symmetric(horizontal=8, vertical=4),
+            border_radius=6,
+        )
+        
         edit_btn = ft.Container(
             content=ft.Row([
                 ft.Icon(ft.Icons.EDIT_OUTLINED, size=16, color="#1565C0"),
@@ -319,13 +307,9 @@ class PromotionsContent:
             border_radius=6,
         )
         
-        # Format dates for display (shorter)
-        start_display = start_date if start_date != '-' else '-'
-        end_display = end_date if end_date != '-' else '-'
-        
         row = ft.Container(
             content=ft.Row([
-                # Row number column with badge styling
+                # Row number
                 ft.Container(
                     content=ft.Container(
                         content=ft.Text(str(row_number), size=13, weight=ft.FontWeight.W_500, color="#1565C0"),
@@ -337,57 +321,52 @@ class PromotionsContent:
                     width=50,
                     alignment=ft.Alignment(0, 0),
                 ),
-                # Promo Code column
+                # Name
+                ft.Container(
+                    content=ft.Column([
+                        ft.Text(name, size=13, weight=ft.FontWeight.W_500, color=ft.Colors.BLACK, max_lines=1),
+                        ft.Text(req_text, size=10, color="#64748B") if req_text else ft.Container(),
+                    ], spacing=2),
+                    width=200,
+                    alignment=ft.Alignment(-1, 0),
+                    padding=ft.padding.only(left=10),
+                    tooltip=name,
+                ),
+                # Discount Type
                 ft.Container(
                     content=ft.Container(
-                        content=ft.Text(promo_code, size=12, color=ft.Colors.GREY_700, weight=ft.FontWeight.W_500, max_lines=1),
+                        content=ft.Text(discount_type_label, size=12, color="#64748B"),
                         bgcolor=ft.Colors.GREY_100,
                         border_radius=4,
                         padding=ft.padding.symmetric(horizontal=6, vertical=2),
                     ),
-                    width=110,
+                    width=120,
                     alignment=ft.Alignment(-1, 0),
                     padding=ft.padding.only(left=10),
                 ),
-                # Promo Name column
+                # Discount Value
                 ft.Container(
-                    content=ft.Text(promo_name, size=13, weight=ft.FontWeight.W_500, color=ft.Colors.BLACK, max_lines=1),
-                    width=150,
-                    alignment=ft.Alignment(-1, 0),
-                    padding=ft.padding.only(left=10),
+                    content=ft.Text(discount_display, size=13, weight=ft.FontWeight.W_600, color=ft.Colors.ORANGE_700),
+                    width=130,
+                    alignment=ft.Alignment(1, 0),
+                    padding=ft.padding.only(right=10),
                 ),
-                # Discount column
+                # Period
                 ft.Container(
-                    content=ft.Column([
-                        ft.Text(f"{discount_label}: {discount_display}", size=12, weight=ft.FontWeight.W_500, color=ft.Colors.ORANGE_700, max_lines=1),
-                        ft.Text(days_text, size=10, color=days_color),
-                    ], spacing=1),
-                    width=110,
-                    alignment=ft.Alignment(-1, 0),
-                    padding=ft.padding.only(left=10),
-                ),
-                # Start Date column
-                ft.Container(
-                    content=ft.Text(start_display, size=12, color=ft.Colors.GREY_600),
-                    width=110,
+                    content=ft.Text(period_display, size=11, color=ft.Colors.GREY_600, max_lines=1),
+                    width=180,
                     alignment=ft.Alignment(0, 0),
                 ),
-                # End Date column
-                ft.Container(
-                    content=ft.Text(end_display, size=12, color=ft.Colors.GREY_600),
-                    width=110,
-                    alignment=ft.Alignment(0, 0),
-                ),
-                # Status column
+                # Status
                 ft.Container(
                     content=status_badge,
                     width=100,
                     alignment=ft.Alignment(0, 0),
                 ),
-                # Actions column
+                # Actions
                 ft.Container(
-                    content=ft.Row([edit_btn, delete_btn], spacing=4),
-                    width=120,
+                    content=ft.Row([items_btn, edit_btn, delete_btn], spacing=4),
+                    width=180,
                     alignment=ft.Alignment(0, 0),
                 ),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
@@ -395,14 +374,13 @@ class PromotionsContent:
             bgcolor=row_bg,
         )
         
-        # Add divider at bottom
         return ft.Column([
             row,
             ft.Divider(height=1, color=ft.Colors.GREY_200),
         ], spacing=0)
     
     def _create_empty_state(self):
-        """Create empty state when no data"""
+        """Create empty state"""
         return ft.Container(
             content=ft.Column([
                 ft.Icon(ft.Icons.LOCAL_OFFER, size=64, color=ft.Colors.GREY_300),
@@ -414,7 +392,7 @@ class PromotionsContent:
             expand=True,
         )
     
-    def update_pagination(self):
+    def update_pagination_controls(self):
         """Update pagination controls"""
         if not self.filtered_promotions:
             self.total_pages = 1
@@ -429,54 +407,53 @@ class PromotionsContent:
         prev_disabled = self.current_page <= 1
         next_disabled = self.current_page >= self.total_pages
         
-        self.pagination_container.content = ft.Row([
-            ft.Text(f"{get_text('showing')} {len(self.filtered_promotions)} {get_text('of')} {len(self.promotions_data)} {get_text('results')}", size=12, color="#64748B"),
-            ft.Container(expand=True),
-            ft.Container(
-                content=ft.Row([
-                    ft.IconButton(
-                        icon=ft.Icons.CHEVRON_LEFT,
-                        icon_size=20,
-                        on_click=self.prev_page,
-                        disabled=prev_disabled,
-                        style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
-                    ),
-                    ft.Container(
-                        content=ft.Text(f"{self.current_page}/{self.total_pages}", size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
-                        padding=ft.padding.symmetric(horizontal=15),
-                    ),
-                    ft.IconButton(
-                        icon=ft.Icons.CHEVRON_RIGHT,
-                        icon_size=20,
-                        on_click=self.next_page,
-                        disabled=next_disabled,
-                        style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
-                    ),
-                ]),
-                bgcolor=ft.Colors.WHITE,
-                border_radius=10,
-                padding=ft.padding.symmetric(horizontal=8, vertical=4),
-            ),
-        ], vertical_alignment=ft.CrossAxisAlignment.CENTER)
-        
+        self.pagination_container.content = ft.Container(
+            content=ft.Row([
+                ft.Text(f"{get_text('showing')} {len(self.filtered_promotions)} {get_text('of')} {len(self.promotions_data)} {get_text('results')}", size=12, color="#64748B"),
+                ft.Container(expand=True),
+                ft.Container(
+                    content=ft.Row([
+                        ft.IconButton(
+                            icon=ft.Icons.CHEVRON_LEFT,
+                            icon_size=20,
+                            on_click=self.prev_page,
+                            disabled=prev_disabled,
+                            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
+                        ),
+                        ft.Container(
+                            content=ft.Text(f"{self.current_page}/{self.total_pages}", size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
+                            padding=ft.padding.symmetric(horizontal=15),
+                        ),
+                        ft.IconButton(
+                            icon=ft.Icons.CHEVRON_RIGHT,
+                            icon_size=20,
+                            on_click=self.next_page,
+                            disabled=next_disabled,
+                            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
+                        ),
+                    ]),
+                    bgcolor=ft.Colors.WHITE,
+                    border_radius=10,
+                    padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                ),
+            ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
+            padding=ft.padding.symmetric(vertical=16, horizontal=20),
+            bgcolor="#F5F7FA",
+        )
         self.page.update()
     
     def prev_page(self, e=None):
-        """Go to previous page"""
         if self.current_page > 1:
             self.current_page -= 1
             self.display_promotions(self.filtered_promotions)
     
     def next_page(self, e=None):
-        """Go to next page"""
         if self.current_page < self.total_pages:
             self.current_page += 1
             self.display_promotions(self.filtered_promotions)
     
     def filter_promotions(self, e=None):
-        """Filter promotions based on search query"""
         query = self.search_input.value.lower() if self.search_input.value else ""
-        
         self.current_page = 1
         
         if not query:
@@ -484,14 +461,12 @@ class PromotionsContent:
         else:
             self.filtered_promotions = [
                 promo for promo in self.promotions_data
-                if query in promo.get('promo_name', '').lower()
-                or query in promo.get('promo_code', '').lower()
+                if query in promo.get('name', '').lower()
             ]
         
         self.display_promotions(self.filtered_promotions)
     
     def display_promotions(self, promotions):
-        """Display promotions in table format"""
         self.table_rows.controls.clear()
         
         if not promotions:
@@ -500,8 +475,6 @@ class PromotionsContent:
             start_idx = (self.current_page - 1) * self.items_per_page
             end_idx = start_idx + self.items_per_page
             page_promotions = promotions[start_idx:end_idx]
-            
-            # Calculate global row number
             global_start = start_idx + 1
             
             for i, promo in enumerate(page_promotions):
@@ -509,16 +482,14 @@ class PromotionsContent:
                 row = self._create_table_row(promo, start_idx + i, row_number)
                 self.table_rows.controls.append(row)
         
-        self.update_pagination()
+        self.update_pagination_controls()
         self.page.update()
     
     async def _delayed_load(self):
-        """Async delayed load"""
         await asyncio.sleep(0.2)
         self.load_data()
     
     def load_data(self):
-        """Load promotions from API"""
         if self.is_loading:
             return
         self.is_loading = True
@@ -528,9 +499,7 @@ class PromotionsContent:
             self.promotions_data = self.client.get_promotions()
             self.filtered_promotions = self.promotions_data.copy()
             print(f"DEBUG: Loaded {len(self.promotions_data)} promotions")
-            
             self.display_promotions(self.filtered_promotions)
-            
         except Exception as e:
             print(f"DEBUG: Error loading promotions: {e}")
             traceback.print_exc()
@@ -539,7 +508,6 @@ class PromotionsContent:
             self.is_loading = False
     
     def _safe_edit(self, promo_id, event):
-        """Safe wrapper for edit button"""
         try:
             self.edit_promotion(promo_id)
         except Exception as e:
@@ -548,7 +516,6 @@ class PromotionsContent:
             self.show_snackbar(f"{get_text('error')}: {e}")
     
     def _safe_delete(self, promo_id, event):
-        """Safe wrapper for delete button"""
         try:
             self.delete_promotion(promo_id)
         except Exception as e:
@@ -557,13 +524,11 @@ class PromotionsContent:
             self.show_snackbar(f"{get_text('error')}: {e}")
     
     def _open_dialog(self, dialog):
-        """Centralized dialog opening method"""
         try:
             if self.current_dialog:
                 self.current_dialog.open = False
                 if self.current_dialog in self.page.overlay:
                     self.page.overlay.remove(self.current_dialog)
-            
             self.current_dialog = dialog
             self.page.overlay.append(dialog)
             dialog.open = True
@@ -572,7 +537,6 @@ class PromotionsContent:
             print(f"DEBUG: Error opening dialog: {e}")
     
     def _close_dialog(self, e=None):
-        """Centralized dialog closing method"""
         try:
             if self.current_dialog:
                 self.current_dialog.open = False
@@ -581,12 +545,11 @@ class PromotionsContent:
             print(f"DEBUG: Error closing dialog: {ex}")
     
     def show_add_dialog(self, e=None):
-        """Show add promotion dialog with modern UI"""
-        print("DEBUG: show_add_dialog called")
+        """Show add promotion dialog"""
         
-        promo_code = ft.TextField(
-            label=f"{get_text('promo_code')} *",
-            hint_text="เช่น SUMMER2024",
+        name = ft.TextField(
+            label=f"{get_text('promo_name')} *",
+            hint_text="ເຊັ່ນ: Summer Sale 2024",
             border_radius=12,
             bgcolor=ft.Colors.WHITE,
             filled=True,
@@ -597,33 +560,21 @@ class PromotionsContent:
             focused_border_color=self.primary_color,
         )
         
-        promo_name = ft.TextField(
-            label=f"{get_text('promo_name')} *",
-            hint_text="เช่น ส่วนลดหน้าร้อน",
-            border_radius=12,
-            bgcolor=ft.Colors.WHITE,
-            filled=True,
-            prefix_icon=ft.Icons.TAG,
-            content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
-            border_color=ft.Colors.GREY_300,
-            focused_border_color=self.primary_color,
-        )
-        
         discount_type = ft.Dropdown(
             label=f"{get_text('discount_type')} *",
+            value="percent",
             border_radius=12,
             bgcolor=ft.Colors.WHITE,
             filled=True,
-            prefix_icon=ft.Icons.PERCENT,
             options=[
-                ft.dropdown.Option("percentage", f"% {get_text('percentage')}"),
-                ft.dropdown.Option("fixed", f"KIP {get_text('fixed')}"),
+                ft.dropdown.Option("percent", f"% {get_text('percentage')}"),
+                ft.dropdown.Option("amount", f"KIP {get_text('fixed_amount')}"),
             ]
         )
         
-        discount_value = ft.TextField(
+        value = ft.TextField(
             label=f"{get_text('discount_value')} *",
-            hint_text="เช่น 10 หรือ 50000",
+            hint_text="ເຊັ່ນ: 10 (ສຳລັບເປີເຊັນ) ຫຼື 50000 (ສຳລັບຈຳນວນເງິນ)",
             border_radius=12,
             bgcolor=ft.Colors.WHITE,
             filled=True,
@@ -633,9 +584,37 @@ class PromotionsContent:
             focused_border_color=self.primary_color,
         )
         
+        min_qty = ft.TextField(
+            label=get_text("min_qty"),
+            hint_text="1",
+            border_radius=12,
+            bgcolor=ft.Colors.WHITE,
+            filled=True,
+            value="1",
+            prefix_icon=ft.Icons.SHOPPING_CART,
+            content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
+            border_color=ft.Colors.GREY_300,
+            focused_border_color=self.primary_color,
+            expand=True,
+        )
+        
+        min_amount = ft.TextField(
+            label=get_text("min_amount"),
+            hint_text="0",
+            border_radius=12,
+            bgcolor=ft.Colors.WHITE,
+            filled=True,
+            value="0",
+            prefix_icon=ft.Icons.ATTACH_MONEY,
+            content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
+            border_color=ft.Colors.GREY_300,
+            focused_border_color=self.primary_color,
+            expand=True,
+        )
+        
         start_date = ft.TextField(
-            label=f"{get_text('start_date')} *",
-            hint_text="2024-01-01",
+            label=get_text("start_date"),
+            hint_text="YYYY-MM-DD",
             border_radius=12,
             bgcolor=ft.Colors.WHITE,
             filled=True,
@@ -643,11 +622,12 @@ class PromotionsContent:
             content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
             border_color=ft.Colors.GREY_300,
             focused_border_color=self.primary_color,
+            expand=True,
         )
         
         end_date = ft.TextField(
-            label=f"{get_text('end_date')} *",
-            hint_text="2024-12-31",
+            label=get_text("end_date"),
+            hint_text="YYYY-MM-DD",
             border_radius=12,
             bgcolor=ft.Colors.WHITE,
             filled=True,
@@ -655,19 +635,33 @@ class PromotionsContent:
             content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
             border_color=ft.Colors.GREY_300,
             focused_border_color=self.primary_color,
+            expand=True,
+        )
+        
+        status = ft.Dropdown(
+            label=get_text("status"),
+            value="active",
+            border_radius=12,
+            bgcolor=ft.Colors.WHITE,
+            filled=True,
+            options=[
+                ft.dropdown.Option("active", f"✅ {get_text('status_active')}"),
+                ft.dropdown.Option("inactive", f"❌ {get_text('status_inactive')}"),
+            ]
         )
         
         def save(e):
-            if promo_code.value and promo_name.value and discount_type.value and discount_value.value:
+            if name.value and discount_type.value and value.value:
                 try:
                     self.client.add_promotion(
-                        promo_code.value,
-                        promo_name.value,
-                        discount_type.value,
-                        float(discount_value.value),
-                        start_date.value,
-                        end_date.value,
-                        True
+                        name=name.value,
+                        discount_type=discount_type.value,
+                        value=float(value.value),
+                        min_qty=int(min_qty.value) if min_qty.value else 1,
+                        min_amount=float(min_amount.value) if min_amount.value else 0,
+                        start_date=start_date.value if start_date.value else None,
+                        end_date=end_date.value if end_date.value else None,
+                        status=status.value
                     )
                     self._close_dialog()
                     self.load_data()
@@ -694,17 +688,8 @@ class PromotionsContent:
                         ),
                         ft.Column(
                             [
-                                ft.Text(
-                                    get_text('promotions_add'),
-                                    size=20,
-                                    weight=ft.FontWeight.BOLD,
-                                    color="#1E293B",
-                                ),
-                                ft.Text(
-                                    "เพิ่มโปรโมชั่นใหม่เข้าสู่ระบบ",
-                                    size=13,
-                                    color="#64748B",
-                                ),
+                                ft.Text(get_text('promotions_add'), size=20, weight=ft.FontWeight.BOLD, color="#1E293B"),
+                                ft.Text("ເພີ່ມໂປຣໂມຊັນໃໝ່", size=13, color="#64748B"),
                             ],
                             spacing=2,
                         ),
@@ -718,57 +703,37 @@ class PromotionsContent:
             content=ft.Container(
                 content=ft.Column(
                     [
-                        promo_code,
-                        ft.Container(height=12),
-                        promo_name,
+                        name,
                         ft.Container(height=12),
                         discount_type,
                         ft.Container(height=12),
-                        discount_value,
+                        value,
+                        ft.Container(height=12),
+                        ft.Row([min_qty, min_amount], spacing=12),
                         ft.Container(height=12),
                         ft.Row([start_date, end_date], spacing=12),
+                        ft.Container(height=12),
+                        status,
                     ],
                     spacing=0,
                     scroll=ft.ScrollMode.AUTO,
                 ),
                 padding=ft.padding.all(24),
-                width=520,
-                height=500,
+                width=550,
+                height=520,
             ),
             actions=[
                 ft.Container(
                     content=ft.Row(
                         [
                             ft.TextButton(
-                                content=ft.Row(
-                                    [
-                                        ft.Icon(ft.Icons.CLOSE, size=18, color="#64748B"),
-                                        ft.Text(get_text("cancel"), size=14, color="#64748B"),
-                                    ],
-                                    spacing=6,
-                                ),
+                                content=ft.Row([ft.Icon(ft.Icons.CLOSE, size=18, color="#64748B"), ft.Text(get_text("cancel"), size=14, color="#64748B")], spacing=6),
                                 on_click=self._close_dialog,
-                                style=ft.ButtonStyle(
-                                    overlay_color=ft.Colors.with_opacity(0.1, ft.Colors.GREY_400),
-                                    shape=ft.RoundedRectangleBorder(radius=10),
-                                ),
                             ),
                             ft.ElevatedButton(
-                                content=ft.Row(
-                                    [
-                                        ft.Icon(ft.Icons.SAVE, size=18, color=ft.Colors.WHITE),
-                                        ft.Text(get_text("save"), size=14, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500),
-                                    ],
-                                    spacing=6,
-                                ),
+                                content=ft.Row([ft.Icon(ft.Icons.SAVE, size=18, color=ft.Colors.WHITE), ft.Text(get_text("save"), size=14, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500)], spacing=6),
                                 on_click=save,
-                                style=ft.ButtonStyle(
-                                    bgcolor=self.primary_color,
-                                    color=ft.Colors.WHITE,
-                                    shape=ft.RoundedRectangleBorder(radius=10),
-                                    elevation=2,
-                                    padding=ft.padding.symmetric(horizontal=20, vertical=12),
-                                ),
+                                style=ft.ButtonStyle(bgcolor=self.primary_color, color=ft.Colors.WHITE, shape=ft.RoundedRectangleBorder(radius=10), elevation=2),
                             ),
                         ],
                         spacing=12,
@@ -784,9 +749,8 @@ class PromotionsContent:
         self._open_dialog(dialog)
     
     def edit_promotion(self, promo_id):
-        """Edit promotion dialog with modern UI"""
+        """Edit promotion dialog"""
         
-        # Find promotion from stored data
         promo = None
         for p in self.promotions_data:
             if p.get('id') == promo_id:
@@ -797,24 +761,13 @@ class PromotionsContent:
             self.show_snackbar(f"❌ {get_text('error')}")
             return
         
-        promo_code = ft.TextField(
-            label=f"{get_text('promo_code')} *",
-            value=promo.get('promo_code', ''),
-            read_only=True,
-            border_radius=12,
-            bgcolor=ft.Colors.GREY_100,
-            filled=True,
-            prefix_icon=ft.Icons.LOCAL_OFFER,
-            content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
-        )
-        
-        promo_name = ft.TextField(
+        name = ft.TextField(
             label=f"{get_text('promo_name')} *",
-            value=promo.get('promo_name', ''),
+            value=promo.get('name', ''),
             border_radius=12,
             bgcolor=ft.Colors.WHITE,
             filled=True,
-            prefix_icon=ft.Icons.TAG,
+            prefix_icon=ft.Icons.LOCAL_OFFER,
             content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
             border_color=ft.Colors.GREY_300,
             focused_border_color=self.primary_color,
@@ -822,20 +775,19 @@ class PromotionsContent:
         
         discount_type = ft.Dropdown(
             label=f"{get_text('discount_type')} *",
-            value=promo.get('discount_type', 'percentage'),
+            value=promo.get('discount_type', 'percent'),
             border_radius=12,
             bgcolor=ft.Colors.WHITE,
             filled=True,
-            prefix_icon=ft.Icons.PERCENT,
             options=[
-                ft.dropdown.Option("percentage", f"% {get_text('percentage')}"),
-                ft.dropdown.Option("fixed", f"KIP {get_text('fixed')}"),
+                ft.dropdown.Option("percent", f"% {get_text('percentage')}"),
+                ft.dropdown.Option("amount", f"KIP {get_text('fixed_amount')}"),
             ]
         )
         
-        discount_value = ft.TextField(
+        value = ft.TextField(
             label=f"{get_text('discount_value')} *",
-            value=str(int(promo.get('discount_value', 0))),
+            value=str(promo.get('value', 0)),
             border_radius=12,
             bgcolor=ft.Colors.WHITE,
             filled=True,
@@ -845,9 +797,37 @@ class PromotionsContent:
             focused_border_color=self.primary_color,
         )
         
+        min_qty = ft.TextField(
+            label=get_text("min_qty"),
+            value=str(promo.get('min_qty', 1)),
+            border_radius=12,
+            bgcolor=ft.Colors.WHITE,
+            filled=True,
+            prefix_icon=ft.Icons.SHOPPING_CART,
+            content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
+            border_color=ft.Colors.GREY_300,
+            focused_border_color=self.primary_color,
+            expand=True,
+        )
+        
+        min_amount = ft.TextField(
+            label=get_text("min_amount"),
+            value=str(promo.get('min_amount', 0)),
+            border_radius=12,
+            bgcolor=ft.Colors.WHITE,
+            filled=True,
+            prefix_icon=ft.Icons.ATTACH_MONEY,
+            content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
+            border_color=ft.Colors.GREY_300,
+            focused_border_color=self.primary_color,
+            expand=True,
+        )
+        
+        start_date_val = promo.get('start_date')
         start_date = ft.TextField(
-            label=f"{get_text('start_date')} *",
-            value=promo.get('start_date', ''),
+            label=get_text("start_date"),
+            value=str(start_date_val) if start_date_val else "",
+            hint_text="YYYY-MM-DD",
             border_radius=12,
             bgcolor=ft.Colors.WHITE,
             filled=True,
@@ -855,11 +835,14 @@ class PromotionsContent:
             content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
             border_color=ft.Colors.GREY_300,
             focused_border_color=self.primary_color,
+            expand=True,
         )
         
+        end_date_val = promo.get('end_date')
         end_date = ft.TextField(
-            label=f"{get_text('end_date')} *",
-            value=promo.get('end_date', ''),
+            label=get_text("end_date"),
+            value=str(end_date_val) if end_date_val else "",
+            hint_text="YYYY-MM-DD",
             border_radius=12,
             bgcolor=ft.Colors.WHITE,
             filled=True,
@@ -867,30 +850,36 @@ class PromotionsContent:
             content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
             border_color=ft.Colors.GREY_300,
             focused_border_color=self.primary_color,
+            expand=True,
         )
         
-        is_active = promo.get('is_active', True)
-        
-        active_toggle = ft.Switch(
-            label=get_text("active"),
-            value=is_active,
-            active_color=self.primary_color,
+        status = ft.Dropdown(
+            label=get_text("status"),
+            value=promo.get('status', 'active'),
+            border_radius=12,
+            bgcolor=ft.Colors.WHITE,
+            filled=True,
+            options=[
+                ft.dropdown.Option("active", f"✅ {get_text('status_active')}"),
+                ft.dropdown.Option("inactive", f"❌ {get_text('status_inactive')}"),
+            ]
         )
         
         def save_edit(e):
             try:
-                if not promo_name.value or not discount_type.value or not discount_value.value:
+                if not name.value or not discount_type.value or not value.value:
                     self.show_snackbar(get_text("fill_all_fields"))
                     return
                 
                 self.client.update_promotion(promo_id, {
-                    'promo_code': promo_code.value,
-                    'promo_name': promo_name.value,
+                    'name': name.value,
                     'discount_type': discount_type.value,
-                    'discount_value': float(discount_value.value) if discount_value.value else 0,
-                    'start_date': start_date.value,
-                    'end_date': end_date.value,
-                    'is_active': active_toggle.value,
+                    'value': float(value.value),
+                    'min_qty': int(min_qty.value) if min_qty.value else 1,
+                    'min_amount': float(min_amount.value) if min_amount.value else 0,
+                    'start_date': start_date.value if start_date.value else None,
+                    'end_date': end_date.value if end_date.value else None,
+                    'status': status.value,
                 })
                 self._close_dialog()
                 self.load_data()
@@ -907,28 +896,8 @@ class PromotionsContent:
             title=ft.Container(
                 content=ft.Row(
                     [
-                        ft.Container(
-                            content=ft.Icon(ft.Icons.EDIT, size=28, color=ft.Colors.WHITE),
-                            bgcolor=self.primary_color,
-                            border_radius=14,
-                            padding=ft.padding.all(8),
-                        ),
-                        ft.Column(
-                            [
-                                ft.Text(
-                                    get_text('promotions_edit'),
-                                    size=20,
-                                    weight=ft.FontWeight.BOLD,
-                                    color="#1E293B",
-                                ),
-                                ft.Text(
-                                    "แก้ไขข้อมูลโปรโมชั่น",
-                                    size=13,
-                                    color="#64748B",
-                                ),
-                            ],
-                            spacing=2,
-                        ),
+                        ft.Container(content=ft.Icon(ft.Icons.EDIT, size=28, color=ft.Colors.WHITE), bgcolor=self.primary_color, border_radius=14, padding=ft.padding.all(8)),
+                        ft.Column([ft.Text(get_text('promotions_edit'), size=20, weight=ft.FontWeight.BOLD, color="#1E293B"), ft.Text("ແກ້ໄຂຂໍ້ມູນໂປຣໂມຊັນ", size=13, color="#64748B")], spacing=2),
                     ],
                     spacing=12,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -939,60 +908,31 @@ class PromotionsContent:
             content=ft.Container(
                 content=ft.Column(
                     [
-                        promo_code,
-                        ft.Container(height=12),
-                        promo_name,
+                        name,
                         ft.Container(height=12),
                         discount_type,
                         ft.Container(height=12),
-                        discount_value,
+                        value,
+                        ft.Container(height=12),
+                        ft.Row([min_qty, min_amount], spacing=12),
                         ft.Container(height=12),
                         ft.Row([start_date, end_date], spacing=12),
                         ft.Container(height=12),
-                        active_toggle,
+                        status,
                     ],
                     spacing=0,
                     scroll=ft.ScrollMode.AUTO,
                 ),
                 padding=ft.padding.all(24),
-                width=520,
+                width=550,
                 height=550,
             ),
             actions=[
                 ft.Container(
                     content=ft.Row(
                         [
-                            ft.TextButton(
-                                content=ft.Row(
-                                    [
-                                        ft.Icon(ft.Icons.CLOSE, size=18, color="#64748B"),
-                                        ft.Text(get_text("cancel"), size=14, color="#64748B"),
-                                    ],
-                                    spacing=6,
-                                ),
-                                on_click=self._close_dialog,
-                                style=ft.ButtonStyle(
-                                    overlay_color=ft.Colors.with_opacity(0.1, ft.Colors.GREY_400),
-                                    shape=ft.RoundedRectangleBorder(radius=10),
-                                ),
-                            ),
-                            ft.ElevatedButton(
-                                content=ft.Row(
-                                    [
-                                        ft.Icon(ft.Icons.SAVE, size=18, color=ft.Colors.WHITE),
-                                        ft.Text(get_text("save"), size=14, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500),
-                                    ],
-                                    spacing=6,
-                                ),
-                                on_click=save_edit,
-                                style=ft.ButtonStyle(
-                                    bgcolor=self.primary_color,
-                                    color=ft.Colors.WHITE,
-                                    shape=ft.RoundedRectangleBorder(radius=10),
-                                    elevation=2,
-                                    padding=ft.padding.symmetric(horizontal=20, vertical=12),
-                                ),
-                            ),
+                            ft.TextButton(content=ft.Row([ft.Icon(ft.Icons.CLOSE, size=18, color="#64748B"), ft.Text(get_text("cancel"), size=14, color="#64748B")], spacing=6), on_click=self._close_dialog),
+                            ft.ElevatedButton(content=ft.Row([ft.Icon(ft.Icons.SAVE, size=18, color=ft.Colors.WHITE), ft.Text(get_text("save"), size=14, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500)], spacing=6), on_click=save_edit, style=ft.ButtonStyle(bgcolor=self.primary_color, color=ft.Colors.WHITE, shape=ft.RoundedRectangleBorder(radius=10), elevation=2)),
                         ],
                         spacing=12,
                         alignment=ft.MainAxisAlignment.END,
@@ -1007,16 +947,13 @@ class PromotionsContent:
         self._open_dialog(dialog)
     
     def delete_promotion(self, promo_id):
-        """Delete promotion with confirmation dialog"""
-        
-        # Find promotion from stored data
         promo = None
         for p in self.promotions_data:
             if p.get('id') == promo_id:
                 promo = p
                 break
         
-        promo_name = promo.get('promo_name', get_text('this_promotion')) if promo else get_text('this_promotion')
+        promo_name = promo.get('name', get_text('this_promotion')) if promo else get_text('this_promotion')
         WARNING_COLOR = "#DC2626"
         
         def confirm(e):
@@ -1037,28 +974,8 @@ class PromotionsContent:
             title=ft.Container(
                 content=ft.Row(
                     [
-                        ft.Container(
-                            content=ft.Icon(ft.Icons.WARNING_AMBER, size=28, color=ft.Colors.WHITE),
-                            bgcolor=WARNING_COLOR,
-                            border_radius=14,
-                            padding=ft.padding.all(8),
-                        ),
-                        ft.Column(
-                            [
-                                ft.Text(
-                                    get_text("confirm"),
-                                    size=20,
-                                    weight=ft.FontWeight.BOLD,
-                                    color="#1E293B",
-                                ),
-                                ft.Text(
-                                    "กรุณายืนยันการลบข้อมูล",
-                                    size=13,
-                                    color="#64748B",
-                                ),
-                            ],
-                            spacing=2,
-                        ),
+                        ft.Container(content=ft.Icon(ft.Icons.WARNING_AMBER, size=28, color=ft.Colors.WHITE), bgcolor=WARNING_COLOR, border_radius=14, padding=ft.padding.all(8)),
+                        ft.Column([ft.Text(get_text("confirm"), size=20, weight=ft.FontWeight.BOLD, color="#1E293B"), ft.Text("ກະລຸນາຢືນຢັນການລຶບຂໍ້ມູນ", size=13, color="#64748B")], spacing=2),
                     ],
                     spacing=12,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -1069,25 +986,11 @@ class PromotionsContent:
             content=ft.Container(
                 content=ft.Column(
                     [
-                        ft.Container(
-                            content=ft.Icon(ft.Icons.DELETE_OUTLINE, size=56, color=WARNING_COLOR),
-                            alignment=ft.Alignment(0, 0),
-                        ),
+                        ft.Container(content=ft.Icon(ft.Icons.DELETE_OUTLINE, size=56, color=WARNING_COLOR), alignment=ft.Alignment(0, 0)),
                         ft.Container(height=8),
-                        ft.Text(
-                            f"คุณต้องการลบ '{promo_name}' หรือไม่?",
-                            size=16,
-                            weight=ft.FontWeight.W_500,
-                            color="#1E293B",
-                            text_align=ft.TextAlign.CENTER,
-                        ),
+                        ft.Text(f"ທ່ານຕ້ອງການລຶບ '{promo_name}' ແທ້ບໍ?", size=16, weight=ft.FontWeight.W_500, color="#1E293B", text_align=ft.TextAlign.CENTER),
                         ft.Container(height=4),
-                        ft.Text(
-                            get_text("delete_warning"),
-                            size=13,
-                            color="#64748B",
-                            text_align=ft.TextAlign.CENTER,
-                        ),
+                        ft.Text(get_text("delete_warning"), size=13, color="#64748B", text_align=ft.TextAlign.CENTER),
                     ],
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     spacing=8,
@@ -1099,37 +1002,8 @@ class PromotionsContent:
                 ft.Container(
                     content=ft.Row(
                         [
-                            ft.TextButton(
-                                content=ft.Row(
-                                    [
-                                        ft.Icon(ft.Icons.CLOSE, size=18, color="#64748B"),
-                                        ft.Text(get_text("cancel"), size=14, color="#64748B"),
-                                    ],
-                                    spacing=6,
-                                ),
-                                on_click=self._close_dialog,
-                                style=ft.ButtonStyle(
-                                    overlay_color=ft.Colors.with_opacity(0.1, ft.Colors.GREY_400),
-                                    shape=ft.RoundedRectangleBorder(radius=10),
-                                ),
-                            ),
-                            ft.ElevatedButton(
-                                content=ft.Row(
-                                    [
-                                        ft.Icon(ft.Icons.DELETE, size=18, color=ft.Colors.WHITE),
-                                        ft.Text(get_text("delete"), size=14, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500),
-                                    ],
-                                    spacing=6,
-                                ),
-                                on_click=confirm,
-                                style=ft.ButtonStyle(
-                                    bgcolor=WARNING_COLOR,
-                                    color=ft.Colors.WHITE,
-                                    shape=ft.RoundedRectangleBorder(radius=10),
-                                    elevation=2,
-                                    padding=ft.padding.symmetric(horizontal=20, vertical=12),
-                                ),
-                            ),
+                            ft.TextButton(content=ft.Row([ft.Icon(ft.Icons.CLOSE, size=18, color="#64748B"), ft.Text(get_text("cancel"), size=14, color="#64748B")], spacing=6), on_click=self._close_dialog),
+                            ft.ElevatedButton(content=ft.Row([ft.Icon(ft.Icons.DELETE, size=18, color=ft.Colors.WHITE), ft.Text(get_text("delete"), size=14, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500)], spacing=6), on_click=confirm, style=ft.ButtonStyle(bgcolor=WARNING_COLOR, color=ft.Colors.WHITE, shape=ft.RoundedRectangleBorder(radius=10), elevation=2)),
                         ],
                         spacing=12,
                         alignment=ft.MainAxisAlignment.END,
@@ -1143,13 +1017,138 @@ class PromotionsContent:
         
         self._open_dialog(dialog)
     
-    def show_snackbar(self, message):
-        """Show snackbar message"""
-        snack = ft.SnackBar(
-            content=ft.Text(message),
-            bgcolor=ft.Colors.GREY_800,
-            duration=3000,
+    # ========== Promotion Items Management ==========
+    
+    def show_items_dialog(self, promotion_id: int, promotion_name: str):
+        """Navigate to promotion items page"""
+        self.navigate("promotion_items", promotion_id=promotion_id, promotion_name=promotion_name)
+    
+    def _show_add_item_dialog(self, promotion_id: int, item_type: str, on_add_callback):
+        """Show dialog to add item to promotion"""
+        
+        search_field = ft.TextField(
+            hint_text=f"ຄົ້ນຫາ {item_type}...",
+            border_radius=12,
+            bgcolor=ft.Colors.WHITE,
+            filled=True,
+            prefix_icon=ft.Icons.SEARCH,
+            expand=True,
         )
+        search_field.on_change = lambda e: load_items(e.control.value)
+        
+        items_list = ft.Column(spacing=8, scroll=ft.ScrollMode.AUTO, height=350)
+        
+        def load_items(search: str = ""):
+            try:
+                if item_type == 'part':
+                    items = self.client.get_available_parts_for_promotion(promotion_id, search)
+                else:
+                    items = self.client.get_available_services_for_promotion(promotion_id, search)
+                
+                items_list.controls.clear()
+                
+                if not items:
+                    items_list.controls.append(
+                        ft.Container(
+                            content=ft.Text(f"ບໍ່ພົບ {item_type} ທີ່ສາມາດເພີ່ມໄດ້", size=13, color="#64748B"),
+                            alignment=ft.Alignment(0, 0),
+                            padding=40,
+                        )
+                    )
+                else:
+                    for item in items:
+                        price = item.get('sell_price') if item_type == 'part' else item.get('price')
+                        items_list.controls.append(
+                            ft.Container(
+                                content=ft.Row([
+                                    ft.Column([
+                                        ft.Text(item['name'], size=14, weight=ft.FontWeight.W_500),
+                                        ft.Text(f"{int(price):,} KIP", size=12, color="#64748B"),
+                                    ], spacing=2, expand=True),
+                                    ft.ElevatedButton(
+                                        "ເພີ່ມ",
+                                        bgcolor=self.primary_color,
+                                        color=ft.Colors.WHITE,
+                                        on_click=lambda e, iid=item['id'], iname=item['name']: add_item(iid, iname),
+                                        style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
+                                    ),
+                                ]),
+                                padding=10,
+                                bgcolor=ft.Colors.GREY_50,
+                                border_radius=10,
+                            )
+                        )
+                
+                self.page.update()
+            except Exception as e:
+                print(f"Error loading available items: {e}")
+                self.show_snackbar(f"{get_text('error')}: {e}")
+        
+        def add_item(item_id: int, item_name: str):
+            try:
+                self.client.add_promotion_item(promotion_id, item_type, item_id)
+                self._close_dialog()
+                on_add_callback()
+                self.show_snackbar(f"✅ ເພີ່ມ {item_name} ສຳເລັດ")
+            except Exception as e:
+                self.show_snackbar(f"{get_text('error')}: {e}")
+        
+        dialog = ft.AlertDialog(
+            modal=True,
+            shape=ft.RoundedRectangleBorder(radius=16),
+            title=ft.Text(f"ເພີ່ມ {item_type.upper()}", size=18, weight=ft.FontWeight.BOLD),
+            content=ft.Container(
+                content=ft.Column([
+                    search_field,
+                    ft.Container(height=10),
+                    items_list,
+                ], spacing=0),
+                width=450,
+                height=450,
+            ),
+            actions=[
+                ft.TextButton(get_text("cancel"), on_click=self._close_dialog),
+            ],
+        )
+        
+        load_items()
+        self._open_dialog(dialog)
+    
+    def _create_item_row(self, item: dict, promotion_id: int, on_delete_callback):
+        """Create a row for an item in the items list"""
+        
+        def delete_item(e):
+            try:
+                self.client.delete_promotion_item(promotion_id, item['id'])
+                on_delete_callback()
+                self.show_snackbar(f"✅ ລຶບລາຍການສຳເລັດ")
+            except Exception as err:
+                self.show_snackbar(f"{get_text('error')}: {err}")
+        
+        item_name = item.get('item_name', '-')
+        item_price = item.get('item_price', 0)
+        
+        return ft.Container(
+            content=ft.Row([
+                ft.Column([
+                    ft.Text(item_name, size=14, weight=ft.FontWeight.W_500),
+                    ft.Text(f"{int(item_price):,} KIP", size=11, color="#64748B"),
+                ], spacing=2, expand=True),
+                ft.IconButton(
+                    icon=ft.Icons.DELETE_OUTLINE,
+                    icon_color=ft.Colors.RED_600,
+                    icon_size=20,
+                    on_click=delete_item,
+                    tooltip="ລຶບ",
+                ),
+            ]),
+            padding=ft.padding.symmetric(horizontal=12, vertical=10),
+            bgcolor=ft.Colors.GREY_50,
+            border_radius=10,
+        )
+    
+    def show_snackbar(self, message):
+        snack = ft.SnackBar(content=ft.Text(message), bgcolor=ft.Colors.GREY_800, duration=3000)
         self.page.snack_bar = snack
         self.page.snack_bar.open = True
         self.page.update()
