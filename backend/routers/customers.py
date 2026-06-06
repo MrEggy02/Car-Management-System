@@ -1,3 +1,4 @@
+# backend/routers/customers.py
 from fastapi import APIRouter, HTTPException, Depends, Form
 from database import get_db
 from auth import authenticate_user
@@ -11,13 +12,11 @@ def get_customers(user: dict = Depends(authenticate_user)):
     db = get_db()
     cursor = db.cursor(dictionary=True)
     try:
-        # Only select columns that exist in your table
         cursor.execute("SELECT id, name, phone, address, created_at FROM customers ORDER BY id DESC")
         customers = cursor.fetchall()
         return customers
     except Exception as e:
         print(f"Error in get_customers: {e}")
-        # Return empty list instead of error
         return []
     finally:
         cursor.close()
@@ -130,13 +129,13 @@ def register_customer(
     phone: str = Form(...),
     address: str = Form(""),
     plate_number: str = Form(...),
-    brand: str = Form(""),
+    brand_id: int = Form(None),  # Changed from brand to brand_id
     model: str = Form(""),
     year: int = Form(0),
     color: str = Form(""),
     user: dict = Depends(authenticate_user)
 ):
-    """Register customer and vehicle together"""
+    """Register customer and vehicle together with brand_id"""
     db = get_db()
     cursor = db.cursor()
     try:
@@ -148,11 +147,11 @@ def register_customer(
         
         customer_id = cursor.lastrowid
         
-        # Insert vehicle
+        # Insert vehicle with brand_id (not brand string)
         cursor.execute("""
-            INSERT INTO vehicles (customer_id, plate_number, brand, model, year, color)
+            INSERT INTO vehicles (customer_id, plate_number, brand_id, model, year, color)
             VALUES (%s, %s, %s, %s, %s, %s)
-        """, (customer_id, plate_number, brand, model, year, color))
+        """, (customer_id, plate_number, brand_id, model, year, color))
         
         vehicle_id = cursor.lastrowid
         db.commit()
@@ -167,6 +166,8 @@ def register_customer(
     except Exception as e:
         db.rollback()
         print(f"Error in register_customer: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         cursor.close()

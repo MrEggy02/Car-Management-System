@@ -23,13 +23,14 @@ def get_repair_orders(
                    jo.job_no,
                    c.name as customer_name,
                    c.phone as customer_phone,
-                   v.plate_number, v.brand, v.model,
+                   v.plate_number, b.name as brand, v.model,
                    u.fullname as mechanic_name,
                    q.total_price as quotation_total
             FROM repair_orders ro
             LEFT JOIN job_orders jo ON ro.job_order_id = jo.id
             LEFT JOIN customers c ON jo.customer_id = c.id
             LEFT JOIN vehicles v ON jo.vehicle_id = v.id
+            LEFT JOIN brands b ON v.brand_id = b.id
             LEFT JOIN users u ON ro.mechanic_id = u.id
             LEFT JOIN quotations q ON jo.id = q.job_order_id AND q.status = 'approved'
             WHERE 1=1
@@ -53,10 +54,14 @@ def get_repair_orders(
                 order['start_date'] = str(order['start_date'])
             if order.get('end_date'):
                 order['end_date'] = str(order['end_date'])
+            if order.get('brand') is None:
+                order['brand'] = "-"
         
         return repair_orders
     except Exception as e:
         print(f"Error in get_repair_orders: {e}")
+        import traceback
+        traceback.print_exc()
         return []
     finally:
         cursor.close()
@@ -73,12 +78,13 @@ def get_repair_order(repair_id: int, user: dict = Depends(authenticate_user)):
             SELECT ro.*, 
                    jo.job_no, jo.problem_description,
                    c.name as customer_name, c.phone as customer_phone,
-                   v.plate_number, v.brand, v.model, v.year, v.color,
+                   v.plate_number, b.name as brand, v.model, v.year, v.color,
                    u.fullname as mechanic_name
             FROM repair_orders ro
             LEFT JOIN job_orders jo ON ro.job_order_id = jo.id
             LEFT JOIN customers c ON jo.customer_id = c.id
             LEFT JOIN vehicles v ON jo.vehicle_id = v.id
+            LEFT JOIN brands b ON v.brand_id = b.id
             LEFT JOIN users u ON ro.mechanic_id = u.id
             WHERE ro.id = %s
         """, (repair_id,))
@@ -89,10 +95,12 @@ def get_repair_order(repair_id: int, user: dict = Depends(authenticate_user)):
                 repair_order['start_date'] = str(repair_order['start_date'])
             if repair_order.get('end_date'):
                 repair_order['end_date'] = str(repair_order['end_date'])
+            if repair_order.get('brand') is None:
+                repair_order['brand'] = "-"
             
-            # Get parts usage
+            # Get parts usage - removed part_code and brand since they don't exist in parts table
             cursor.execute("""
-                SELECT pu.*, p.name as part_name, p.part_code, p.brand
+                SELECT pu.*, p.name as part_name
                 FROM parts_usage pu
                 LEFT JOIN parts p ON pu.part_id = p.id
                 WHERE pu.repair_id = %s
@@ -100,6 +108,11 @@ def get_repair_order(repair_id: int, user: dict = Depends(authenticate_user)):
             repair_order['parts_usage'] = cursor.fetchall()
         
         return repair_order
+    except Exception as e:
+        print(f"Error in get_repair_order: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
     finally:
         cursor.close()
         db.close()
@@ -108,7 +121,7 @@ def get_repair_order(repair_id: int, user: dict = Depends(authenticate_user)):
 @router.post("/repair-orders")
 def create_repair_order(
     job_order_id: int = Form(...),
-    mechanic_id: int = Form(None),
+    mechanic_id: Optional[int] = Form(None),
     user: dict = Depends(authenticate_user)
 ):
     """Create a new repair order from a job order (can only create once per job order)"""
@@ -120,7 +133,6 @@ def create_repair_order(
         existing = cursor.fetchone()
         
         if existing:
-            # If exists, return existing repair order info (cannot create new)
             existing_id = existing[0]
             existing_mechanic_id = existing[1]
             existing_status = existing[2]
@@ -153,6 +165,8 @@ def create_repair_order(
     except Exception as e:
         db.rollback()
         print(f"Error creating repair order: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         cursor.close()
@@ -203,13 +217,20 @@ def update_repair_status(
         if not current:
             raise HTTPException(status_code=404, detail="Repair order not found")
         
+        current_status = current[0] if current else None
         update_fields = ["status = %s"]
         params = [status]
         
         # If starting work, set start_date
-        if status == 'working' and current[0] != 'working':
+        if status == 'working' and current_status != 'working':
             update_fields.append("start_date = %s")
             params.append(datetime.now())
+        
+        # If paused, set pause_reason
+        if status == 'paused':
+            pause_reason = "Paused by mechanic"
+            update_fields.append("pause_reason = %s")
+            params.append(pause_reason)
         
         # If completed, set end_date
         if status == 'completed':
@@ -243,6 +264,7 @@ def add_part_usage(
     repair_id: int,
     part_id: int = Form(...),
     qty: int = Form(...),
+    note: Optional[str] = Form(None),
     user: dict = Depends(authenticate_user)
 ):
     """Add part usage for repair (withdraw parts from stock)"""
@@ -254,7 +276,7 @@ def add_part_usage(
         if not cursor.fetchone():
             raise HTTPException(status_code=404, detail="Repair order not found")
         
-        # Get part cost price
+        # Get part cost price and stock
         cursor.execute("SELECT cost_price, stock_qty FROM parts WHERE id = %s", (part_id,))
         part = cursor.fetchone()
         if not part:
@@ -266,9 +288,9 @@ def add_part_usage(
         
         # Add to parts usage
         cursor.execute("""
-            INSERT INTO parts_usage (repair_id, part_id, qty, cost_price)
-            VALUES (%s, %s, %s, %s)
-        """, (repair_id, part_id, qty, part['cost_price']))
+            INSERT INTO parts_usage (repair_id, part_id, qty, cost_price, note)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (repair_id, part_id, qty, part['cost_price'], note))
         
         # Update stock
         cursor.execute("""
@@ -286,6 +308,8 @@ def add_part_usage(
     except Exception as e:
         db.rollback()
         print(f"Error adding part usage: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         cursor.close()
@@ -334,14 +358,15 @@ def delete_part_usage(
 
 @router.get("/employees/mechanics")
 def get_mechanics(user: dict = Depends(authenticate_user)):
-    """Get all mechanics (employees with role = technician)"""
+    """Get all mechanics (employees with role = technician or mechanic)"""
     db = get_db()
     cursor = db.cursor(dictionary=True)
     try:
+        # Check which role column exists: role or role_name
         cursor.execute("""
             SELECT id, username, fullname, phone 
             FROM users 
-            WHERE role = 'technician'
+            WHERE role IN ('technician', 'mechanic')
             ORDER BY fullname
         """)
         mechanics = cursor.fetchall()

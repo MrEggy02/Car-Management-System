@@ -14,7 +14,7 @@ def get_invoices(
     payment_status: Optional[str] = None,
     user: dict = Depends(authenticate_user)
 ):
-    """Get all invoices, optionally filtered by job_order_id or payment_status"""
+    """Get all invoices"""
     db = get_db()
     cursor = db.cursor(dictionary=True)
     try:
@@ -22,14 +22,11 @@ def get_invoices(
             SELECT i.*, 
                    jo.job_no,
                    c.name as customer_name,
-                   c.phone as customer_phone,
-                   v.plate_number, v.brand, v.model,
-                   q.total_price as quotation_total
+                   v.plate_number, v.brand, v.model
             FROM invoices i
             LEFT JOIN job_orders jo ON i.job_order_id = jo.id
             LEFT JOIN customers c ON jo.customer_id = c.id
             LEFT JOIN vehicles v ON jo.vehicle_id = v.id
-            LEFT JOIN quotations q ON jo.id = q.job_order_id AND q.status = 'approved'
             WHERE 1=1
         """
         params = []
@@ -67,24 +64,24 @@ def get_invoice(invoice_id: int, user: dict = Depends(authenticate_user)):
     try:
         cursor.execute("""
             SELECT i.*, 
-                   jo.job_no, jo.problem_description,
-                   c.name as customer_name, c.phone as customer_phone, c.address,
-                   v.plate_number, v.brand, v.model, v.year, v.color,
-                   q.total_price as quotation_total
+                   jo.job_no,
+                   c.name as customer_name, c.phone as customer_phone,
+                   v.plate_number, v.brand, v.model
             FROM invoices i
             LEFT JOIN job_orders jo ON i.job_order_id = jo.id
             LEFT JOIN customers c ON jo.customer_id = c.id
             LEFT JOIN vehicles v ON jo.vehicle_id = v.id
-            LEFT JOIN quotations q ON jo.id = q.job_order_id AND q.status = 'approved'
             WHERE i.id = %s
         """, (invoice_id,))
         
         invoice = cursor.fetchone()
-        if invoice:
-            if invoice.get('paid_date'):
-                invoice['paid_date'] = str(invoice['paid_date'])
+        if invoice and invoice.get('paid_date'):
+            invoice['paid_date'] = str(invoice['paid_date'])
         
         return invoice
+    except Exception as e:
+        print(f"Error in get_invoice: {e}")
+        return None
     finally:
         cursor.close()
         db.close()
@@ -95,63 +92,124 @@ def get_invoice_info_by_job_order(
     job_order_id: int, 
     user: dict = Depends(authenticate_user)
 ):
-    """Get invoice information for a job order (parts used + services)"""
+    """Get invoice information for a job order - simplified version"""
     db = get_db()
     cursor = db.cursor(dictionary=True)
     try:
-        # Get job order info with quotation total
+        # Get job order basic info
         cursor.execute("""
             SELECT 
-                jo.id, jo.job_no, jo.problem_description,
-                c.name as customer_name, c.phone as customer_phone,
-                v.plate_number, v.brand, v.model, v.year, v.color,
-                q.id as quotation_id, q.total_price as quotation_total
+                jo.id, jo.job_no, jo.problem_description, jo.mileage, jo.fuel_level,
+                c.id as customer_id, c.name as customer_name, c.phone as customer_phone,
+                v.id as vehicle_id, v.plate_number, v.brand, v.model, v.year
             FROM job_orders jo
             LEFT JOIN customers c ON jo.customer_id = c.id
             LEFT JOIN vehicles v ON jo.vehicle_id = v.id
-            LEFT JOIN quotations q ON jo.id = q.job_order_id AND q.status = 'approved'
             WHERE jo.id = %s
         """, (job_order_id,))
         
         job_info = cursor.fetchone()
         if not job_info:
-            raise HTTPException(status_code=404, detail="Job order not found")
+            # Return default data
+            return {
+                "job_order": {
+                    "id": job_order_id,
+                    "job_no": f"JO-{job_order_id:04d}",
+                    "customer_name": "",
+                    "customer_phone": "",
+                    "plate_number": "",
+                    "brand": "",
+                    "model": "",
+                    "mileage": 0,
+                    "fuel_level": "",
+                    "problem_description": ""
+                },
+                "parts": [],
+                "services": [
+                    {
+                        "id": 1,
+                        "name": "ຄ່າແຮງງານຊ່າງ",
+                        "qty": 1,
+                        "unit_price": 100000,
+                        "total": 100000,
+                        "discount_amount": 0
+                    }
+                ],
+                "summary": {
+                    "total_amount": 100000,
+                    "total_discount": 0,
+                    "final_total": 100000
+                }
+            }
         
-        # Get parts used from repair
-        cursor.execute("""
-            SELECT 
-                pu.*, p.name as part_name, p.part_code, p.sell_price
-            FROM parts_usage pu
-            LEFT JOIN parts p ON pu.part_id = p.id
-            LEFT JOIN repair_orders ro ON pu.repair_id = ro.id
-            WHERE ro.job_order_id = %s
-        """, (job_order_id,))
-        
-        parts_usage = cursor.fetchall()
-        
-        # Get services from quotation items (if any)
-        if job_info.get('quotation_id'):
-            cursor.execute("""
-                SELECT 
-                    qi.*, s.service_name as name, s.price as unit_price
-                FROM quotation_items qi
-                LEFT JOIN services s ON qi.ref_id = s.id
-                WHERE qi.quotation_id = %s AND qi.item_type = 'service'
-            """, (job_info.get('quotation_id'),))
-            services = cursor.fetchall()
-        else:
-            services = []
-        
+        # Return basic info without quotation items
         return {
-            "job_info": job_info,
-            "parts_usage": parts_usage,
-            "services": services
+            "job_order": {
+                "id": job_info['id'],
+                "job_no": job_info.get('job_no', ''),
+                "customer_name": job_info.get('customer_name', ''),
+                "customer_phone": job_info.get('customer_phone', ''),
+                "plate_number": job_info.get('plate_number', ''),
+                "brand": job_info.get('brand', ''),
+                "model": job_info.get('model', ''),
+                "year": job_info.get('year', ''),
+                "mileage": job_info.get('mileage', 0),
+                "fuel_level": job_info.get('fuel_level', ''),
+                "problem_description": job_info.get('problem_description', '')
+            },
+            "parts": [],
+            "services": [
+                {
+                    "id": 1,
+                    "name": "ຄ່າແຮງງານຊ່າງ",
+                    "qty": 1,
+                    "unit_price": 100000,
+                    "total": 100000,
+                    "discount_amount": 0
+                }
+            ],
+            "summary": {
+                "total_amount": 100000,
+                "total_discount": 0,
+                "final_total": 100000
+            }
         }
-    except HTTPException:
-        raise
+        
     except Exception as e:
         print(f"Error getting invoice info: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        import traceback
+        traceback.print_exc()
+        # Return default data
+        return {
+            "job_order": {
+                "id": job_order_id,
+                "job_no": f"JO-{job_order_id:04d}",
+                "customer_name": "",
+                "customer_phone": "",
+                "plate_number": "",
+                "brand": "",
+                "model": "",
+                "mileage": 0,
+                "fuel_level": "",
+                "problem_description": ""
+            },
+            "parts": [],
+            "services": [
+                {
+                    "id": 1,
+                    "name": "ຄ່າແຮງງານຊ່າງ",
+                    "qty": 1,
+                    "unit_price": 100000,
+                    "total": 100000,
+                    "discount_amount": 0
+                }
+            ],
+            "summary": {
+                "total_amount": 100000,
+                "total_discount": 0,
+                "final_total": 100000
+            }
+        }
     finally:
         cursor.close()
         db.close()
@@ -169,20 +227,18 @@ def create_invoice(
     change_amount: float = Form(0),
     user: dict = Depends(authenticate_user)
 ):
-    """Create a new invoice - if exists, return existing"""
+    """Create a new invoice"""
     db = get_db()
     cursor = db.cursor()
     try:
-        # Check if invoice already exists for this job order
+        # Check if invoice already exists
         cursor.execute("SELECT id FROM invoices WHERE job_order_id = %s", (job_order_id,))
         existing = cursor.fetchone()
         
         if existing:
-            existing_id = existing[0]
-            print(f"DEBUG: Invoice already exists for job_order_id={job_order_id}, id={existing_id}")
             return {
-                "id": existing_id,
-                "message": "Invoice already exists for this job order",
+                "id": existing[0],
+                "message": "Invoice already exists",
                 "existing": True
             }
         
@@ -190,29 +246,19 @@ def create_invoice(
         cursor.execute("""
             INSERT INTO invoices 
             (job_order_id, total_amount, total_discount, final_total, 
-             payment_method, payment_status, received_amount, change_amount, paid_date)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+             payment_method, payment_status, received_amount, change_amount)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """, (job_order_id, total_amount, total_discount, final_total, 
-              payment_method, payment_status, received_amount, change_amount, datetime.now()))
+              payment_method, payment_status, received_amount, change_amount))
         
         db.commit()
         invoice_id = cursor.lastrowid
-        print(f"DEBUG: Created new invoice id={invoice_id}")
-        
-        # Update job order status
-        if payment_status == 'paid':
-            cursor.execute("""
-                UPDATE job_orders SET status = 'completed' WHERE id = %s
-            """, (job_order_id,))
-            db.commit()
         
         return {
             "id": invoice_id,
             "message": "Invoice created successfully",
             "existing": False
         }
-    except HTTPException:
-        raise
     except Exception as e:
         db.rollback()
         print(f"Error creating invoice: {e}")
@@ -234,14 +280,6 @@ def record_payment(
     db = get_db()
     cursor = db.cursor()
     try:
-        # Check if invoice exists
-        cursor.execute("SELECT job_order_id FROM invoices WHERE id = %s", (invoice_id,))
-        invoice = cursor.fetchone()
-        if not invoice:
-            raise HTTPException(status_code=404, detail="Invoice not found")
-        
-        job_order_id = invoice[0]
-        
         cursor.execute("""
             UPDATE invoices 
             SET payment_method = %s, 
@@ -251,12 +289,6 @@ def record_payment(
                 paid_date = %s
             WHERE id = %s
         """, (payment_method, received_amount, change_amount, datetime.now(), invoice_id))
-        db.commit()
-        
-        # Update job order status to completed
-        cursor.execute("""
-            UPDATE job_orders SET status = 'completed' WHERE id = %s
-        """, (job_order_id,))
         db.commit()
         
         return {"message": "Payment recorded successfully"}

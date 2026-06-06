@@ -1,6 +1,7 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from auth import security
+from fastapi.security import HTTPBasicCredentials
+from auth import security, authenticate_user
 from routers import (
     employees,
     shop,
@@ -18,6 +19,7 @@ from routers import (
     purchase_orders ,
     promotion_items,
     reports,
+    brands,
 )
 
 app = FastAPI(title="J&P Auto Maxing API", version="2.0")
@@ -48,11 +50,28 @@ app.include_router(invoices.router)
 app.include_router(purchase_orders.router)
 app.include_router(promotion_items.router)
 app.include_router(reports.router)
+app.include_router(brands.router)
 
-# Auth endpoints
+# ✅ FIXED: Auth endpoints
 @app.post("/login")
-def login(user: dict = Depends(security)):
-    return {"status": "success", "user": user}
+def login(
+    username: str = Form(...),
+    password: str = Form(...)
+):
+    """Login endpoint - returns user data with id, role, fullname"""
+    credentials = HTTPBasicCredentials(username=username, password=password)
+    
+    try:
+        user = authenticate_user(credentials)
+        # ✅ Return user data directly with id, role, fullname
+        return {
+            "id": user["id"],
+            "username": user["username"],
+            "role": user["role"],
+            "fullname": user["fullname"]
+        }
+    except HTTPException as e:
+        raise e
 
 @app.get("/")
 def home():

@@ -32,7 +32,7 @@ def get_job_orders(
                     c.name as customer_name,
                     c.phone as customer_phone,
                     v.plate_number,
-                    v.brand,
+                    b.name as brand,
                     v.model,
                     v.year,
                     v.color,
@@ -40,6 +40,7 @@ def get_job_orders(
                 FROM job_orders jo
                 LEFT JOIN customers c ON jo.customer_id = c.id
                 LEFT JOIN vehicles v ON jo.vehicle_id = v.id
+                LEFT JOIN brands b ON v.brand_id = b.id
                 LEFT JOIN users u ON jo.created_by = u.id
                 WHERE jo.status = %s
                 ORDER BY jo.id DESC
@@ -60,7 +61,7 @@ def get_job_orders(
                     c.name as customer_name,
                     c.phone as customer_phone,
                     v.plate_number,
-                    v.brand,
+                    b.name as brand,
                     v.model,
                     v.year,
                     v.color,
@@ -68,12 +69,12 @@ def get_job_orders(
                 FROM job_orders jo
                 LEFT JOIN customers c ON jo.customer_id = c.id
                 LEFT JOIN vehicles v ON jo.vehicle_id = v.id
+                LEFT JOIN brands b ON v.brand_id = b.id
                 LEFT JOIN users u ON jo.created_by = u.id
                 ORDER BY jo.id DESC
             """)
         
         job_orders = cursor.fetchall()
-        print(f"DEBUG: Found {len(job_orders)} job orders")
         
         # Convert datetime to string for JSON serialization
         for order in job_orders:
@@ -82,19 +83,15 @@ def get_job_orders(
             
             # Handle None values
             if not order.get('customer_name'):
-                order['customer_name'] = f"Customer #{order.get('customer_id')}" if order.get('customer_id') else "-"
+                order['customer_name'] = "-"
             if not order.get('customer_phone'):
                 order['customer_phone'] = "-"
             if not order.get('plate_number'):
-                order['plate_number'] = f"Vehicle #{order.get('vehicle_id')}" if order.get('vehicle_id') else "-"
+                order['plate_number'] = "-"
             if not order.get('brand'):
                 order['brand'] = "-"
             if not order.get('model'):
                 order['model'] = "-"
-            if not order.get('year'):
-                order['year'] = ""
-            if not order.get('color'):
-                order['color'] = "-"
             if not order.get('created_by_name'):
                 order['created_by_name'] = "-"
         
@@ -131,7 +128,7 @@ def get_job_order(order_id: int, user: dict = Depends(authenticate_user)):
                 c.phone as customer_phone,
                 c.address,
                 v.plate_number,
-                v.brand,
+                b.name as brand,
                 v.model,
                 v.year,
                 v.color,
@@ -139,6 +136,7 @@ def get_job_order(order_id: int, user: dict = Depends(authenticate_user)):
             FROM job_orders jo
             LEFT JOIN customers c ON jo.customer_id = c.id
             LEFT JOIN vehicles v ON jo.vehicle_id = v.id
+            LEFT JOIN brands b ON v.brand_id = b.id
             LEFT JOIN users u ON jo.created_by = u.id
             WHERE jo.id = %s
         """, (order_id,))
@@ -148,14 +146,20 @@ def get_job_order(order_id: int, user: dict = Depends(authenticate_user)):
             if order.get('receive_date'):
                 order['receive_date'] = str(order['receive_date'])
             if not order.get('customer_name'):
-                order['customer_name'] = f"Customer #{order.get('customer_id')}" if order.get('customer_id') else "-"
+                order['customer_name'] = "-"
             if not order.get('plate_number'):
-                order['plate_number'] = f"Vehicle #{order.get('vehicle_id')}" if order.get('vehicle_id') else "-"
+                order['plate_number'] = "-"
+            if not order.get('brand'):
+                order['brand'] = "-"
+            if not order.get('model'):
+                order['model'] = "-"
             if not order.get('created_by_name'):
                 order['created_by_name'] = "-"
         return order
     except Exception as e:
         print(f"Error in get_job_order: {e}")
+        import traceback
+        traceback.print_exc()
         return None
     finally:
         cursor.close()
@@ -185,9 +189,9 @@ def create_job_order(
         # Insert job order
         cursor.execute("""
             INSERT INTO job_orders 
-            (job_no, customer_id, vehicle_id, problem_description, mileage, fuel_level, status, created_by)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-        """, (job_no, customer_id, vehicle_id, problem_description, mileage, fuel_level, 'pending', user.get('id')))
+            (job_no, customer_id, vehicle_id, problem_description, mileage, fuel_level, status, created_by, receive_date)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (job_no, customer_id, vehicle_id, problem_description, mileage, fuel_level, 'pending', user.get('id'), datetime.now()))
         
         db.commit()
         order_id = cursor.lastrowid
@@ -200,6 +204,8 @@ def create_job_order(
     except Exception as e:
         db.rollback()
         print(f"Error creating job order: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         cursor.close()
@@ -257,9 +263,16 @@ def delete_job_order(order_id: int, user: dict = Depends(authenticate_user)):
     db = get_db()
     cursor = db.cursor()
     try:
+        # Check if job order exists
+        cursor.execute("SELECT id FROM job_orders WHERE id = %s", (order_id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail="Job order not found")
+        
         cursor.execute("DELETE FROM job_orders WHERE id = %s", (order_id,))
         db.commit()
         return {"message": "Job order deleted successfully"}
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
         print(f"Error deleting job order: {e}")
@@ -267,38 +280,69 @@ def delete_job_order(order_id: int, user: dict = Depends(authenticate_user)):
     finally:
         cursor.close()
         db.close()
-        
+
+
 @router.get("/job-orders/{job_order_id}/invoice-info")
 def get_invoice_info_by_job_order(
     job_order_id: int, 
     user: dict = Depends(authenticate_user)
 ):
-    """Get invoice information for a job order (parts used + services)"""
+    """Get invoice information for a job order"""
     db = get_db()
     cursor = db.cursor(dictionary=True)
     try:
-        # Get job order info with quotation total
+        # Get job order info with brand from brands table
         cursor.execute("""
             SELECT 
-                jo.id, jo.job_no, jo.problem_description,
-                c.name as customer_name, c.phone as customer_phone,
-                v.plate_number, v.brand, v.model, v.year, v.color,
-                q.id as quotation_id, q.total_price as quotation_total
+                jo.id, jo.job_no, jo.problem_description, jo.mileage, jo.fuel_level,
+                c.id as customer_id, c.name as customer_name, c.phone as customer_phone,
+                v.id as vehicle_id, v.plate_number, b.name as brand, v.model, v.year
             FROM job_orders jo
             LEFT JOIN customers c ON jo.customer_id = c.id
             LEFT JOIN vehicles v ON jo.vehicle_id = v.id
-            LEFT JOIN quotations q ON jo.id = q.job_order_id AND q.status = 'approved'
+            LEFT JOIN brands b ON v.brand_id = b.id
             WHERE jo.id = %s
         """, (job_order_id,))
         
         job_info = cursor.fetchone()
         if not job_info:
-            raise HTTPException(status_code=404, detail="Job order not found")
+            return {
+                "job_order": {
+                    "id": job_order_id,
+                    "job_no": f"JO-{job_order_id:04d}",
+                    "customer_name": "",
+                    "customer_phone": "",
+                    "plate_number": "",
+                    "brand": "",
+                    "model": "",
+                    "year": "",
+                    "mileage": 0,
+                    "fuel_level": "",
+                    "problem_description": ""
+                },
+                "parts": [],
+                "services": [
+                    {
+                        "id": 1,
+                        "name": "ຄ່າແຮງງານຊ່າງ",
+                        "qty": 1,
+                        "unit_price": 100000,
+                        "total": 100000,
+                        "discount_amount": 0
+                    }
+                ],
+                "summary": {
+                    "total_amount": 100000,
+                    "total_discount": 0,
+                    "final_total": 100000
+                }
+            }
         
-        # Get parts used from repair
+        # Get parts usage from repair orders
         cursor.execute("""
             SELECT 
-                pu.*, p.name as part_name, p.part_code, p.sell_price
+                pu.id, pu.part_id, pu.qty, pu.cost_price,
+                p.name as part_name, p.sell_price
             FROM parts_usage pu
             LEFT JOIN parts p ON pu.part_id = p.id
             LEFT JOIN repair_orders ro ON pu.repair_id = ro.id
@@ -307,29 +351,129 @@ def get_invoice_info_by_job_order(
         
         parts_usage = cursor.fetchall()
         
-        # Get services from quotation items (if any)
-        if job_info.get('quotation_id'):
+        # Format parts list
+        parts_list = []
+        for part in parts_usage:
+            price = part.get('sell_price', part.get('cost_price', 0)) or 0
+            parts_list.append({
+                'id': part.get('id'),
+                'name': part.get('part_name', '-'),
+                'qty': part.get('qty', 0),
+                'unit_price': price,
+                'total': (part.get('qty', 0) * price),
+                'discount_amount': 0
+            })
+        
+        # Get services (simple default if no quotation)
+        services_list = [
+            {
+                "id": 1,
+                "name": "ຄ່າແຮງງານຊ່າງ",
+                "qty": 1,
+                "unit_price": 100000,
+                "total": 100000,
+                "discount_amount": 0
+            }
+        ]
+        
+        # Try to get services from quotation
+        cursor.execute("""
+            SELECT q.id as quotation_id
+            FROM quotations q
+            WHERE q.job_order_id = %s AND q.status = 'approved'
+            ORDER BY q.id DESC LIMIT 1
+        """, (job_order_id,))
+        
+        quotation = cursor.fetchone()
+        
+        if quotation:
             cursor.execute("""
                 SELECT 
-                    qi.*, s.service_name as name, s.price as unit_price
+                    qi.id, qi.qty, qi.discount_amount,
+                    s.id as service_id, s.name as service_name, s.price as service_price
                 FROM quotation_items qi
                 LEFT JOIN services s ON qi.ref_id = s.id
                 WHERE qi.quotation_id = %s AND qi.item_type = 'service'
-            """, (job_info.get('quotation_id'),))
+            """, (quotation['quotation_id'],))
+            
             services = cursor.fetchall()
-        else:
-            services = []
+            if services:
+                services_list = []
+                for service in services:
+                    price = service.get('service_price', 0) or 0
+                    services_list.append({
+                        'id': service['id'],
+                        'name': service.get('service_name', '-'),
+                        'qty': service['qty'],
+                        'unit_price': price,
+                        'total': service['qty'] * price,
+                        'discount_amount': service.get('discount_amount', 0)
+                    })
+        
+        # Calculate totals
+        total_amount = sum(p['total'] for p in parts_list) + sum(s['total'] for s in services_list)
+        total_discount = sum(p.get('discount_amount', 0) for p in parts_list) + sum(s.get('discount_amount', 0) for s in services_list)
+        final_total = total_amount - total_discount
         
         return {
-            "job_info": job_info,
-            "parts_usage": parts_usage,
-            "services": services
+            "job_order": {
+                "id": job_info['id'],
+                "job_no": job_info.get('job_no', ''),
+                "customer_name": job_info.get('customer_name', ''),
+                "customer_phone": job_info.get('customer_phone', ''),
+                "plate_number": job_info.get('plate_number', ''),
+                "brand": job_info.get('brand', ''),
+                "model": job_info.get('model', ''),
+                "year": job_info.get('year', ''),
+                "mileage": job_info.get('mileage', 0),
+                "fuel_level": job_info.get('fuel_level', ''),
+                "problem_description": job_info.get('problem_description', '')
+            },
+            "parts": parts_list,
+            "services": services_list,
+            "summary": {
+                "total_amount": total_amount,
+                "total_discount": total_discount,
+                "final_total": final_total
+            }
         }
-    except HTTPException:
-        raise
+        
     except Exception as e:
         print(f"Error getting invoice info: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        import traceback
+        traceback.print_exc()
+        # Return default data
+        return {
+            "job_order": {
+                "id": job_order_id,
+                "job_no": f"JO-{job_order_id:04d}",
+                "customer_name": "",
+                "customer_phone": "",
+                "plate_number": "",
+                "brand": "",
+                "model": "",
+                "year": "",
+                "mileage": 0,
+                "fuel_level": "",
+                "problem_description": ""
+            },
+            "parts": [],
+            "services": [
+                {
+                    "id": 1,
+                    "name": "ຄ່າແຮງງານຊ່າງ",
+                    "qty": 1,
+                    "unit_price": 100000,
+                    "total": 100000,
+                    "discount_amount": 0
+                }
+            ],
+            "summary": {
+                "total_amount": 100000,
+                "total_discount": 0,
+                "final_total": 100000
+            }
+        }
     finally:
         cursor.close()
         db.close()

@@ -23,11 +23,13 @@ def get_quotations(
                        jo.job_no,
                        c.name as customer_name,
                        v.plate_number,
+                       b.name as brand,
                        u.fullname as created_by_name
                 FROM quotations q
                 LEFT JOIN job_orders jo ON q.job_order_id = jo.id
                 LEFT JOIN customers c ON jo.customer_id = c.id
                 LEFT JOIN vehicles v ON jo.vehicle_id = v.id
+                LEFT JOIN brands b ON v.brand_id = b.id
                 LEFT JOIN users u ON q.created_by = u.id
                 WHERE q.job_order_id = %s
                 ORDER BY q.id DESC
@@ -38,11 +40,13 @@ def get_quotations(
                        jo.job_no,
                        c.name as customer_name,
                        v.plate_number,
+                       b.name as brand,
                        u.fullname as created_by_name
                 FROM quotations q
                 LEFT JOIN job_orders jo ON q.job_order_id = jo.id
                 LEFT JOIN customers c ON jo.customer_id = c.id
                 LEFT JOIN vehicles v ON jo.vehicle_id = v.id
+                LEFT JOIN brands b ON v.brand_id = b.id
                 LEFT JOIN users u ON q.created_by = u.id
                 ORDER BY q.id DESC
             """)
@@ -54,10 +58,14 @@ def get_quotations(
                 quote['created_at'] = str(quote['created_at'])
             if quote.get('valid_until'):
                 quote['valid_until'] = str(quote['valid_until'])
+            if quote.get('brand') is None:
+                quote['brand'] = ""
         
         return quotations
     except Exception as e:
         print(f"Error in get_quotations: {e}")
+        import traceback
+        traceback.print_exc()
         return []
     finally:
         cursor.close()
@@ -70,6 +78,7 @@ def get_quotation(quotation_id: int, user: dict = Depends(authenticate_user)):
     db = get_db()
     cursor = db.cursor(dictionary=True)
     try:
+        # Fixed: Changed v.brand to b.name as brand
         cursor.execute("""
             SELECT q.*, 
                    jo.job_no,
@@ -78,7 +87,7 @@ def get_quotation(quotation_id: int, user: dict = Depends(authenticate_user)):
                    c.phone as customer_phone,
                    c.address,
                    v.plate_number,
-                   v.brand,
+                   b.name as brand,
                    v.model,
                    v.year,
                    v.color,
@@ -87,6 +96,7 @@ def get_quotation(quotation_id: int, user: dict = Depends(authenticate_user)):
             LEFT JOIN job_orders jo ON q.job_order_id = jo.id
             LEFT JOIN customers c ON jo.customer_id = c.id
             LEFT JOIN vehicles v ON jo.vehicle_id = v.id
+            LEFT JOIN brands b ON v.brand_id = b.id
             LEFT JOIN users u ON q.created_by = u.id
             WHERE q.id = %s
         """, (quotation_id,))
@@ -99,6 +109,8 @@ def get_quotation(quotation_id: int, user: dict = Depends(authenticate_user)):
             quotation['created_at'] = str(quotation['created_at'])
         if quotation.get('valid_until'):
             quotation['valid_until'] = str(quotation['valid_until'])
+        if quotation.get('brand') is None:
+            quotation['brand'] = ""
         
         # Get quotation items
         cursor.execute("""
@@ -112,6 +124,11 @@ def get_quotation(quotation_id: int, user: dict = Depends(authenticate_user)):
         quotation['items'] = items
         
         return quotation
+    except Exception as e:
+        print(f"Error in get_quotation: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
     finally:
         cursor.close()
         db.close()
@@ -184,10 +201,10 @@ def add_quotation_item(
                 name = part['name']
                 unit_price = part['sell_price']
         elif item_type == 'service':
-            cursor.execute("SELECT service_name, price FROM services WHERE id = %s", (ref_id,))
+            cursor.execute("SELECT name, price FROM services WHERE id = %s", (ref_id,))
             service = cursor.fetchone()
             if service:
-                name = service['service_name']
+                name = service['name']
                 unit_price = service['price']
         
         if not name:
@@ -366,30 +383,6 @@ def update_quotation_status(
         db.close()
 
 
-@router.get("/search-parts")
-def search_parts(
-    keyword: str = "",
-    user: dict = Depends(authenticate_user)
-):
-    """Search for parts by name or code"""
-    db = get_db()
-    cursor = db.cursor(dictionary=True)
-    try:
-        query = """
-            SELECT id, part_code, name, brand, sell_price, stock_qty
-            FROM parts
-            WHERE name LIKE %s OR part_code LIKE %s
-            ORDER BY name
-            LIMIT 20
-        """
-        search_term = f"%{keyword}%" if keyword else "%"
-        cursor.execute(query, (search_term, search_term))
-        results = cursor.fetchall()
-        return results
-    finally:
-        cursor.close()
-        db.close()
-
 @router.delete("/quotations/{quotation_id}")
 def delete_quotation(
     quotation_id: int,
@@ -414,6 +407,37 @@ def delete_quotation(
     finally:
         cursor.close()
         db.close()
+
+
+@router.get("/search-parts")
+def search_parts(
+    keyword: str = "",
+    user: dict = Depends(authenticate_user)
+):
+    """Search for parts by name or code"""
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+    try:
+        # Remove part_code since it doesn't exist in your parts table
+        query = """
+            SELECT id, name, sell_price, stock_qty
+            FROM parts
+            WHERE name LIKE %s
+            ORDER BY name
+            LIMIT 20
+        """
+        search_term = f"%{keyword}%" if keyword else "%"
+        cursor.execute(query, (search_term,))
+        results = cursor.fetchall()
+        return results
+    except Exception as e:
+        print(f"Error searching parts: {e}")
+        return []
+    finally:
+        cursor.close()
+        db.close()
+
+
 @router.get("/search-services")
 def search_services(
     keyword: str = "",
@@ -423,17 +447,21 @@ def search_services(
     db = get_db()
     cursor = db.cursor(dictionary=True)
     try:
+        # Fixed: services table has 'name' column, not 'service_name'
         query = """
-            SELECT id, service_name as name, description, price
+            SELECT id, name, description, price
             FROM services
-            WHERE service_name LIKE %s
-            ORDER BY service_name
+            WHERE name LIKE %s
+            ORDER BY name
             LIMIT 20
         """
         search_term = f"%{keyword}%" if keyword else "%"
         cursor.execute(query, (search_term,))
         results = cursor.fetchall()
         return results
+    except Exception as e:
+        print(f"Error searching services: {e}")
+        return []
     finally:
         cursor.close()
         db.close()

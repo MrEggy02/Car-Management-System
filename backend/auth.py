@@ -1,34 +1,48 @@
-# auth.py (ฉบับสมบูรณ์)
+# auth.py
 from fastapi import HTTPException, Depends, status
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from database import get_db
+import hashlib
 
 security = HTTPBasic()
 
+def hash_password(password: str) -> str:
+    """Hash password with SHA-256"""
+    return hashlib.sha256(password.encode()).hexdigest()
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return plain_password == hashed_password
+    """Verify password"""
+    return hash_password(plain_password) == hashed_password
 
 def authenticate_user(credentials: HTTPBasicCredentials = Depends(security)):
-    print(f"🔍 Login attempt: username={credentials.username}")
+    """Authenticate user from Employees table"""
+    print(f"Login attempt: username={credentials.username}")
     
     db = get_db()
     cursor = db.cursor(dictionary=True)
     
-    cursor.execute("SELECT * FROM users WHERE username = %s", (credentials.username,))
+    # Search from Employees table
+    cursor.execute("""
+        SELECT id, name, username, password, role, status, can_login 
+        FROM Employees 
+        WHERE username = %s AND can_login = TRUE AND status = 'active'
+    """, (credentials.username,))
     user = cursor.fetchone()
     cursor.close()
     db.close()
     
     if not user:
-        raise HTTPException(status_code=401, detail="Username not found")
+        raise HTTPException(status_code=401, detail="Username not found or cannot login")
     
     if not verify_password(credentials.password, user['password']):
         raise HTTPException(status_code=401, detail="Wrong password")
     
-    print(f"✅ Login success: {credentials.username}")
+    print(f"Login success: {credentials.username}")
+    
+    # ✅ Return user data with correct format
     return {
         "id": user['id'],
         "username": user['username'],
         "role": user['role'],
-        "fullname": user['fullname']
+        "fullname": user['name']
     }
