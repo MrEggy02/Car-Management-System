@@ -34,8 +34,8 @@ class ContentManager:
             content = self._get_shop_content()
         elif index == 6:
             content = self._get_promotions_content()
-        # Customer Management - Only Customer List (index 11)
-        # Input customer (8) and edit customer (10) are no longer in sidebar
+        elif index == 7:
+            content = self._get_master_data_content()
         elif index == 11:
             content = self._get_customer_list_content()
         elif index == 12:
@@ -179,6 +179,12 @@ class ContentManager:
         def navigate(page_name, *args, **kwargs):
             self.parent.navigate_to(page_name, **kwargs)
         return PromotionsContent(self.parent.page, self.parent.client, self.parent.user, navigate).build()
+    def _get_master_data_content(self):
+        from Management.master_data.master_data_page import MasterDataContent
+        def navigate(page_name, *args, **kwargs):
+            self.parent.navigate_to(page_name, **kwargs)
+        return MasterDataContent(self.parent.page, self.parent.client, self.parent.user, navigate).build()
+    
     
     def _get_customer_list_content(self):
         """Get customer list page (add and edit are now dialogs)"""

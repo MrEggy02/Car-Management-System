@@ -38,7 +38,7 @@ class TopNavBarManager:
             # Language section header
             ft.PopupMenuItem(
                 content=ft.Text(get_text("language"), size=12, color="#64748B", weight=ft.FontWeight.W_500),
-                disabled=True,  # เปลี่ยนจาก enabled=False เป็น disabled=True
+                disabled=True,
             ),
             # Lao
             ft.PopupMenuItem(
@@ -67,7 +67,7 @@ class TopNavBarManager:
                 on_click=lambda e: change_language_to("en"),
             ),
             ft.PopupMenuItem(),  # divider
-            # Logout
+            # Logout - Direct logout without confirmation dialog
             ft.PopupMenuItem(
                 content=ft.Row(
                     [
@@ -76,7 +76,7 @@ class TopNavBarManager:
                     ],
                     spacing=10,
                 ),
-                on_click=self._show_logout_confirmation,
+                on_click=lambda e: self._direct_logout(),  # Direct logout
             ),
         ]
         
@@ -118,7 +118,6 @@ class TopNavBarManager:
                             spacing=2,
                             horizontal_alignment=ft.CrossAxisAlignment.START,
                         ),
-                      
                     ],
                     spacing=8,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -195,35 +194,21 @@ class TopNavBarManager:
         
         return self.top_nav_bar
     
-    def _show_logout_confirmation(self, e):
-        """แสดง dialog ยืนยันการออกจากระบบ"""
-        def confirm_logout(e):
-            dialog.open = False
-            self.parent.logout()
+    def _direct_logout(self):
+        """Direct logout without confirmation dialog"""
+        print("DEBUG: Direct logout called")
         
-        def cancel_logout(e):
-            dialog.open = False
-            self.page.update()
-        
-        dialog = ft.AlertDialog(
-            modal=True,
-            shape=ft.RoundedRectangleBorder(radius=16),
-            title=ft.Text(get_text("confirm_logout"), size=18, weight=ft.FontWeight.BOLD),
-            content=ft.Text(get_text("logout_confirmation"), size=14),
-            actions=[
-                ft.TextButton(get_text("cancel"), on_click=cancel_logout),
-                ft.ElevatedButton(
-                    get_text("logout"), 
-                    on_click=confirm_logout,
-                    style=ft.ButtonStyle(bgcolor="#EF4444", color=ft.Colors.WHITE),
-                ),
-            ],
-            actions_alignment=ft.MainAxisAlignment.END,
-        )
-        
-        self.page.dialog = dialog
-        dialog.open = True
-        self.page.update()
+        # Navigate to login page directly
+        from pages.login_page import login_page
+
+        def on_login_success(p, c, u):
+            from pages.main_app import MainApp
+            app = MainApp(p, c, u)
+            p.clean()
+            p.add(app.build())
+            p.update()
+
+        login_page(self.parent.page, on_login_success)
     
     def _get_role_text(self, role):
         """แปลง role เป็นข้อความที่แสดง"""

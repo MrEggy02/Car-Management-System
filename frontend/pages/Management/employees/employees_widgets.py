@@ -192,7 +192,6 @@ def create_table_row(emp, index, row_number, on_edit, on_delete):
     row = ft.Container(
         content=ft.Row(
             [
-                # Row number column with badge styling
                 ft.Container(
                     content=ft.Container(
                         content=ft.Text(
@@ -260,7 +259,7 @@ def create_add_dialog(on_save, on_close):
     
     name = ft.TextField(
         label=get_text("employees_name"),
-        hint_text="สมชาย ใจดี",
+        hint_text="ຊື່ພະນັກງານ",
         border_radius=10,
         bgcolor=ft.Colors.WHITE,
         filled=True,
@@ -289,7 +288,7 @@ def create_add_dialog(on_save, on_close):
     
     phone = ft.TextField(
         label=get_text("employees_phone"),
-        hint_text="0812345678",
+        hint_text="0200000000",
         border_radius=10,
         bgcolor=ft.Colors.WHITE,
         filled=True,
@@ -357,6 +356,9 @@ def create_add_dialog(on_save, on_close):
         if not visible:
             username_field.value = ""
             password_field.value = ""
+        # Update the dialog
+        if username_field.page:
+            username_field.page.update()
     
     can_login_checkbox.on_change = on_can_login_change
     
@@ -383,202 +385,6 @@ def create_add_dialog(on_save, on_close):
                         padding=ft.padding.all(6),
                     ),
                     ft.Text(get_text("employees_add"), size=16, weight=ft.FontWeight.BOLD, color="#1E293B"),
-                ],
-                spacing=10,
-                vertical_alignment=ft.CrossAxisAlignment.CENTER,
-            ),
-            padding=ft.padding.symmetric(horizontal=18, vertical=14),
-            border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
-        ),
-        content=ft.Container(
-            content=ft.Column([
-                # First row: Name and Role
-                ft.Row([name, role], spacing=12),
-                ft.Container(height=8),
-                # Second row: Phone and Status
-                ft.Row([phone, status], spacing=12),
-                ft.Container(height=12),
-                # Login section
-                ft.Row([can_login_checkbox], spacing=12),
-                ft.Container(height=8),
-                ft.Row([username_field, password_field], spacing=12),
-            ], spacing=0, scroll=ft.ScrollMode.AUTO),
-            padding=ft.padding.all(18),
-            width=500,
-            height=360,
-        ),
-        actions=[
-            ft.Container(
-                content=ft.Row([
-                    ft.TextButton(
-                        content=ft.Text(get_text("cancel"), color="#64748B"),
-                        on_click=on_close,
-                        style=ft.ButtonStyle(
-                            shape=ft.RoundedRectangleBorder(radius=8),
-                        ),
-                    ),
-                    ft.ElevatedButton(
-                        content=ft.Text(get_text("save"), color=ft.Colors.WHITE),
-                        on_click=save,
-                        style=ft.ButtonStyle(
-                            bgcolor=PRIMARY_COLOR,
-                            shape=ft.RoundedRectangleBorder(radius=8),
-                            elevation=0,
-                            padding=ft.padding.symmetric(horizontal=20, vertical=8),
-                        ),
-                    ),
-                ], spacing=10, alignment=ft.MainAxisAlignment.END),
-                padding=ft.padding.symmetric(horizontal=18, vertical=12),
-                border=ft.border.only(top=ft.BorderSide(1, ft.Colors.GREY_100)),
-            ),
-        ],
-        actions_alignment=ft.MainAxisAlignment.END,
-    )
-
-def create_edit_dialog(emp, on_save, on_close):
-    """Create edit employee dialog – username/password fields always visible (disabled if not allowed)"""
-    
-    name = ft.TextField(
-        label=get_text("employees_name"),
-        value=emp.get("name", ""),
-        border_radius=10,
-        bgcolor=ft.Colors.WHITE,
-        filled=True,
-        content_padding=ft.padding.symmetric(horizontal=12, vertical=10),
-        border_color=ft.Colors.GREY_300,
-        focused_border_color=PRIMARY_COLOR,
-        expand=True,
-    )
-    
-    role = ft.Dropdown(
-        label=get_text("employees_role"),
-        value=emp.get("role", ""),
-        border_radius=10,
-        bgcolor=ft.Colors.WHITE,
-        filled=True,
-        content_padding=ft.padding.symmetric(horizontal=12, vertical=10),
-        border_color=ft.Colors.GREY_300,
-        focused_border_color=PRIMARY_COLOR,
-        expand=True,
-        options=[
-            ft.dropdown.Option("admin", get_text('role_admin')),
-            ft.dropdown.Option("mechanic", get_text('role_mechanic')),
-            ft.dropdown.Option("cashier", get_text('role_cashier')),
-        ],
-    )
-    
-    phone = ft.TextField(
-        label=get_text("employees_phone"),
-        value=emp.get("phone", ""),
-        border_radius=10,
-        bgcolor=ft.Colors.WHITE,
-        filled=True,
-        content_padding=ft.padding.symmetric(horizontal=12, vertical=10),
-        border_color=ft.Colors.GREY_300,
-        focused_border_color=PRIMARY_COLOR,
-        expand=True,
-    )
-    
-    status = ft.Dropdown(
-        label=get_text("employees_status"),
-        value=emp.get("status", "active"),
-        border_radius=10,
-        bgcolor=ft.Colors.WHITE,
-        filled=True,
-        content_padding=ft.padding.symmetric(horizontal=12, vertical=10),
-        border_color=ft.Colors.GREY_300,
-        focused_border_color=PRIMARY_COLOR,
-        expand=True,
-        options=[
-            ft.dropdown.Option("active", get_text('status_active')),
-            ft.dropdown.Option("inactive", get_text('status_inactive')),
-        ],
-    )
-    
-    # Login section - fields are ALWAYS VISIBLE, but disabled when can_login is False
-    current_can_login = emp.get("can_login", False)
-    current_username = emp.get("username", "")
-    
-    can_login_checkbox = ft.Checkbox(
-        label=get_text("allow_login"),
-        value=current_can_login,
-        label_style=ft.TextStyle(size=13),
-    )
-    
-    username_field = ft.TextField(
-        label=get_text("username"),
-        value=current_username if current_username != "-" else "",
-        hint_text="username for login",
-        border_radius=10,
-        bgcolor=ft.Colors.WHITE,
-        filled=True,
-        disabled=not current_can_login,    # disabled if can_login is False
-        content_padding=ft.padding.symmetric(horizontal=12, vertical=10),
-        border_color=ft.Colors.GREY_300,
-        focused_border_color=PRIMARY_COLOR,
-        expand=True,
-    )
-    
-    password_field = ft.TextField(
-        label=get_text("new_password"),
-        hint_text=get_text("leave_blank_to_keep") if current_can_login else get_text("not_required"),
-        password=True,
-        can_reveal_password=True,
-        border_radius=10,
-        bgcolor=ft.Colors.WHITE,
-        filled=True,
-        disabled=not current_can_login,    # disabled if can_login is False
-        content_padding=ft.padding.symmetric(horizontal=12, vertical=10),
-        border_color=ft.Colors.GREY_300,
-        focused_border_color=PRIMARY_COLOR,
-        expand=True,
-    )
-    
-    def on_can_login_change(e):
-        enabled = can_login_checkbox.value
-        username_field.disabled = not enabled
-        password_field.disabled = not enabled
-        if not enabled:
-            password_field.hint_text = get_text("not_required")
-        else:
-            password_field.hint_text = get_text("leave_blank_to_keep")
-        # Optionally clear password field when disabled? We'll keep as is.
-        page = username_field.page
-        if page:
-            page.update()
-    
-    can_login_checkbox.on_change = on_can_login_change
-    
-    def save(e):
-        update_data = {
-            "name": name.value,
-            "role": role.value,
-            "phone": phone.value,
-            "status": status.value,
-            "can_login": can_login_checkbox.value,
-        }
-        if can_login_checkbox.value:
-            update_data["username"] = username_field.value.strip() if username_field.value else None
-            if password_field.value and password_field.value.strip():
-                update_data["password"] = password_field.value.strip()
-        else:
-            update_data["username"] = None   # clear username if login not allowed
-        on_save(update_data)
-    
-    return ft.AlertDialog(
-        modal=True,
-        shape=ft.RoundedRectangleBorder(radius=14),
-        bgcolor=ft.Colors.WHITE,
-        title=ft.Container(
-            content=ft.Row(
-                [
-                    ft.Container(
-                        content=ft.Icon(ft.Icons.EDIT, size=22, color=ft.Colors.WHITE),
-                        bgcolor=PRIMARY_COLOR,
-                        border_radius=10,
-                        padding=ft.padding.all(6),
-                    ),
-                    ft.Text(get_text("employees_edit"), size=16, weight=ft.FontWeight.BOLD, color="#1E293B"),
                 ],
                 spacing=10,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -623,6 +429,212 @@ def create_edit_dialog(emp, on_save, on_close):
                         ),
                     ),
                 ], spacing=10, alignment=ft.MainAxisAlignment.END),
+                padding=ft.padding.symmetric(horizontal=18, vertical=12),
+                border=ft.border.only(top=ft.BorderSide(1, ft.Colors.GREY_100)),
+            ),
+        ],
+        actions_alignment=ft.MainAxisAlignment.END,
+    )
+
+def create_edit_dialog(emp, on_save, on_close):
+    """Create edit employee dialog - fields always visible, disabled when not allowed"""
+    
+    # Debug print
+    print(f"=== EDIT DIALOG ===")
+    print(f"Employee: {emp.get('name')}")
+    print(f"can_login raw: {emp.get('can_login')}")
+    
+    # Convert can_login to boolean properly
+    can_login_raw = emp.get("can_login", False)
+    if can_login_raw in [1, "1", True, "true", "True"]:
+        current_can_login = True
+    else:
+        current_can_login = False
+    
+    current_username = emp.get("username", "")
+    if current_username is None or current_username == "-":
+        current_username = ""
+    
+    print(f"can_login converted: {current_can_login}")
+    print(f"username: {current_username}")
+    
+    # Name field
+    name = ft.TextField(
+        label=get_text("employees_name"),
+        value=emp.get("name", ""),
+        border_radius=10,
+        bgcolor=ft.Colors.WHITE,
+        filled=True,
+        expand=True,
+    )
+    
+    # Role dropdown
+    role = ft.Dropdown(
+        label=get_text("employees_role"),
+        value=emp.get("role", "mechanic"),
+        border_radius=10,
+        bgcolor=ft.Colors.WHITE,
+        filled=True,
+        expand=True,
+        options=[
+            ft.dropdown.Option("admin", get_text('role_admin')),
+            ft.dropdown.Option("mechanic", get_text('role_mechanic')),
+            ft.dropdown.Option("cashier", get_text('role_cashier')),
+        ],
+    )
+    
+    # Phone field
+    phone = ft.TextField(
+        label=get_text("employees_phone"),
+        value=emp.get("phone", ""),
+        border_radius=10,
+        bgcolor=ft.Colors.WHITE,
+        filled=True,
+        expand=True,
+    )
+    
+    # Status dropdown
+    status = ft.Dropdown(
+        label=get_text("employees_status"),
+        value=emp.get("status", "active"),
+        border_radius=10,
+        bgcolor=ft.Colors.WHITE,
+        filled=True,
+        expand=True,
+        options=[
+            ft.dropdown.Option("active", get_text('status_active')),
+            ft.dropdown.Option("inactive", get_text('status_inactive')),
+        ],
+    )
+    
+    # Allow login checkbox
+    can_login_checkbox = ft.Checkbox(
+        label=get_text("allow_login"),
+        value=current_can_login,
+        label_style=ft.TextStyle(size=13),
+    )
+    
+    # Username field - ALWAYS VISIBLE
+    username_field = ft.TextField(
+        label=get_text("username"),
+        value=current_username,
+        hint_text="ຊື່ຜູ້ໃຊ້ສຳລັບເຂົ້າສູ່ລະບົບ",
+        border_radius=10,
+        bgcolor=ft.Colors.WHITE,
+        filled=True,
+        disabled=not current_can_login,
+        expand=True,
+    )
+    
+    # Password field - ALWAYS VISIBLE
+    password_field = ft.TextField(
+        label=get_text("new_password"),
+        hint_text="ປ່ອຍຫວ່າງໄວ້ຖ້າບໍ່ຕ້ອງການປ່ຽນ",
+        password=True,
+        can_reveal_password=True,
+        border_radius=10,
+        bgcolor=ft.Colors.WHITE,
+        filled=True,
+        disabled=not current_can_login,
+        expand=True,
+    )
+    
+    def on_can_login_change(e):
+        enabled = can_login_checkbox.value
+        username_field.disabled = not enabled
+        password_field.disabled = not enabled
+        if enabled:
+            password_field.hint_text = "ປ່ອຍຫວ່າງໄວ້ຖ້າບໍ່ຕ້ອງການປ່ຽນ"
+        else:
+            password_field.hint_text = "ບໍ່ຕ້ອງການເຂົ້າສູ່ລະບົບ"
+        username_field.update()
+        password_field.update()
+    
+    can_login_checkbox.on_change = on_can_login_change
+    
+    def save(e):
+        update_data = {
+            "name": name.value,
+            "role": role.value,
+            "phone": phone.value,
+            "status": status.value,
+            "can_login": can_login_checkbox.value,
+        }
+        if can_login_checkbox.value:
+            if username_field.value and username_field.value.strip():
+                update_data["username"] = username_field.value.strip()
+            if password_field.value and password_field.value.strip():
+                update_data["password"] = password_field.value.strip()
+        else:
+            update_data["username"] = None
+        on_save(update_data)
+    
+    return ft.AlertDialog(
+        modal=True,
+        shape=ft.RoundedRectangleBorder(radius=14),
+        bgcolor=ft.Colors.WHITE,
+        title=ft.Container(
+            content=ft.Row(
+                [
+                    ft.Container(
+                        content=ft.Icon(ft.Icons.EDIT, size=22, color=ft.Colors.WHITE),
+                        bgcolor=PRIMARY_COLOR,
+                        border_radius=10,
+                        padding=ft.padding.all(6),
+                    ),
+                    ft.Text(get_text("employees_edit"), size=16, weight=ft.FontWeight.BOLD, color="#1E293B"),
+                ],
+                spacing=10,
+            ),
+            padding=ft.padding.symmetric(horizontal=18, vertical=14),
+            border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
+        ),
+        content=ft.Container(
+            content=ft.Column(
+                [
+                    # Row 1: Name and Role
+                    ft.Row([name, role], spacing=12),
+                    ft.Container(height=8),
+                    # Row 2: Phone and Status
+                    ft.Row([phone, status], spacing=12),
+                    ft.Container(height=16),
+                    # Login Access Section
+                    ft.Text(get_text("login_access"), size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
+                    ft.Divider(height=1, color=ft.Colors.GREY_200),
+                    ft.Container(height=8),
+                    # Allow login checkbox
+                    can_login_checkbox,
+                    ft.Container(height=12),
+                    # Username field
+                    username_field,
+                    ft.Container(height=12),
+                    # Password field
+                    password_field,
+                ],
+                spacing=0,
+                scroll=ft.ScrollMode.AUTO,
+            ),
+            padding=ft.padding.all(20),
+            width=520,
+            height=480,
+        ),
+        actions=[
+            ft.Container(
+                content=ft.Row(
+                    [
+                        ft.TextButton(
+                            content=ft.Text(get_text("cancel"), color="#64748B"),
+                            on_click=on_close,
+                        ),
+                        ft.ElevatedButton(
+                            content=ft.Text(get_text("save"), color=ft.Colors.WHITE),
+                            on_click=save,
+                            style=ft.ButtonStyle(bgcolor=PRIMARY_COLOR, elevation=0, padding=ft.padding.symmetric(horizontal=24, vertical=10)),
+                        ),
+                    ],
+                    spacing=12,
+                    alignment=ft.MainAxisAlignment.END,
+                ),
                 padding=ft.padding.symmetric(horizontal=18, vertical=12),
                 border=ft.border.only(top=ft.BorderSide(1, ft.Colors.GREY_100)),
             ),

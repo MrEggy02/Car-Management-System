@@ -24,6 +24,11 @@ class SidebarManager:
         self.purchase_submenu_column = None
         self.reports_submenu_column = None
         
+        # Store single item menu button references
+        self.customer_main_btn = None
+        self.job_order_main_btn = None
+        self.quotation_main_btn = None
+        
     def build(self):
         """สร้าง Sidebar"""
         nav_column = ft.Column(spacing=0)
@@ -106,7 +111,7 @@ class SidebarManager:
             nav_column.controls.append(btn_container)
     
     def _create_data_management_menu(self, nav_column):
-        """สร้างเมนู Data Management และซับเมนู (submenu ไม่มีไอคอน)"""
+        """สร้างเมนู Data Management และซับเมนู"""
         data_menu_items = [
             {"label": get_text("nav_employees"), "index": 1},
             {"label": get_text("nav_suppliers"), "index": 2},
@@ -114,6 +119,8 @@ class SidebarManager:
             {"label": get_text("nav_parts"), "index": 4},
             {"label": get_text("nav_shop"), "index": 5},
             {"label": get_text("nav_promotions"), "index": 6},
+            {"label": get_text("nav_master_data"), "index": 7},
+            
         ]
         
         data_menu_container = ft.Container(
@@ -166,17 +173,9 @@ class SidebarManager:
         nav_column.controls.append(data_menu_container)
     
     def _create_customer_management_menu(self, nav_column):
-        """สร้างเมนู Customer Management - เฉพาะ Customer List (ເພີ່ມ ແກ້ໄຂ ໃຊ້ Dialog)"""
-        customer_menu_items = [
-            {"label": get_text("customer_list"), "index": 11},
-        ]
+        """สร้างเมนู Customer Management - คลิกได้เลย ไม่มี dropdown"""
         
-        customer_menu_container = ft.Container(
-            padding=ft.padding.symmetric(vertical=2, horizontal=0),
-            margin=ft.margin.symmetric(horizontal=0, vertical=0),
-        )
-        
-        customer_main_btn = ft.Container(
+        self.customer_main_btn = ft.Container(
             content=ft.Row(
                 [
                     ft.Image(src="assets/icons/customer_management.png", width=22, height=22, color=self.parent.unselected_color),
@@ -187,11 +186,6 @@ class SidebarManager:
                         color=self.parent.unselected_color,
                         expand=True,
                     ),
-                    ft.Icon(
-                        ft.Icons.KEYBOARD_ARROW_DOWN if not self.parent.customer_menu_expanded else ft.Icons.KEYBOARD_ARROW_UP,
-                        color=self.parent.unselected_color,
-                        size=20,
-                    ),
                 ],
                 spacing=16,
             ),
@@ -199,40 +193,17 @@ class SidebarManager:
             margin=ft.margin.symmetric(horizontal=12, vertical=2),
             border_radius=12,
             ink=True,
-            on_click=lambda e: self.parent.toggle_customer_menu(),
+            data="customer_menu",
+            on_click=lambda e: self.parent.on_nav_click(11),
+            on_hover=lambda e: self._on_single_menu_hover(e, self.customer_main_btn),
         )
         
-        self.customer_submenu_column = ft.Column(spacing=1, visible=self.parent.customer_menu_expanded)
-        
-        for item in customer_menu_items:
-            sub_btn_container, sub_label = self._create_customer_submenu_button(item)
-            self.customer_submenu_buttons.append({
-                "container": sub_btn_container,
-                "label": sub_label,
-                "index": item["index"]
-            })
-            self.customer_submenu_column.controls.append(sub_btn_container)
-        
-        customer_menu_container.content = ft.Column([
-            customer_main_btn,
-            self.customer_submenu_column,
-        ], spacing=0)
-        
-        nav_column.controls.append(customer_menu_container)
+        nav_column.controls.append(self.customer_main_btn)
     
     def _create_job_order_management_menu(self, nav_column):
-        """สร้างเมนู Job Order Management และซับเมนู (submenu ไม่มีไอคอน)"""
-        job_order_menu_items = [
-            
-            {"label": get_text("job_order_list"), "index": 13},
-        ]
+        """สร้างเมนู Job Order Management - คลิกได้เลย ไม่มี dropdown"""
         
-        job_order_menu_container = ft.Container(
-            padding=ft.padding.symmetric(vertical=2, horizontal=0),
-            margin=ft.margin.symmetric(horizontal=0, vertical=0),
-        )
-        
-        job_order_main_btn = ft.Container(
+        self.job_order_main_btn = ft.Container(
             content=ft.Row(
                 [
                     ft.Image(src="assets/icons/job_order.png", width=22, height=22, color=self.parent.unselected_color),
@@ -243,11 +214,6 @@ class SidebarManager:
                         color=self.parent.unselected_color,
                         expand=True,
                     ),
-                    ft.Icon(
-                        ft.Icons.KEYBOARD_ARROW_DOWN if not self.parent.job_order_menu_expanded else ft.Icons.KEYBOARD_ARROW_UP,
-                        color=self.parent.unselected_color,
-                        size=20,
-                    ),
                 ],
                 spacing=16,
             ),
@@ -255,40 +221,17 @@ class SidebarManager:
             margin=ft.margin.symmetric(horizontal=12, vertical=2),
             border_radius=12,
             ink=True,
-            on_click=lambda e: self.parent.toggle_job_order_menu(),
+            data="job_order_menu",
+            on_click=lambda e: self.parent.on_nav_click(13),
+            on_hover=lambda e: self._on_single_menu_hover(e, self.job_order_main_btn),
         )
         
-        self.job_order_submenu_column = ft.Column(spacing=1, visible=self.parent.job_order_menu_expanded)
-        
-        for item in job_order_menu_items:
-            sub_btn_container, sub_label = self._create_job_order_submenu_button(item)
-            self.job_order_submenu_buttons.append({
-                "container": sub_btn_container,
-                "label": sub_label,
-                "index": item["index"]
-            })
-            self.job_order_submenu_column.controls.append(sub_btn_container)
-        
-        job_order_menu_container.content = ft.Column([
-            job_order_main_btn,
-            self.job_order_submenu_column,
-        ], spacing=0)
-        
-        nav_column.controls.append(job_order_menu_container)
+        nav_column.controls.append(self.job_order_main_btn)
     
     def _create_quotation_management_menu(self, nav_column):
-        """สร้างเมนู Quotation Management และซับเมนู (submenu ไม่มีไอคอน)"""
-        quotation_menu_items = [
-            
-            {"label": get_text("quotations"), "index": 15},
-        ]
+        """สร้างเมนู Quotation Management - คลิกได้เลย ไม่มี dropdown"""
         
-        quotation_menu_container = ft.Container(
-            padding=ft.padding.symmetric(vertical=2, horizontal=0),
-            margin=ft.margin.symmetric(horizontal=0, vertical=0),
-        )
-        
-        quotation_main_btn = ft.Container(
+        self.quotation_main_btn = ft.Container(
             content=ft.Row(
                 [
                     ft.Image(src="assets/icons/quotation.png", width=22, height=22, color=self.parent.unselected_color),
@@ -299,11 +242,6 @@ class SidebarManager:
                         color=self.parent.unselected_color,
                         expand=True,
                     ),
-                    ft.Icon(
-                        ft.Icons.KEYBOARD_ARROW_DOWN if not self.parent.quotation_menu_expanded else ft.Icons.KEYBOARD_ARROW_UP,
-                        color=self.parent.unselected_color,
-                        size=20,
-                    ),
                 ],
                 spacing=16,
             ),
@@ -311,29 +249,26 @@ class SidebarManager:
             margin=ft.margin.symmetric(horizontal=12, vertical=2),
             border_radius=12,
             ink=True,
-            on_click=lambda e: self.parent.toggle_quotation_menu(),
+            data="quotation_menu",
+            on_click=lambda e: self.parent.on_nav_click(15),
+            on_hover=lambda e: self._on_single_menu_hover(e, self.quotation_main_btn),
         )
         
-        self.quotation_submenu_column = ft.Column(spacing=1, visible=self.parent.quotation_menu_expanded)
-        
-        for item in quotation_menu_items:
-            sub_btn_container, sub_label = self._create_quotation_submenu_button(item)
-            self.quotation_submenu_buttons.append({
-                "container": sub_btn_container,
-                "label": sub_label,
-                "index": item["index"]
-            })
-            self.quotation_submenu_column.controls.append(sub_btn_container)
-        
-        quotation_menu_container.content = ft.Column([
-            quotation_main_btn,
-            self.quotation_submenu_column,
-        ], spacing=0)
-        
-        nav_column.controls.append(quotation_menu_container)
+        nav_column.controls.append(self.quotation_main_btn)
+    
+    def _on_single_menu_hover(self, e, btn_container):
+        """Handle hover for single item menus"""
+        if e.data == "true":
+            if self.parent.current_index not in [11, 13, 15]:
+                btn_container.bgcolor = self.parent.hover_color
+        else:
+            if self.parent.current_index not in [11, 13, 15]:
+                btn_container.bgcolor = None
+        if btn_container.page:
+            btn_container.page.update()
     
     def _create_repair_management_menu(self, nav_column):
-        """สร้างเมนู Repair Management และซับเมนู (submenu ไม่มีไอคอน)"""
+        """สร้างเมนู Repair Management - มี dropdown"""
         repair_menu_items = [
             {"label": get_text("new_repair"), "index": 16},
             {"label": get_text("repair_list"), "index": 17},
@@ -389,7 +324,7 @@ class SidebarManager:
         nav_column.controls.append(repair_menu_container)
     
     def _create_invoice_management_menu(self, nav_column):
-        """สร้างเมนู Invoice Management (Process 6) - submenu ไม่มีไอคอน"""
+        """สร้างเมนู Invoice Management - มี dropdown"""
         invoice_menu_items = [
             {"label": get_text("new_invoice"), "index": 19},
             {"label": get_text("invoice_list"), "index": 20},
@@ -445,7 +380,7 @@ class SidebarManager:
         nav_column.controls.append(invoice_menu_container)
     
     def _create_purchase_management_menu(self, nav_column):
-        """สร้างเมนู Purchase Management (Process 7) - submenu ไม่มีไอคอน"""
+        """สร้างเมนู Purchase Management - มี dropdown"""
         purchase_menu_items = [
             {"label": get_text("create_purchase_order"), "index": 22},
             {"label": get_text("purchase_order_list"), "index": 23},
@@ -502,7 +437,7 @@ class SidebarManager:
         nav_column.controls.append(purchase_menu_container)
     
     def _create_reports_management_menu(self, nav_column):
-        """สร้างเมนู Reports Management (Process 8)"""
+        """สร้างเมนู Reports Management - มี dropdown"""
         reports_menu_items = [
             {"label": get_text("revenue_report"), "index": 29},
             {"label": get_text("repair_summary_report"), "index": 30},
@@ -573,7 +508,6 @@ class SidebarManager:
             on_hover=lambda e, i=idx: self.parent.on_nav_hover(e, i),
         )
         
-        # เปลี่ยนจาก ft.Icon เป็น ft.Image สำหรับ Dashboard
         icon = ft.Image(src=item["icon"], width=22, height=22, color=self.parent.unselected_color)
         label = ft.Text(item["label"], size=14, weight=ft.FontWeight.W_500, color=self.parent.unselected_color)
         row = ft.Row([icon, label], spacing=16, alignment=ft.MainAxisAlignment.START)
@@ -584,13 +518,12 @@ class SidebarManager:
             label.color = self.parent.selected_color
             btn_container.bgcolor = ft.Colors.with_opacity(0.1, self.parent.selected_color)
             btn_container.border = ft.border.only(left=ft.border.BorderSide(3, self.parent.selected_color))
-            # เปลี่ยนเป็นรูป selected
             icon.src = item["selected_icon"]
         
         return btn_container, icon, label
     
     def _create_submenu_button(self, item):
-        """สร้างปุ่มซับเมนูสำหรับ Data Management (ไม่มีไอคอน)"""
+        """สร้างปุ่มซับเมนูสำหรับ Data Management"""
         btn_container = ft.Container(
             padding=ft.padding.symmetric(vertical=6, horizontal=16),
             margin=ft.margin.symmetric(horizontal=12, vertical=1),
@@ -616,7 +549,7 @@ class SidebarManager:
         return btn_container, label
     
     def _create_customer_submenu_button(self, item):
-        """สร้างปุ่มซับเมนูสำหรับ Customer Management (ไม่มีไอคอน)"""
+        """สร้างปุ่มซับเมนูสำหรับ Customer Management (ไม่ใช้แล้ว แต่เก็บไว้)"""
         btn_container = ft.Container(
             padding=ft.padding.symmetric(vertical=6, horizontal=16),
             margin=ft.margin.symmetric(horizontal=12, vertical=1),
@@ -642,7 +575,7 @@ class SidebarManager:
         return btn_container, label
     
     def _create_job_order_submenu_button(self, item):
-        """สร้างปุ่มซับเมนูสำหรับ Job Order Management (ไม่มีไอคอน)"""
+        """สร้างปุ่มซับเมนูสำหรับ Job Order Management (ไม่ใช้แล้ว แต่เก็บไว้)"""
         btn_container = ft.Container(
             padding=ft.padding.symmetric(vertical=6, horizontal=16),
             margin=ft.margin.symmetric(horizontal=12, vertical=1),
@@ -668,7 +601,7 @@ class SidebarManager:
         return btn_container, label
     
     def _create_quotation_submenu_button(self, item):
-        """สร้างปุ่มซับเมนูสำหรับ Quotation Management (ไม่มีไอคอน)"""
+        """สร้างปุ่มซับเมนูสำหรับ Quotation Management (ไม่ใช้แล้ว แต่เก็บไว้)"""
         btn_container = ft.Container(
             padding=ft.padding.symmetric(vertical=6, horizontal=16),
             margin=ft.margin.symmetric(horizontal=12, vertical=1),
@@ -694,7 +627,7 @@ class SidebarManager:
         return btn_container, label
     
     def _create_repair_submenu_button(self, item):
-        """สร้างปุ่มซับเมนูสำหรับ Repair Management (ไม่มีไอคอน)"""
+        """สร้างปุ่มซับเมนูสำหรับ Repair Management"""
         btn_container = ft.Container(
             padding=ft.padding.symmetric(vertical=6, horizontal=16),
             margin=ft.margin.symmetric(horizontal=12, vertical=1),
@@ -720,7 +653,7 @@ class SidebarManager:
         return btn_container, label
     
     def _create_invoice_submenu_button(self, item):
-        """สร้างปุ่มซับเมนูสำหรับ Invoice Management (ไม่มีไอคอน)"""
+        """สร้างปุ่มซับเมนูสำหรับ Invoice Management"""
         btn_container = ft.Container(
             padding=ft.padding.symmetric(vertical=6, horizontal=16),
             margin=ft.margin.symmetric(horizontal=12, vertical=1),
@@ -746,7 +679,7 @@ class SidebarManager:
         return btn_container, label
     
     def _create_purchase_submenu_button(self, item):
-        """สร้างปุ่มซับเมนูสำหรับ Purchase Management (ไม่มีไอคอน)"""
+        """สร้างปุ่มซับเมนูสำหรับ Purchase Management"""
         btn_container = ft.Container(
             padding=ft.padding.symmetric(vertical=6, horizontal=16),
             margin=ft.margin.symmetric(horizontal=12, vertical=1),
@@ -799,144 +732,108 @@ class SidebarManager:
     
     def _update_selected_button(self):
         """อัพเดทสถานะปุ่มที่ถูกเลือก"""
-        # Reset all main buttons
+        # Reset all main buttons (Dashboard)
         for btn_data in self.nav_buttons:
             btn_data["icon"].color = self.parent.unselected_color
             btn_data["label"].color = self.parent.unselected_color
             btn_data["container"].bgcolor = None
             btn_data["container"].border = None
-            # เปลี่ยนกลับเป็นรูปปกติ
             if "icon_path" in btn_data:
                 btn_data["icon"].src = btn_data["icon_path"]
         
-        # Reset submenu buttons
-        for btn_data in self.data_submenu_buttons:
-            btn_data["label"].color = self.parent.unselected_color
-            btn_data["container"].bgcolor = None
-            btn_data["container"].border = None
+        # Reset all submenu buttons
+        for btn_list in [self.data_submenu_buttons, self.customer_submenu_buttons, 
+                         self.job_order_submenu_buttons, self.quotation_submenu_buttons,
+                         self.repair_submenu_buttons, self.invoice_submenu_buttons,
+                         self.purchase_submenu_buttons, self.reports_submenu_buttons]:
+            for btn_data in btn_list:
+                btn_data["label"].color = self.parent.unselected_color
+                btn_data["container"].bgcolor = None
+                btn_data["container"].border = None
         
-        for btn_data in self.customer_submenu_buttons:
-            btn_data["label"].color = self.parent.unselected_color
-            btn_data["container"].bgcolor = None
-            btn_data["container"].border = None
+        # Reset single item menu buttons (Customer, Job Order, Quotation)
+        for btn in [self.customer_main_btn, self.job_order_main_btn, self.quotation_main_btn]:
+            if btn:
+                # Reset icon and text color
+                for child in btn.content.controls:
+                    if isinstance(child, ft.Image):
+                        child.color = self.parent.unselected_color
+                    elif isinstance(child, ft.Text):
+                        child.color = self.parent.unselected_color
+                btn.bgcolor = None
+                btn.border = None
         
-        for btn_data in self.job_order_submenu_buttons:
-            btn_data["label"].color = self.parent.unselected_color
-            btn_data["container"].bgcolor = None
-            btn_data["container"].border = None
+        # Highlight selected button based on current_index
+        current = self.parent.current_index
         
-        for btn_data in self.quotation_submenu_buttons:
-            btn_data["label"].color = self.parent.unselected_color
-            btn_data["container"].bgcolor = None
-            btn_data["container"].border = None
+        # Check submenu buttons first
+        selected = None
+        for btn_list in [self.data_submenu_buttons, self.customer_submenu_buttons,
+                         self.job_order_submenu_buttons, self.quotation_submenu_buttons,
+                         self.repair_submenu_buttons, self.invoice_submenu_buttons,
+                         self.purchase_submenu_buttons, self.reports_submenu_buttons]:
+            selected = next((btn for btn in btn_list if btn["index"] == current), None)
+            if selected:
+                break
         
-        for btn_data in self.repair_submenu_buttons:
-            btn_data["label"].color = self.parent.unselected_color
-            btn_data["container"].bgcolor = None
-            btn_data["container"].border = None
-        
-        for btn_data in self.invoice_submenu_buttons:
-            btn_data["label"].color = self.parent.unselected_color
-            btn_data["container"].bgcolor = None
-            btn_data["container"].border = None
-        
-        for btn_data in self.purchase_submenu_buttons:
-            btn_data["label"].color = self.parent.unselected_color
-            btn_data["container"].bgcolor = None
-            btn_data["container"].border = None
-        
-        for btn_data in self.reports_submenu_buttons:
-            btn_data["label"].color = self.parent.unselected_color
-            btn_data["container"].bgcolor = None
-            btn_data["container"].border = None
-        
-        # Select button based on current_index
-        selected_btn = next((btn for btn in self.data_submenu_buttons if btn["index"] == self.parent.current_index), None)
-        if selected_btn:
-            selected_btn["label"].color = self.parent.selected_color
-            selected_btn["container"].bgcolor = ft.Colors.with_opacity(0.1, self.parent.selected_color)
-            selected_btn["container"].border = ft.border.only(left=ft.border.BorderSide(3, self.parent.selected_color))
-        else:
-            selected_customer_btn = next((btn for btn in self.customer_submenu_buttons if btn["index"] == self.parent.current_index), None)
-            if selected_customer_btn:
-                selected_customer_btn["label"].color = self.parent.selected_color
-                selected_customer_btn["container"].bgcolor = ft.Colors.with_opacity(0.1, self.parent.selected_color)
-                selected_customer_btn["container"].border = ft.border.only(left=ft.border.BorderSide(3, self.parent.selected_color))
-            else:
-                selected_job_btn = next((btn for btn in self.job_order_submenu_buttons if btn["index"] == self.parent.current_index), None)
-                if selected_job_btn:
-                    selected_job_btn["label"].color = self.parent.selected_color
-                    selected_job_btn["container"].bgcolor = ft.Colors.with_opacity(0.1, self.parent.selected_color)
-                    selected_job_btn["container"].border = ft.border.only(left=ft.border.BorderSide(3, self.parent.selected_color))
-                else:
-                    selected_quotation_btn = next((btn for btn in self.quotation_submenu_buttons if btn["index"] == self.parent.current_index), None)
-                    if selected_quotation_btn:
-                        selected_quotation_btn["label"].color = self.parent.selected_color
-                        selected_quotation_btn["container"].bgcolor = ft.Colors.with_opacity(0.1, self.parent.selected_color)
-                        selected_quotation_btn["container"].border = ft.border.only(left=ft.border.BorderSide(3, self.parent.selected_color))
-                    else:
-                        selected_repair_btn = next((btn for btn in self.repair_submenu_buttons if btn["index"] == self.parent.current_index), None)
-                        if selected_repair_btn:
-                            selected_repair_btn["label"].color = self.parent.selected_color
-                            selected_repair_btn["container"].bgcolor = ft.Colors.with_opacity(0.1, self.parent.selected_color)
-                            selected_repair_btn["container"].border = ft.border.only(left=ft.border.BorderSide(3, self.parent.selected_color))
-                        else:
-                            selected_invoice_btn = next((btn for btn in self.invoice_submenu_buttons if btn["index"] == self.parent.current_index), None)
-                            if selected_invoice_btn:
-                                selected_invoice_btn["label"].color = self.parent.selected_color
-                                selected_invoice_btn["container"].bgcolor = ft.Colors.with_opacity(0.1, self.parent.selected_color)
-                                selected_invoice_btn["container"].border = ft.border.only(left=ft.border.BorderSide(3, self.parent.selected_color))
-                            else:
-                                selected_purchase_btn = next((btn for btn in self.purchase_submenu_buttons if btn["index"] == self.parent.current_index), None)
-                                if selected_purchase_btn:
-                                    selected_purchase_btn["label"].color = self.parent.selected_color
-                                    selected_purchase_btn["container"].bgcolor = ft.Colors.with_opacity(0.1, self.parent.selected_color)
-                                    selected_purchase_btn["container"].border = ft.border.only(left=ft.border.BorderSide(3, self.parent.selected_color))
-                                else:
-                                    selected_reports_btn = next((btn for btn in self.reports_submenu_buttons if btn["index"] == self.parent.current_index), None)
-                                    if selected_reports_btn:
-                                        selected_reports_btn["label"].color = self.parent.selected_color
-                                        selected_reports_btn["container"].bgcolor = ft.Colors.with_opacity(0.1, self.parent.selected_color)
-                                        selected_reports_btn["container"].border = ft.border.only(left=ft.border.BorderSide(3, self.parent.selected_color))
-                                    else:
-                                        main_btn = self.nav_buttons[self.parent.current_index] if self.parent.current_index < len(self.nav_buttons) else None
-                                        if main_btn:
-                                            main_btn["icon"].color = self.parent.selected_color
-                                            main_btn["label"].color = self.parent.selected_color
-                                            main_btn["container"].bgcolor = ft.Colors.with_opacity(0.1, self.parent.selected_color)
-                                            main_btn["container"].border = ft.border.only(left=ft.border.BorderSide(3, self.parent.selected_color))
-                                            # เปลี่ยนเป็นรูป selected สำหรับ Dashboard
-                                            if "selected_icon_path" in main_btn:
-                                                main_btn["icon"].src = main_btn["selected_icon_path"]
+        if selected:
+            selected["label"].color = self.parent.selected_color
+            selected["container"].bgcolor = ft.Colors.with_opacity(0.1, self.parent.selected_color)
+            selected["container"].border = ft.border.only(left=ft.border.BorderSide(3, self.parent.selected_color))
+        elif current in [11, 13, 15]:
+            # Single item menu
+            btn_map = {
+                11: self.customer_main_btn,
+                13: self.job_order_main_btn,
+                15: self.quotation_main_btn
+            }
+            btn = btn_map.get(current)
+            if btn:
+                for child in btn.content.controls:
+                    if isinstance(child, ft.Image):
+                        child.color = self.parent.selected_color
+                    elif isinstance(child, ft.Text):
+                        child.color = self.parent.selected_color
+                btn.bgcolor = ft.Colors.with_opacity(0.1, self.parent.selected_color)
+                btn.border = ft.border.only(left=ft.border.BorderSide(3, self.parent.selected_color))
+        elif current < len(self.nav_buttons):
+            # Dashboard
+            main_btn = self.nav_buttons[current]
+            main_btn["icon"].color = self.parent.selected_color
+            main_btn["label"].color = self.parent.selected_color
+            main_btn["container"].bgcolor = ft.Colors.with_opacity(0.1, self.parent.selected_color)
+            main_btn["container"].border = ft.border.only(left=ft.border.BorderSide(3, self.parent.selected_color))
+            if "selected_icon_path" in main_btn:
+                main_btn["icon"].src = main_btn["selected_icon_path"]
     
     def update_arrow_icons(self):
         """อัพเดทไอคอนลูกศรของเมนู"""
         if self.sidebar and len(self.sidebar.content.controls) > 0:
             nav_column = self.sidebar.content.controls[1].content.controls[0]
-            menu_index = 0
+            
             for control in nav_column.controls:
                 if isinstance(control, ft.Container):
                     content = control.content
+                    # Check if it's a menu with dropdown (has Column and arrow)
                     if isinstance(content, ft.Column) and len(content.controls) > 0:
                         main_btn = content.controls[0]
                         if isinstance(main_btn, ft.Container) and isinstance(main_btn.content, ft.Row):
+                            # Check if arrow exists (3rd child)
                             if len(main_btn.content.controls) > 2:
                                 arrow_icon = main_btn.content.controls[2]
                                 if isinstance(arrow_icon, ft.Icon):
-                                    if menu_index == 1:
-                                        arrow_icon.name = ft.Icons.KEYBOARD_ARROW_UP if self.parent.data_menu_expanded else ft.Icons.KEYBOARD_ARROW_DOWN
-                                    elif menu_index == 2:
-                                        arrow_icon.name = ft.Icons.KEYBOARD_ARROW_UP if self.parent.customer_menu_expanded else ft.Icons.KEYBOARD_ARROW_DOWN
-                                    elif menu_index == 3:
-                                        arrow_icon.name = ft.Icons.KEYBOARD_ARROW_UP if self.parent.job_order_menu_expanded else ft.Icons.KEYBOARD_ARROW_DOWN
-                                    elif menu_index == 4:
-                                        arrow_icon.name = ft.Icons.KEYBOARD_ARROW_UP if self.parent.quotation_menu_expanded else ft.Icons.KEYBOARD_ARROW_DOWN
-                                    elif menu_index == 5:
-                                        arrow_icon.name = ft.Icons.KEYBOARD_ARROW_UP if self.parent.repair_menu_expanded else ft.Icons.KEYBOARD_ARROW_DOWN
-                                    elif menu_index == 6:
-                                        arrow_icon.name = ft.Icons.KEYBOARD_ARROW_UP if self.parent.invoice_menu_expanded else ft.Icons.KEYBOARD_ARROW_DOWN
-                                    elif menu_index == 7:
-                                        arrow_icon.name = ft.Icons.KEYBOARD_ARROW_UP if self.parent.purchase_menu_expanded else ft.Icons.KEYBOARD_ARROW_DOWN
-                                    elif menu_index == 8:
-                                        arrow_icon.name = ft.Icons.KEYBOARD_ARROW_UP if self.parent.reports_menu_expanded else ft.Icons.KEYBOARD_ARROW_DOWN
-                    menu_index += 1
+                                    # Check text to identify menu
+                                    text_widget = main_btn.content.controls[1]
+                                    if isinstance(text_widget, ft.Text):
+                                        menu_text = text_widget.value
+                                        
+                                        if menu_text == get_text("data_management"):
+                                            arrow_icon.name = ft.Icons.KEYBOARD_ARROW_UP if self.parent.data_menu_expanded else ft.Icons.KEYBOARD_ARROW_DOWN
+                                        elif menu_text == get_text("repair_management"):
+                                            arrow_icon.name = ft.Icons.KEYBOARD_ARROW_UP if self.parent.repair_menu_expanded else ft.Icons.KEYBOARD_ARROW_DOWN
+                                        elif menu_text == get_text("invoice_management"):
+                                            arrow_icon.name = ft.Icons.KEYBOARD_ARROW_UP if self.parent.invoice_menu_expanded else ft.Icons.KEYBOARD_ARROW_DOWN
+                                        elif menu_text == get_text("purchase_management"):
+                                            arrow_icon.name = ft.Icons.KEYBOARD_ARROW_UP if self.parent.purchase_menu_expanded else ft.Icons.KEYBOARD_ARROW_DOWN
+                                        elif menu_text == get_text("reports_management"):
+                                            arrow_icon.name = ft.Icons.KEYBOARD_ARROW_UP if self.parent.reports_menu_expanded else ft.Icons.KEYBOARD_ARROW_DOWN

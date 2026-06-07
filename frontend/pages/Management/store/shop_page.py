@@ -1,8 +1,11 @@
-# pages/shop_page.py
+# pages/Management/store/shop_page.py
 import flet as ft
 import asyncio
 import traceback
+import os
+import tempfile
 from i18n import get_text
+
 
 class ShopContent:
     def __init__(self, page: ft.Page, client, user, navigate):
@@ -13,11 +16,12 @@ class ShopContent:
         self.is_loading = False
         self.primary_color = "#1565C0"
         self.primary_dark = "#0D47A1"
+        self.selected_image_path = None
 
     def build(self):
-        """Build shop management content"""
+        """Build shop management content with wide image at top"""
         
-        # Header - ปกติไม่ใหญ่เกินไป
+        # Header
         header = ft.Container(
             content=ft.Row(
                 [
@@ -25,13 +29,13 @@ class ShopContent:
                         [
                             ft.Text(
                                 get_text("shop_title"), 
-                                size=24, 
+                                size=20, 
                                 weight=ft.FontWeight.BOLD, 
                                 color=ft.Colors.WHITE
                             ),
                             ft.Text(
                                 get_text("shop_subtitle"),
-                                size=13,
+                                size=12,
                                 color=ft.Colors.with_opacity(0.9, ft.Colors.WHITE),
                             ),
                         ],
@@ -48,14 +52,14 @@ class ShopContent:
                             bgcolor=ft.Colors.with_opacity(0.2, ft.Colors.WHITE),
                             shape=ft.RoundedRectangleBorder(radius=10),
                             elevation=0,
-                            padding=ft.padding.symmetric(horizontal=20, vertical=12),
+                            padding=ft.padding.symmetric(horizontal=20, vertical=10),
                         ),
                     ),
                 ],
                 spacing=16,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.only(top=20, bottom=20, left=32, right=32),
+            padding=ft.padding.only(top=14, bottom=14, left=26, right=26),
             gradient=ft.LinearGradient(
                 begin=ft.Alignment(-1, -1),
                 end=ft.Alignment(1, 1),
@@ -64,7 +68,25 @@ class ShopContent:
             border_radius=ft.BorderRadius.only(bottom_left=20, bottom_right=20),
         )
         
-        # Form fields
+        # Shop image - wide banner style (full width of card)
+        self.shop_image = ft.Image(
+            src="assets/shop_banner.png" if os.path.exists("assets/shop_banner.png") else "assets/car_logo.png",
+            width=float('inf'),
+            height=180,
+            fit="cover",
+            expand=True,
+        )
+        
+        # Image container without camera button
+        image_container = ft.Container(
+            content=self.shop_image,
+            height=180,
+            border_radius=ft.BorderRadius.only(top_left=16, top_right=16),
+            bgcolor=ft.Colors.GREY_100,
+            clip_behavior=ft.ClipBehavior.HARD_EDGE,
+        )
+        
+        # Shop name field
         self.shop_name = ft.TextField(
             label=f"{get_text('shop_name')}",
             hint_text=get_text("shop_name_hint"),
@@ -78,6 +100,7 @@ class ShopContent:
             expand=True,
         )
         
+        # Phone field
         self.phone = ft.TextField(
             label=get_text("shop_phone"),
             hint_text=get_text("phone_hint"),
@@ -91,6 +114,7 @@ class ShopContent:
             expand=True,
         )
         
+        # Address field
         self.address = ft.TextField(
             label=get_text("shop_address"),
             hint_text=get_text("address_hint"),
@@ -106,22 +130,44 @@ class ShopContent:
             focused_border_color=self.primary_color,
         )
         
-        # Form Card
-        form_card = ft.Card(
-            content=ft.Container(
-                content=ft.Column([
-                    # Two column layout for name and phone
-                    ft.Row([
-                        self.shop_name,
-                        ft.Container(width=16),
-                        self.phone,
-                    ], spacing=0, expand=True),
-                    ft.Container(height=20),
-                    self.address,
-                ], spacing=0),
-                padding=ft.padding.all(24),
+        # Form card with wide image on top
+        form_card = ft.Container(
+            content=ft.Column([
+                # Wide shop image at top
+                image_container,
+                # Content below image
+                ft.Container(
+                    content=ft.Column([
+                        # Shop info section
+                        ft.Text(
+                            get_text("shop_information"),
+                            size=16,
+                            weight=ft.FontWeight.BOLD,
+                            color="#1E293B",
+                        ),
+                        ft.Container(height=10),
+                        # Two column layout for name and phone
+                        ft.Row([
+                            self.shop_name,
+                            ft.Container(width=16),
+                            self.phone,
+                        ], spacing=0, expand=True),
+                        ft.Container(height=16),
+                        self.address,
+                        ft.Container(height=10),
+                    ], spacing=0),
+                    padding=ft.padding.all(24),
+                ),
+            ], spacing=0, scroll=ft.ScrollMode.AUTO),
+            bgcolor=ft.Colors.WHITE,
+            border_radius=16,
+            shadow=ft.BoxShadow(
+                blur_radius=10,
+                spread_radius=1,
+                color=ft.Colors.with_opacity(0.1, ft.Colors.BLACK),
+                offset=ft.Offset(0, 2),
             ),
-            elevation=2,
+            clip_behavior=ft.ClipBehavior.HARD_EDGE,
         )
         
         # Main content - Center the form
@@ -133,7 +179,8 @@ class ShopContent:
                     width=700,
                     alignment=ft.Alignment(0, 0),
                 ),
-            ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                ft.Container(height=20),
+            ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, scroll=ft.ScrollMode.AUTO),
             expand=True,
             bgcolor="#F5F7FA",
         )
@@ -171,6 +218,18 @@ class ShopContent:
                 self.shop_name.value = shop.get('name', '')
                 self.address.value = shop.get('address', '')
                 self.phone.value = shop.get('phone', '')
+                
+                # Try to load logo
+                try:
+                    logo = self.client.get_shop_logo()
+                    if logo:
+                        # Save to temp file and display
+                        with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as tmp:
+                            tmp.write(logo)
+                            self.shop_image.src = tmp.name
+                except:
+                    pass
+                
                 self.page.update()
                 print("DEBUG: Shop data loaded successfully")
             
@@ -190,7 +249,6 @@ class ShopContent:
             return
         
         btn = e.control
-        original_text = btn.content.controls[1].value
         btn.content.controls[0].name = ft.Icons.HOURGLASS_EMPTY
         btn.disabled = True
         self.page.update()

@@ -452,7 +452,29 @@ class APIClient:
     def get_brands(self) -> List[Dict]:
         """Get all vehicle brands"""
         return self._request("GET", "/brands")
-
+    
+    def add_brand(self, name: str, status: str = "active") -> Dict:
+        """Add new brand"""
+        return self._request("POST", "/brands", data={
+            "name": name,
+            "status": status
+        })
+        
+    def update_brand(self, brand_id: int, name: str, status: str) -> Dict:
+        """Update brand"""
+        return self._request("PUT", f"/brands/{brand_id}", data={
+            "name": name,
+            "status": status
+        })
+    
+    def delete_brand(self, brand_id: int) -> Dict:
+        """Delete brand"""
+        return self._request("DELETE", f"/brands/{brand_id}")
+    
+    def get_active_brands(self) -> List[Dict]:
+        """Get active brands only"""
+        return self._request("GET", "/brands/active")
+ 
     def register_customer_with_vehicle(
         self, customer_data: Dict, vehicle_data: Dict
     ) -> Dict:
@@ -735,3 +757,47 @@ class APIClient:
         if end_date:
             params["end_date"] = end_date
         return self._request("GET", "/reports/service-items", params=params)
+    
+    # Add these methods to APIClient class
+
+# ========== Units ==========
+    def get_units(self) -> List[Dict]:
+        """Get all units"""
+        return self._request("GET", "/units")
+
+    def add_unit(self, name: str, status: str = "active") -> Dict:
+        """Add new unit"""
+        return self._request("POST", "/units", data={"name": name, "status": status})
+
+    def update_unit(self, unit_id: int, name: str, status: str) -> Dict:
+        """Update unit"""
+        return self._request("PUT", f"/units/{unit_id}", data={"name": name, "status": status})
+
+    def delete_unit(self, unit_id: int) -> Dict:
+        """Delete unit"""
+        return self._request("DELETE", f"/units/{unit_id}")
+
+    def get_active_units(self) -> List[Dict]:
+        """Get active units only"""
+        return self._request("GET", "/units/active")
+
+# ========== Part Categories ==========
+    def get_part_categories(self) -> List[Dict]:
+        """Get all part categories"""
+        return self._request("GET", "/part-categories")
+
+    def add_part_category(self, name: str, status: str = "active") -> Dict:
+        """Add new part category"""
+        return self._request("POST", "/part-categories", data={"name": name, "status": status})
+
+    def update_part_category(self, category_id: int, name: str, status: str) -> Dict:
+        """Update part category"""
+        return self._request("PUT", f"/part-categories/{category_id}", data={"name": name, "status": status})
+
+    def delete_part_category(self, category_id: int) -> Dict:
+        """Delete part category"""
+        return self._request("DELETE", f"/part-categories/{category_id}")
+
+    def get_active_part_categories(self) -> List[Dict]:
+        """Get active part categories only"""
+        return self._request("GET", "/part-categories/active")

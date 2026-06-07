@@ -1,4 +1,4 @@
-# app_layout.py (Complete with Repair Management, Personal Page, and Reports)
+# app_layout.py (Complete with Repair Management, Personal Page, Reports, and Master Data)
 import flet as ft
 from flet import Alignment
 import sys
@@ -33,7 +33,7 @@ class AppLayout:
         self.repair_menu_expanded = False
         self.invoice_menu_expanded = False
         self.purchase_menu_expanded = False
-        self.reports_menu_expanded = False  # NEW
+        self.reports_menu_expanded = False
         self.current_dialog = None
         self.sidebar_visible = True
         self.sidebar_width = 280
@@ -98,7 +98,7 @@ class AppLayout:
         repair_menu_expanded = self.repair_menu_expanded
         invoice_menu_expanded = self.invoice_menu_expanded
         purchase_menu_expanded = self.purchase_menu_expanded
-        reports_menu_expanded = self.reports_menu_expanded  # NEW
+        reports_menu_expanded = self.reports_menu_expanded
 
         # Clear page
         self.page.controls.clear()
@@ -112,7 +112,7 @@ class AppLayout:
         self.repair_menu_expanded = repair_menu_expanded
         self.invoice_menu_expanded = invoice_menu_expanded
         self.purchase_menu_expanded = purchase_menu_expanded
-        self.reports_menu_expanded = reports_menu_expanded  # NEW
+        self.reports_menu_expanded = reports_menu_expanded
 
         # Rebuild everything
         self.sidebar = self.sidebar_manager.build()
@@ -213,7 +213,7 @@ class AppLayout:
             self.sidebar_manager.update_arrow_icons()
         self.page.update()
 
-    def toggle_reports_menu(self):  # NEW
+    def toggle_reports_menu(self):
         """Toggle reports management submenu visibility"""
         self.reports_menu_expanded = not self.reports_menu_expanded
         if hasattr(self.sidebar_manager, 'reports_submenu_column') and self.sidebar_manager.reports_submenu_column:
@@ -359,7 +359,7 @@ class AppLayout:
                         btn_data["container"].bgcolor = None
                 self.page.update()
 
-    def on_reports_submenu_hover(self, e, index):  # NEW
+    def on_reports_submenu_hover(self, e, index):
         """Handle hover effects for reports submenu"""
         if hasattr(self.sidebar_manager, 'reports_submenu_buttons'):
             btn_data = next(
@@ -399,12 +399,12 @@ class AppLayout:
         """Handle navigation click"""
         print(f"DEBUG: Nav clicked index {index}")
 
-        if index == 7:
-            self.logout()
-            return
+        # ❌ REMOVED: No logout condition here anymore
+        # Logout is now handled only from TopNavBarManager
 
         # Auto-expand menus if needed
-        if index in range(1, 7) and not self.data_menu_expanded:
+        # Updated range to include index 7 (Master Data) and index 8 (if any)
+        if index in range(1, 9) and not self.data_menu_expanded:
             self.data_menu_expanded = True
             if self.sidebar_manager.submenu_column:
                 self.sidebar_manager.submenu_column.visible = True
@@ -453,7 +453,6 @@ class AppLayout:
                 self.sidebar_manager.update_arrow_icons()
                 self.page.update()
 
-        # NEW: Auto-expand reports menu
         if index in range(29, 35) and not self.reports_menu_expanded:
             self.reports_menu_expanded = True
             if hasattr(self.sidebar_manager, 'reports_submenu_column') and self.sidebar_manager.reports_submenu_column:
@@ -481,6 +480,7 @@ class AppLayout:
             "parts": 4,
             "shop": 5,
             "promotions": 6,
+            "master_data": 7,
             "input_customer": 8,
             "edit_customer": 10,
             "customer_list": 11,
@@ -576,36 +576,126 @@ class AppLayout:
             print(f"DEBUG: Error closing dialog: {ex}")
 
     def logout(self):
-        print("DEBUG: Logging out")
+        """Show modern logout confirmation dialog"""
+        print("DEBUG: Showing logout confirmation dialog")
 
         def confirm_logout(e):
             print("DEBUG: Logout confirmed")
+            # Close the dialog
+            if logout_dialog in self.page.overlay:
+                self.page.overlay.remove(logout_dialog)
             self._close_dialog()
+            
+            # Navigate to login page
             from pages.login_page import login_page
 
             def on_login_success(p, c, u):
-                from pages.dashboard_page import dashboard_page
-                dashboard_page(p, c, u)
+                from pages.main_app import MainApp
+                app = MainApp(p, c, u)
+                p.clean()
+                p.add(app.build())
+                p.update()
 
             login_page(self.page, on_login_success)
 
         def cancel_logout(e):
             print("DEBUG: Logout cancelled")
+            # Close the dialog
+            if logout_dialog in self.page.overlay:
+                self.page.overlay.remove(logout_dialog)
             self._close_dialog()
+            # Return to current page
             self.on_nav_click(self.current_index)
 
-        dialog = ft.AlertDialog(
-            title=ft.Text(get_text("confirm_logout")),
-            content=ft.Text(get_text("logout_confirm_message")),
+        # Create modern logout dialog
+        logout_dialog = ft.AlertDialog(
+            modal=True,
+            shape=ft.RoundedRectangleBorder(radius=20),
+            bgcolor=ft.Colors.WHITE,
+            content=ft.Container(
+                content=ft.Column(
+                    [
+                        # Warning icon
+                        ft.Container(
+                            content=ft.Icon(
+                                ft.Icons.LOGOUT_ROUNDED,
+                                size=56,
+                                color="#EF4444",
+                            ),
+                            bgcolor=ft.Colors.with_opacity(0.1, "#EF4444"),
+                            border_radius=50,
+                            padding=ft.padding.all(16),
+                        ),
+                        ft.Container(height=16),
+                        # Title
+                        ft.Text(
+                            get_text("confirm_logout"),
+                            size=22,
+                            weight=ft.FontWeight.BOLD,
+                            color="#1E293B",
+                            text_align=ft.TextAlign.CENTER,
+                        ),
+                        ft.Container(height=8),
+                        # Message
+                        ft.Text(
+                            get_text("logout_confirm_message"),
+                            size=14,
+                            color="#64748B",
+                            text_align=ft.TextAlign.CENTER,
+                        ),
+                    ],
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=0,
+                ),
+                width=380,
+                padding=ft.padding.all(28),
+            ),
             actions=[
-                ft.TextButton(get_text("cancel"), on_click=cancel_logout),
-                ft.TextButton(
-                    get_text("logout"),
-                    on_click=confirm_logout,
-                    style=ft.ButtonStyle(color=ft.Colors.RED),
+                ft.Container(
+                    content=ft.Row(
+                        [
+                            ft.TextButton(
+                                content=ft.Text(
+                                    get_text("cancel"),
+                                    size=14,
+                                    weight=ft.FontWeight.W_500,
+                                ),
+                                on_click=cancel_logout,
+                                style=ft.ButtonStyle(
+                                    color="#64748B",
+                                    overlay_color=ft.Colors.with_opacity(0.1, "#64748B"),
+                                    shape=ft.RoundedRectangleBorder(radius=10),
+                                ),
+                                expand=True,
+                            ),
+                            ft.ElevatedButton(
+                                content=ft.Text(
+                                    get_text("logout"),
+                                    size=14,
+                                    weight=ft.FontWeight.W_600,
+                                    color=ft.Colors.WHITE,
+                                ),
+                                on_click=confirm_logout,
+                                style=ft.ButtonStyle(
+                                    bgcolor="#EF4444",
+                                    color=ft.Colors.WHITE,
+                                    shape=ft.RoundedRectangleBorder(radius=10),
+                                    elevation=0,
+                                    padding=ft.padding.symmetric(horizontal=20, vertical=12),
+                                ),
+                                expand=True,
+                            ),
+                        ],
+                        spacing=12,
+                        alignment=ft.MainAxisAlignment.CENTER,
+                    ),
+                    padding=ft.padding.symmetric(horizontal=20, vertical=16),
                 ),
             ],
-            actions_alignment=ft.MainAxisAlignment.END,
+            actions_alignment=ft.MainAxisAlignment.CENTER,
         )
 
-        self._open_dialog(dialog)
+        # Open the dialog
+        self.page.overlay.append(logout_dialog)
+        logout_dialog.open = True
+        self.page.update()

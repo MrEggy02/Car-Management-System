@@ -32,8 +32,11 @@ class JobOrderListContent:
         self.status_filter = None
         self.customers = []
         self.vehicles_by_customer = {}
+        self.current_page = 1
+        self.items_per_page = 10
+        self.total_pages = 1
         
-        # Status colors
+        # Status colors (keep for internal use)
         self.status_colors = {
             "pending": "#FF9800",
             "quoting": "#2196F3",
@@ -52,16 +55,9 @@ class JobOrderListContent:
             "cancelled": ft.Icons.CANCEL
         }
         
-        # Container for orders list - using GridView
-        self.orders_grid = ft.GridView(
-            expand=True,
-            runs_count=2,
-            max_extent=400,
-            child_aspect_ratio=0.9,
-            spacing=12,
-            run_spacing=12,
-            padding=ft.padding.only(top=0, left=0, right=0, bottom=0),
-        )
+        # Container for orders list
+        self.table_rows = ft.Column(spacing=0, scroll=ft.ScrollMode.AUTO, expand=True)
+        self.pagination_container = ft.Container()
 
     def build(self):
         # Header
@@ -76,7 +72,6 @@ class JobOrderListContent:
                                 weight=ft.FontWeight.BOLD,
                                 color=ft.Colors.WHITE,
                             ),
-                            
                         ],
                         spacing=2,
                     ),
@@ -156,22 +151,21 @@ class JobOrderListContent:
             margin=ft.margin.only(bottom=16),
         )
         
-        # Stats row - smaller
-        self.stats_container = ft.Container(
-            content=ft.Row(
-                [
-                    self._create_stat_card(get_text("total_orders"), "0", ft.Icons.RECEIPT, "#1565C0"),
-                    self._create_stat_card(get_text("pending_orders"), "0", ft.Icons.HOURGLASS_EMPTY, "#FF9800"),
-                    self._create_stat_card(get_text("repairing_orders"), "0", ft.Icons.BUILD, "#9C27B0"),
-                    self._create_stat_card(get_text("completed_orders"), "0", ft.Icons.CHECK_CIRCLE, "#4CAF50"),
-                ],
-                spacing=10,
-                alignment=ft.MainAxisAlignment.START,
-            ),
-            padding=ft.padding.all(12),
+        # Create table header - NO STATUS COLUMN
+        table_header = self._create_table_header()
+        
+        # Table container
+        table_container = ft.Container(
+            content=ft.Column([
+                table_header,
+                ft.Divider(height=1, color=ft.Colors.GREY_300),
+                self.table_rows,
+            ], spacing=0),
+            margin=ft.margin.only(left=20, right=20),
             bgcolor=ft.Colors.WHITE,
-            border_radius=12,
-            margin=ft.margin.only(bottom=16),
+            border_radius=ft.BorderRadius.only(top_left=12, top_right=12, bottom_left=12, bottom_right=12),
+            border=ft.border.all(1, ft.Colors.GREY_200),
+            expand=True,
         )
         
         # Loading indicator
@@ -183,7 +177,7 @@ class JobOrderListContent:
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
             alignment=Alignment.CENTER,
             padding=ft.padding.all(40),
-            visible=True,
+            visible=False,
         )
         
         # Empty state
@@ -209,26 +203,16 @@ class JobOrderListContent:
         )
         
         # Main content
-        scrollable_content = ft.Column(
-            [
+        content_area = ft.Container(
+            content=ft.Column([
                 filter_row,
-                self.stats_container,
-                ft.Container(
-                    content=self.orders_grid,
-                    expand=True,
-                ),
+                table_container,
+                self.pagination_container,
                 self.loading_indicator,
                 self.empty_state,
-            ],
-            spacing=0,
-            scroll=ft.ScrollMode.AUTO,
+            ], expand=True),
             expand=True,
-        )
-        
-        content_area = ft.Container(
-            content=scrollable_content,
-            expand=True,
-            padding=ft.padding.all(20),
+            padding=ft.padding.all(24),
             bgcolor="#F5F7FA",
         )
         
@@ -243,26 +227,142 @@ class JobOrderListContent:
         
         return main_content
     
-    def _create_stat_card(self, title: str, value: str, icon, color: str):
+    def _create_table_header(self):
+        """Create table header row - NO STATUS COLUMN"""
         return ft.Container(
             content=ft.Row([
                 ft.Container(
-                    content=ft.Icon(icon, size=18, color=ft.Colors.WHITE),
-                    bgcolor=color,
-                    border_radius=8,
-                    padding=ft.padding.all(6),
+                    content=ft.Text(get_text("job_no"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
+                    width=140,
+                    alignment=ft.Alignment(-1, 0),
+                    padding=ft.padding.only(left=10),
                 ),
-                ft.Column([
-                    ft.Text(value, size=18, weight=ft.FontWeight.BOLD, color="#1E293B"),
-                    ft.Text(title, size=10, color="#64748B"),
-                ], spacing=0, horizontal_alignment=ft.CrossAxisAlignment.END),
-            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-            padding=ft.padding.all(10),
-            bgcolor=ft.Colors.WHITE,
-            border_radius=10,
-            border=ft.border.all(1, ft.Colors.GREY_100),
-            expand=True,
+                ft.Container(
+                    content=ft.Text(get_text("customer_name"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
+                    width=200,
+                    alignment=ft.Alignment(-1, 0),
+                    padding=ft.padding.only(left=10),
+                ),
+                ft.Container(
+                    content=ft.Text(get_text("plate_number"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
+                    width=130,
+                    alignment=ft.Alignment(-1, 0),
+                    padding=ft.padding.only(left=10),
+                ),
+                ft.Container(
+                    content=ft.Text(get_text("receive_date"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
+                    width=120,
+                    alignment=ft.Alignment(0, 0),
+                ),
+                ft.Container(
+                    content=ft.Text(get_text("actions"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
+                    width=200,
+                    alignment=ft.Alignment(0, 0),
+                ),
+            ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
+            padding=ft.padding.symmetric(vertical=14, horizontal=10),
+            bgcolor=ft.Colors.GREY_100,
+            border_radius=ft.BorderRadius.only(top_left=12, top_right=12),
         )
+    
+    def _create_table_row(self, order: Dict, index: int):
+        """Create a table row - NO STATUS COLUMN"""
+        order_id = order.get("id")
+        job_no = order.get("job_no", "N/A")
+        customer_name = order.get("customer_name", "-")
+        plate_number = order.get("plate_number", "-")
+        receive_date = order.get("receive_date", "")
+        
+        if receive_date:
+            try:
+                receive_date = receive_date.split()[0] if " " in receive_date else receive_date[:10]
+            except:
+                receive_date = "-"
+        else:
+            receive_date = "-"
+        
+        row_bg = ft.Colors.GREY_50 if index % 2 == 0 else ft.Colors.WHITE
+        
+        # Action buttons
+        view_btn = ft.Container(
+            content=ft.Row([
+                ft.Icon(ft.Icons.VISIBILITY_OUTLINED, size=16, color=self.primary_color),
+                ft.Text(get_text("view"), size=12, color=self.primary_color),
+            ], spacing=4),
+            on_click=lambda e, oid=order_id: self.show_detail_dialog(oid),
+            padding=ft.padding.symmetric(horizontal=8, vertical=4),
+            border_radius=6,
+        )
+        
+        print_btn = ft.Container(
+            content=ft.Row([
+                ft.Icon(ft.Icons.PRINT_OUTLINED, size=16, color=self.primary_color),
+                ft.Text(get_text("print"), size=12, color=self.primary_color),
+            ], spacing=4),
+            on_click=lambda e, oid=order_id: self.print_job_order(oid),
+            padding=ft.padding.symmetric(horizontal=8, vertical=4),
+            border_radius=6,
+        )
+        
+        status_btn = ft.Container(
+            content=ft.Row([
+                ft.Icon(ft.Icons.UPDATE, size=16, color="#64748B"),
+                ft.Text(get_text("status"), size=12, color="#64748B"),
+            ], spacing=4),
+            on_click=lambda e, oid=order_id: self.show_status_dialog(oid),
+            padding=ft.padding.symmetric(horizontal=8, vertical=4),
+            border_radius=6,
+        )
+        
+        invoice_btn = ft.Container(
+            content=ft.Row([
+                ft.Icon(ft.Icons.RECEIPT, size=16, color=ft.Colors.GREEN_600),
+                ft.Text(get_text("invoice"), size=12, color=ft.Colors.GREEN_600),
+            ], spacing=4),
+            on_click=lambda e, oid=order_id: self.create_invoice(oid),
+            padding=ft.padding.symmetric(horizontal=8, vertical=4),
+            border_radius=6,
+        )
+        
+        row = ft.Container(
+            content=ft.Row([
+                ft.Container(
+                    content=ft.Text(job_no, size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
+                    width=140,
+                    alignment=ft.Alignment(-1, 0),
+                    padding=ft.padding.only(left=10),
+                ),
+                ft.Container(
+                    content=ft.Text(customer_name, size=13, color="#1E293B", max_lines=1),
+                    width=200,
+                    alignment=ft.Alignment(-1, 0),
+                    padding=ft.padding.only(left=10),
+                ),
+                ft.Container(
+                    content=ft.Text(plate_number, size=12, color="#64748B", max_lines=1),
+                    width=130,
+                    alignment=ft.Alignment(-1, 0),
+                    padding=ft.padding.only(left=10),
+                ),
+                ft.Container(
+                    content=ft.Text(receive_date, size=12, color="#64748B"),
+                    width=120,
+                    alignment=ft.Alignment(0, 0),
+                ),
+                ft.Container(
+                    content=ft.Row([view_btn, print_btn, status_btn, invoice_btn], spacing=4),
+                    width=200,
+                    alignment=ft.Alignment(0, 0),
+                ),
+            ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
+            padding=ft.padding.symmetric(vertical=12, horizontal=10),
+            bgcolor=row_bg,
+        )
+        
+        return ft.Column([
+            row,
+            ft.Divider(height=1, color=ft.Colors.GREY_200),
+        ], spacing=0)
     
     def load_customers_and_vehicles(self):
         """Load all customers and their vehicles for dialog"""
@@ -275,9 +375,10 @@ class JobOrderListContent:
             print(f"Error loading customers: {ex}")
     
     def load_orders(self):
+        """Load orders from API"""
         self.loading_indicator.visible = True
         self.empty_state.visible = False
-        self.orders_grid.controls.clear()
+        self.table_rows.controls.clear()
         self.page.update()
         
         try:
@@ -289,15 +390,13 @@ class JobOrderListContent:
             else:
                 self.job_orders = []
             
-            self._update_stats()
-            self.apply_filters()
-            self.loading_indicator.visible = False
-            self.page.update()
+            self.filtered_orders = self.job_orders.copy()
+            self.display_orders()
             
         except Exception as ex:
             print(f"Error loading orders: {ex}")
             self.loading_indicator.visible = False
-            self.orders_grid.controls.append(
+            self.table_rows.controls.append(
                 ft.Container(
                     content=ft.Column([
                         ft.Icon(ft.Icons.ERROR_OUTLINE, size=48, color=ft.Colors.RED_400),
@@ -308,18 +407,86 @@ class JobOrderListContent:
             )
             self.page.update()
     
-    def _update_stats(self):
-        total = len(self.job_orders)
-        pending = sum(1 for o in self.job_orders if o.get("status") == "pending")
-        repairing = sum(1 for o in self.job_orders if o.get("status") == "repairing")
-        completed = sum(1 for o in self.job_orders if o.get("status") in ["finished", "closed"])
+    def display_orders(self):
+        """Display orders with pagination"""
+        self.table_rows.controls.clear()
         
-        if len(self.stats_container.content.controls) >= 4:
-            self.stats_container.content.controls[0].content.controls[1].controls[0].value = str(total)
-            self.stats_container.content.controls[1].content.controls[1].controls[0].value = str(pending)
-            self.stats_container.content.controls[2].content.controls[1].controls[0].value = str(repairing)
-            self.stats_container.content.controls[3].content.controls[1].controls[0].value = str(completed)
+        total_items = len(self.filtered_orders)
+        self.total_pages = max(1, (total_items + self.items_per_page - 1) // self.items_per_page)
+        
+        if self.current_page > self.total_pages:
+            self.current_page = self.total_pages
+        if self.current_page < 1:
+            self.current_page = 1
+        
+        start_idx = (self.current_page - 1) * self.items_per_page
+        end_idx = min(start_idx + self.items_per_page, total_items)
+        page_items = self.filtered_orders[start_idx:end_idx]
+        
+        if page_items and len(page_items) > 0:
+            self.loading_indicator.visible = False
+            self.empty_state.visible = False
+            for i, order in enumerate(page_items):
+                self.table_rows.controls.append(self._create_table_row(order, start_idx + i))
+        else:
+            self.loading_indicator.visible = False
+            self.empty_state.visible = True
+        
+        self.update_pagination_controls()
         self.page.update()
+    
+    def update_pagination_controls(self):
+        """Update pagination controls"""
+        prev_disabled = self.current_page <= 1
+        next_disabled = self.current_page >= self.total_pages
+        
+        self.pagination_container.content = ft.Row(
+            [
+                ft.Text(
+                    f"{get_text('showing')} {len(self.filtered_orders)} {get_text('of')} {len(self.job_orders)} {get_text('results')}",
+                    size=12,
+                    color="#64748B",
+                ),
+                ft.Container(expand=True),
+                ft.Container(
+                    content=ft.Row([
+                        ft.IconButton(
+                            icon=ft.Icons.CHEVRON_LEFT,
+                            icon_size=20,
+                            on_click=self.prev_page,
+                            disabled=prev_disabled,
+                            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
+                        ),
+                        ft.Container(
+                            content=ft.Text(f"{self.current_page}/{self.total_pages}", size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
+                            padding=ft.padding.symmetric(horizontal=15),
+                        ),
+                        ft.IconButton(
+                            icon=ft.Icons.CHEVRON_RIGHT,
+                            icon_size=20,
+                            on_click=self.next_page,
+                            disabled=next_disabled,
+                            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
+                        ),
+                    ]),
+                    bgcolor=ft.Colors.WHITE,
+                    border_radius=10,
+                    padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                ),
+            ],
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        )
+        self.page.update()
+    
+    def prev_page(self, e=None):
+        if self.current_page > 1:
+            self.current_page -= 1
+            self.display_orders()
+    
+    def next_page(self, e=None):
+        if self.current_page < self.total_pages:
+            self.current_page += 1
+            self.display_orders()
     
     def apply_filters_from_event(self, e):
         self.apply_filters()
@@ -343,137 +510,8 @@ class JobOrderListContent:
             ]
         
         self.filtered_orders = filtered
-        self.orders_grid.controls.clear()
-        
-        if self.filtered_orders and len(self.filtered_orders) > 0:
-            for order in self.filtered_orders:
-                self.orders_grid.controls.append(self._create_order_card(order))
-            self.empty_state.visible = False
-        else:
-            self.empty_state.visible = True
-        
-        self.page.update()
-    
-    def _create_order_card(self, order: Dict):
-        """Create a compact order card"""
-        order_id = order.get("id")
-        job_no = order.get("job_no", "N/A")
-        customer_name = order.get("customer_name", "-")
-        plate_number = order.get("plate_number", "-")
-        status = order.get("status", "pending")
-        receive_date = order.get("receive_date", "")
-        
-        if receive_date:
-            try:
-                receive_date = receive_date.split()[0] if " " in receive_date else receive_date[:10]
-            except:
-                receive_date = "-"
-        else:
-            receive_date = "-"
-        
-        status_color = self.status_colors.get(status, "#607D8B")
-        status_icon = self.status_icons.get(status, ft.Icons.INFO)
-        status_text = get_text(status)
-        
-        # Compact card
-        card = ft.Container(
-            content=ft.Column([
-                # Header with job number and status
-                ft.Container(
-                    content=ft.Row([
-                        ft.Container(
-                            content=ft.Icon(ft.Icons.RECEIPT, size=18, color=self.primary_color),
-                        ),
-                        ft.Text(job_no, size=14, weight=ft.FontWeight.BOLD, color="#1E293B", expand=True),
-                        ft.Container(
-                            content=ft.Row([
-                                ft.Icon(status_icon, size=10, color=ft.Colors.WHITE),
-                                ft.Text(status_text, size=9, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500),
-                            ], spacing=3),
-                            bgcolor=status_color,
-                            border_radius=16,
-                            padding=ft.padding.symmetric(horizontal=8, vertical=3),
-                        ),
-                    ], spacing=8, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                    padding=ft.padding.symmetric(horizontal=12, vertical=10),
-                ),
-                
-                # Divider
-                ft.Divider(height=1, color=ft.Colors.GREY_100),
-                
-                # Customer info
-                ft.Container(
-                    content=ft.Column([
-                        ft.Row([
-                            ft.Icon(ft.Icons.PERSON, size=12, color="#64748B"),
-                            ft.Text(customer_name, size=11, color="#1E293B", weight=ft.FontWeight.W_500, expand=True),
-                        ], spacing=6),
-                        ft.Row([
-                            ft.Icon(ft.Icons.DIRECTIONS_CAR, size=12, color="#64748B"),
-                            ft.Text(plate_number, size=11, color="#64748B", expand=True),
-                        ], spacing=6),
-                        ft.Row([
-                            ft.Icon(ft.Icons.CALENDAR_TODAY, size=12, color="#64748B"),
-                            ft.Text(f"{get_text('receive_date')}: {receive_date}", size=10, color="#64748B", expand=True),
-                        ], spacing=6),
-                    ], spacing=6),
-                    padding=ft.padding.symmetric(horizontal=12, vertical=10),
-                ),
-                
-                # Divider
-                ft.Divider(height=1, color=ft.Colors.GREY_100),
-                
-                # Action buttons - horizontal row
-                ft.Container(
-                    content=ft.Row([
-                        ft.IconButton(
-                            icon=ft.Icons.VISIBILITY,
-                            icon_size=16,
-                            tooltip=get_text("view_detail"),
-                            icon_color=self.primary_color,
-                            on_click=lambda e, oid=order_id: self.show_detail_dialog(oid),
-                            style=ft.ButtonStyle(padding=ft.padding.all(6)),
-                        ),
-                        ft.IconButton(
-                            icon=ft.Icons.PRINT,
-                            icon_size=16,
-                            tooltip=get_text("print"),
-                            icon_color=self.primary_color,
-                            on_click=lambda e, oid=order_id: self.print_job_order(oid),
-                            style=ft.ButtonStyle(padding=ft.padding.all(6)),
-                        ),
-                        ft.IconButton(
-                            icon=ft.Icons.UPDATE,
-                            icon_size=16,
-                            tooltip=get_text("update_status"),
-                            icon_color="#64748B",
-                            on_click=lambda e, oid=order_id: self.show_status_dialog(oid),
-                            style=ft.ButtonStyle(padding=ft.padding.all(6)),
-                        ),
-                        ft.IconButton(
-                            icon=ft.Icons.RECEIPT,
-                            icon_size=16,
-                            tooltip=get_text("create_invoice"),
-                            icon_color=ft.Colors.GREEN_600,
-                            on_click=lambda e, oid=order_id: self.create_invoice(oid),
-                            style=ft.ButtonStyle(padding=ft.padding.all(6)),
-                        ),
-                    ], alignment=ft.MainAxisAlignment.SPACE_EVENLY, spacing=0),
-                    padding=ft.padding.symmetric(vertical=8),
-                ),
-            ], spacing=0),
-            bgcolor=ft.Colors.WHITE,
-            border_radius=12,
-            border=ft.border.all(1, ft.Colors.GREY_200),
-            shadow=ft.BoxShadow(
-                blur_radius=4,
-                spread_radius=1,
-                color=ft.Colors.with_opacity(0.05, ft.Colors.BLACK),
-                offset=ft.Offset(0, 1),
-            ),
-        )
-        
-        return card
+        self.current_page = 1
+        self.display_orders()
     
     def show_create_dialog(self):
         def on_save(data):
@@ -576,7 +614,11 @@ class JobOrderListContent:
             self.show_snack_bar(f"{get_text('error')}: {str(ex)}", is_error=True)
     
     def _generate_print_html(self, order):
-        """Generate HTML for printing"""
+        """Generate HTML for printing with custom Phetsarath font"""
+        
+        # Get the font path
+        font_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "assets/fonts/Phetsarath.ttf")
+        
         job_no = order.get("job_no", "N/A")
         customer_name = order.get("customer_name", "-")
         customer_phone = order.get("customer_phone", "-")
@@ -621,52 +663,68 @@ class JobOrderListContent:
     <meta charset="UTF-8">
     <title>Job Order Receipt - {job_no}</title>
     <style>
+        @font-face {{
+            font-family: 'Phetsarath';
+            src: url('file:///{font_path}') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }}
+        
         @media print {{
             body {{ margin: 0; padding: 0; }}
         }}
+        
         * {{
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }}
+        
         body {{
-            font-family: 'Noto Sans', 'DejaVu Sans', 'Segoe UI', Arial, sans-serif;
+            font-family: 'Phetsarath', 'Noto Sans', 'DejaVu Sans', 'Segoe UI', Arial, sans-serif;
             font-size: 12px;
             padding: 20px;
             background: #e2e8f0;
         }}
+        
         .receipt {{
-            max-width: 350px;
+            max-width: 380px;
             margin: 0 auto;
             background: white;
             border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
             overflow: hidden;
         }}
+        
         .receipt-content {{
             padding: 20px;
         }}
+        
         .header {{
             text-align: center;
             padding: 20px 20px 15px 20px;
             background: linear-gradient(135deg, #1565C0 0%, #0D47A1 100%);
             color: white;
         }}
+        
         .shop-name {{
-            font-size: 18px;
+            font-size: 20px;
             font-weight: bold;
             letter-spacing: 1px;
         }}
+        
         .shop-address {{
-            font-size: 9px;
+            font-size: 10px;
             opacity: 0.9;
             margin-top: 4px;
         }}
+        
         .shop-phone {{
-            font-size: 10px;
+            font-size: 11px;
             font-weight: bold;
             margin-top: 6px;
         }}
+        
         .receipt-title {{
             font-size: 11px;
             letter-spacing: 2px;
@@ -675,76 +733,88 @@ class JobOrderListContent:
             border-top: 1px dashed rgba(255,255,255,0.3);
             display: inline-block;
         }}
+        
         .info-section {{
-            margin-bottom: 16px;
+            margin-bottom: 14px;
         }}
+        
         .info-row {{
             display: flex;
             justify-content: space-between;
             margin-bottom: 6px;
-            font-size: 10px;
+            font-size: 11px;
             padding-bottom: 4px;
             border-bottom: 1px dotted #e2e8f0;
         }}
+        
         .info-label {{
             font-weight: 600;
             color: #475569;
-            width: 85px;
+            width: 90px;
         }}
+        
         .info-value {{
             color: #1e293b;
             font-weight: 500;
             flex: 1;
             text-align: right;
         }}
+        
         .divider {{
             height: 1px;
             background: repeating-linear-gradient(90deg, #cbd5e1, #cbd5e1 5px, transparent 5px, transparent 10px);
-            margin: 12px 0;
+            margin: 10px 0;
         }}
+        
         .divider-dashed {{
             height: 1px;
             background: repeating-linear-gradient(90deg, #94a3b8, #94a3b8 4px, transparent 4px, transparent 8px);
-            margin: 10px 0;
+            margin: 8px 0;
         }}
+        
         .section-title {{
             font-size: 11px;
             font-weight: bold;
             color: #1565C0;
-            margin-bottom: 8px;
-            padding-bottom: 4px;
+            margin-bottom: 6px;
+            padding-bottom: 3px;
             border-bottom: 2px solid #1565C0;
             display: inline-block;
         }}
+        
         .problem-box {{
             background: #f8fafc;
             padding: 10px;
             border-radius: 8px;
             margin-top: 6px;
-            font-size: 10px;
+            font-size: 11px;
             line-height: 1.4;
             color: #334155;
             border-left: 3px solid #1565C0;
         }}
+        
         .barcode {{
             height: 20px;
             background: repeating-linear-gradient(90deg, #000, #000 2px, transparent 2px, transparent 6px);
             margin: 12px 0;
         }}
+        
         .footer {{
             text-align: center;
             padding-top: 12px;
             margin-top: 8px;
             border-top: 1px dashed #cbd5e1;
-            font-size: 8px;
+            font-size: 9px;
             color: #94a3b8;
         }}
+        
         .thankyou {{
-            font-size: 11px;
+            font-size: 12px;
             font-weight: bold;
             color: #1565C0;
             margin-bottom: 6px;
         }}
+        
         .stamp {{
             margin-top: 12px;
             display: flex;
@@ -753,12 +823,14 @@ class JobOrderListContent:
             font-size: 9px;
             color: #64748b;
         }}
+        
         .signature {{
             border-top: 1px dotted #94a3b8;
-            width: 100px;
+            width: 120px;
             padding-top: 4px;
             text-align: center;
         }}
+        
         .receipt-no {{
             font-size: 9px;
             color: #64748b;
@@ -766,6 +838,7 @@ class JobOrderListContent:
             margin-top: 4px;
             font-family: monospace;
         }}
+        
         .badge {{
             background: #f1f5f9;
             display: inline-block;
@@ -774,6 +847,15 @@ class JobOrderListContent:
             font-size: 8px;
             font-weight: bold;
             margin-bottom: 6px;
+        }}
+        
+        .highlight {{
+            font-weight: bold;
+            color: #1565C0;
+        }}
+        
+        .date-text {{
+            font-size: 10px;
         }}
     </style>
 </head>
@@ -791,7 +873,7 @@ class JobOrderListContent:
             
             <div style="text-align: center; margin: 8px 0;">
                 <span class="badge">ເລກທີໃບຮັບ</span>
-                <div style="font-size: 20px; font-weight: bold; color: #1565C0; letter-spacing: 1px; margin-top: 2px;">{job_no}</div>
+                <div style="font-size: 22px; font-weight: bold; color: #1565C0; letter-spacing: 1px; margin-top: 2px;">{job_no}</div>
             </div>
             
             <div class="divider-dashed"></div>
@@ -813,7 +895,7 @@ class JobOrderListContent:
                     <span class="info-label">ເບີໂທ</span>
                     <span class="info-value">{customer_phone}</span>
                 </div>
-                {f'<div class="info-row"><span class="info-label">ທີ່ຢູ່</span><span class="info-value">{customer_address[:30]}</span></div>' if customer_address and customer_address != "-" else ''}
+                {f'<div class="info-row"><span class="info-label">ທີ່ຢູ່</span><span class="info-value">{customer_address[:35]}</span></div>' if customer_address and customer_address != "-" else ''}
             </div>
             
             <div class="divider-dashed"></div>
@@ -822,7 +904,7 @@ class JobOrderListContent:
                 <div class="section-title">🚗 ຂໍ້ມູນລົດ</div>
                 <div class="info-row">
                     <span class="info-label">ທະບຽນລົດ</span>
-                    <span class="info-value">{plate_number}</span>
+                    <span class="info-value"><span class="highlight">{plate_number}</span></span>
                 </div>
                 <div class="info-row">
                     <span class="info-label">ຍີ່ຫໍ້/ລຸ້ນ</span>
@@ -834,7 +916,7 @@ class JobOrderListContent:
                 </div>
                 <div class="info-row">
                     <span class="info-label">ເລກໄມ</span>
-                    <span class="info-value">{mileage:,} km</span>
+                    <span class="info-value">{int(mileage):,} km</span>
                 </div>
                 <div class="info-row">
                     <span class="info-label">ນ້ຳມັນ</span>
@@ -860,13 +942,13 @@ class JobOrderListContent:
             
             <div class="stamp">
                 <div class="signature">ລາຍເຊັນລູກຄ້າ</div>
-                <div>📅 {datetime.now().strftime('%d/%m/%Y')}</div>
+                <div class="signature">ລາຍເຊັນຊ່າງ</div>
             </div>
             
             <div class="footer">
-                <div class="thankyou">ຂອບໃຈທີ່ໃຊ້ບໍລິການ</div>
+                <div class="thankyou">ຂອບໃຈທີ່ໄວ້ໃຈບໍລິການຂອງພວກເຮົາ</div>
                 <div>ສອບຖາມເພີ່ມເຕີມ: {shop_phone}</div>
-                <div style="margin-top: 6px;">ພິມເມື່ອ: {datetime.now().strftime('%d/%m/%Y %H:%M')}</div>
+                <div class="date-text">ພິມເມື່ອ: {datetime.now().strftime('%d/%m/%Y %H:%M')}</div>
             </div>
         </div>
     </div>
@@ -875,7 +957,7 @@ class JobOrderListContent:
         window.onload = function() {{
             setTimeout(function() {{
                 window.print();
-            }}, 200);
+            }}, 300);
         }}
     </script>
 </body>
