@@ -29,15 +29,11 @@ class ShopContent:
                         [
                             ft.Text(
                                 get_text("shop_title"), 
-                                size=20, 
+                                size=18, 
                                 weight=ft.FontWeight.BOLD, 
                                 color=ft.Colors.WHITE
                             ),
-                            ft.Text(
-                                get_text("shop_subtitle"),
-                                size=12,
-                                color=ft.Colors.with_opacity(0.9, ft.Colors.WHITE),
-                            ),
+                            
                         ],
                         spacing=2,
                     ),
@@ -59,7 +55,7 @@ class ShopContent:
                 spacing=16,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.only(top=14, bottom=14, left=26, right=26),
+            padding=ft.padding.symmetric(vertical=12, horizontal=24),
             gradient=ft.LinearGradient(
                 begin=ft.Alignment(-1, -1),
                 end=ft.Alignment(1, 1),
@@ -72,7 +68,7 @@ class ShopContent:
         self.shop_image = ft.Image(
             src="assets/shop_banner.png" if os.path.exists("assets/shop_banner.png") else "assets/car_logo.png",
             width=float('inf'),
-            height=180,
+            height=300,
             fit="cover",
             expand=True,
         )
@@ -80,7 +76,7 @@ class ShopContent:
         # Image container without camera button
         image_container = ft.Container(
             content=self.shop_image,
-            height=180,
+            height=300,
             border_radius=ft.BorderRadius.only(top_left=16, top_right=16),
             bgcolor=ft.Colors.GREY_100,
             clip_behavior=ft.ClipBehavior.HARD_EDGE,
@@ -176,7 +172,7 @@ class ShopContent:
                 ft.Container(height=20),
                 ft.Container(
                     content=form_card,
-                    width=700,
+                    width=840,
                     alignment=ft.Alignment(0, 0),
                 ),
                 ft.Container(height=20),

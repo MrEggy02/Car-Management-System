@@ -801,3 +801,43 @@ class APIClient:
     def get_active_part_categories(self) -> List[Dict]:
         """Get active part categories only"""
         return self._request("GET", "/part-categories/active")
+    
+    # ========== Promotion Parts ==========
+    def get_promotion_parts(self, promotion_id: int) -> List[Dict]:
+        """Get parts in promotion"""
+        return self._request("GET", f"/promotions/{promotion_id}/parts")
+
+    def add_promotion_part(self, promotion_id: int, part_id: int, qty: int = 1) -> Dict:
+        """Add part to promotion"""
+        return self._request("POST", f"/promotions/{promotion_id}/parts", data={
+            "part_id": part_id,
+            "qty": qty
+        })
+
+    def delete_promotion_part(self, promotion_id: int, item_id: int) -> Dict:
+        """Remove part from promotion"""
+        return self._request("DELETE", f"/promotions/{promotion_id}/parts/{item_id}")
+
+    def clear_promotion_parts(self, promotion_id: int) -> Dict:
+        """Clear all parts from promotion"""
+        return self._request("DELETE", f"/promotions/{promotion_id}/parts")
+
+# ========== Promotion Services ==========
+    def get_promotion_services(self, promotion_id: int) -> List[Dict]:
+        """Get services in promotion"""
+        return self._request("GET", f"/promotions/{promotion_id}/services")
+
+    def add_promotion_service(self, promotion_id: int, service_id: int, qty: int = 1) -> Dict:
+        """Add service to promotion"""
+        return self._request("POST", f"/promotions/{promotion_id}/services", data={
+            "service_id": service_id,
+            "qty": qty
+        })
+
+    def delete_promotion_service(self, promotion_id: int, item_id: int) -> Dict:
+        """Remove service from promotion"""
+        return self._request("DELETE", f"/promotions/{promotion_id}/services/{item_id}")
+
+    def clear_promotion_services(self, promotion_id: int) -> Dict:
+        """Clear all services from promotion"""
+        return self._request("DELETE", f"/promotions/{promotion_id}/services")

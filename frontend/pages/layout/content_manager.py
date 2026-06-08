@@ -121,70 +121,40 @@ class ContentManager:
         ).build()
     
     def _get_services_content(self):
-        try:
-            from pages.services_page import ServicesContent
-        except ImportError:
-            try:
-                from Management.service.services_page import ServicesContent
-            except ImportError:
-                from services_page import ServicesContent
+        from Management.service.services_page import ServicesContent
         def navigate(page_name, *args, **kwargs):
             self.parent.navigate_to(page_name, **kwargs)
         return ServicesContent(self.parent.page, self.parent.client, self.parent.user, navigate).build()
     
     def _get_parts_content(self):
-        try:
-            from pages.parts_page import PartsContent
-        except ImportError:
-            try:
-                from Management.parts.parts_page import PartsContent
-            except ImportError:
-                from parts_page import PartsContent
+        from Management.parts.parts_page import PartsContent
         def navigate(page_name, *args, **kwargs):
             self.parent.navigate_to(page_name, **kwargs)
         return PartsContent(self.parent.page, self.parent.client, self.parent.user, navigate).build()
     
     def _get_suppliers_content(self):
-        try:
-            from pages.suppliers_page import SuppliersContent
-        except ImportError:
-            try:
-                from Management.supplier.suppliers_page import SuppliersContent
-            except ImportError:
-                from suppliers_page import SuppliersContent
+        from Management.supplier.suppliers_page import SuppliersContent
         def navigate(page_name, *args, **kwargs):
             self.parent.navigate_to(page_name, **kwargs)
         return SuppliersContent(self.parent.page, self.parent.client, self.parent.user, navigate).build()
     
     def _get_shop_content(self):
-        try:
-            from pages.shop_page import ShopContent
-        except ImportError:
-            try:
-                from Management.store.shop_page import ShopContent
-            except ImportError:
-                from shop_page import ShopContent
+        from Management.store.shop_page import ShopContent
         def navigate(page_name, *args, **kwargs):
             self.parent.navigate_to(page_name, **kwargs)
         return ShopContent(self.parent.page, self.parent.client, self.parent.user, navigate).build()
     
     def _get_promotions_content(self):
-        try:
-            from pages.promotions_page import PromotionsContent
-        except ImportError:
-            try:
-                from Management.promotion.promotions_page import PromotionsContent
-            except ImportError:
-                from promotions_page import PromotionsContent
+        from Management.promotion.promotions_page import PromotionsContent
         def navigate(page_name, *args, **kwargs):
             self.parent.navigate_to(page_name, **kwargs)
         return PromotionsContent(self.parent.page, self.parent.client, self.parent.user, navigate).build()
+    
     def _get_master_data_content(self):
         from Management.master_data.master_data_page import MasterDataContent
         def navigate(page_name, *args, **kwargs):
             self.parent.navigate_to(page_name, **kwargs)
         return MasterDataContent(self.parent.page, self.parent.client, self.parent.user, navigate).build()
-    
     
     def _get_customer_list_content(self):
         """Get customer list page (add and edit are now dialogs)"""
@@ -243,7 +213,7 @@ class ContentManager:
             self.parent.user, 
             navigate, 
             job_order_id=job_order_id,
-            content_container=self.current_view  # Pass the content container
+            content_container=self.current_view
         ).build()
     
     def _get_repair_list_content(self):

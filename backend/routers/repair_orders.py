@@ -24,14 +24,14 @@ def get_repair_orders(
                    c.name as customer_name,
                    c.phone as customer_phone,
                    v.plate_number, b.name as brand, v.model,
-                   u.fullname as mechanic_name,
+                   e.name as mechanic_name,
                    q.total_price as quotation_total
             FROM repair_orders ro
             LEFT JOIN job_orders jo ON ro.job_order_id = jo.id
             LEFT JOIN customers c ON jo.customer_id = c.id
             LEFT JOIN vehicles v ON jo.vehicle_id = v.id
             LEFT JOIN brands b ON v.brand_id = b.id
-            LEFT JOIN users u ON ro.mechanic_id = u.id
+            LEFT JOIN Employees e ON ro.mechanic_id = e.id
             LEFT JOIN quotations q ON jo.id = q.job_order_id AND q.status = 'approved'
             WHERE 1=1
         """
@@ -79,13 +79,13 @@ def get_repair_order(repair_id: int, user: dict = Depends(authenticate_user)):
                    jo.job_no, jo.problem_description,
                    c.name as customer_name, c.phone as customer_phone,
                    v.plate_number, b.name as brand, v.model, v.year, v.color,
-                   u.fullname as mechanic_name
+                   e.name as mechanic_name
             FROM repair_orders ro
             LEFT JOIN job_orders jo ON ro.job_order_id = jo.id
             LEFT JOIN customers c ON jo.customer_id = c.id
             LEFT JOIN vehicles v ON jo.vehicle_id = v.id
             LEFT JOIN brands b ON v.brand_id = b.id
-            LEFT JOIN users u ON ro.mechanic_id = u.id
+            LEFT JOIN Employees e ON ro.mechanic_id = e.id
             WHERE ro.id = %s
         """, (repair_id,))
         
@@ -98,7 +98,7 @@ def get_repair_order(repair_id: int, user: dict = Depends(authenticate_user)):
             if repair_order.get('brand') is None:
                 repair_order['brand'] = "-"
             
-            # Get parts usage - removed part_code and brand since they don't exist in parts table
+            # Get parts usage
             cursor.execute("""
                 SELECT pu.*, p.name as part_name
                 FROM parts_usage pu
@@ -358,16 +358,15 @@ def delete_part_usage(
 
 @router.get("/employees/mechanics")
 def get_mechanics(user: dict = Depends(authenticate_user)):
-    """Get all mechanics (employees with role = technician or mechanic)"""
+    """Get all mechanics (employees with role = mechanic)"""
     db = get_db()
     cursor = db.cursor(dictionary=True)
     try:
-        # Check which role column exists: role or role_name
         cursor.execute("""
-            SELECT id, username, fullname, phone 
-            FROM users 
-            WHERE role IN ('technician', 'mechanic')
-            ORDER BY fullname
+            SELECT id, name as fullname, phone, role
+            FROM Employees 
+            WHERE role = 'mechanic' AND status = 'active'
+            ORDER BY name
         """)
         mechanics = cursor.fetchall()
         print(f"DEBUG: Found mechanics: {mechanics}")

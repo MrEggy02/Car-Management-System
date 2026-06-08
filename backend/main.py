@@ -20,6 +20,8 @@ from routers import (
     promotion_items,
     reports,
     brands,
+    units, 
+    part_categories,
 )
 
 app = FastAPI(title="J&P Auto Maxing API", version="2.0")
@@ -51,6 +53,8 @@ app.include_router(purchase_orders.router)
 app.include_router(promotion_items.router)
 app.include_router(reports.router)
 app.include_router(brands.router)
+app.include_router(units.router)
+app.include_router(part_categories.router)
 
 # ✅ FIXED: Auth endpoints
 @app.post("/login")

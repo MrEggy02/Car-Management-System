@@ -36,12 +36,12 @@ def get_job_orders(
                     v.model,
                     v.year,
                     v.color,
-                    u.fullname as created_by_name
+                    e.name as created_by_name
                 FROM job_orders jo
                 LEFT JOIN customers c ON jo.customer_id = c.id
                 LEFT JOIN vehicles v ON jo.vehicle_id = v.id
                 LEFT JOIN brands b ON v.brand_id = b.id
-                LEFT JOIN users u ON jo.created_by = u.id
+                LEFT JOIN Employees e ON jo.created_by = e.id
                 WHERE jo.status = %s
                 ORDER BY jo.id DESC
             """, (status,))
@@ -65,12 +65,12 @@ def get_job_orders(
                     v.model,
                     v.year,
                     v.color,
-                    u.fullname as created_by_name
+                    e.name as created_by_name
                 FROM job_orders jo
                 LEFT JOIN customers c ON jo.customer_id = c.id
                 LEFT JOIN vehicles v ON jo.vehicle_id = v.id
                 LEFT JOIN brands b ON v.brand_id = b.id
-                LEFT JOIN users u ON jo.created_by = u.id
+                LEFT JOIN Employees e ON jo.created_by = e.id
                 ORDER BY jo.id DESC
             """)
         
@@ -132,12 +132,12 @@ def get_job_order(order_id: int, user: dict = Depends(authenticate_user)):
                 v.model,
                 v.year,
                 v.color,
-                u.fullname as created_by_name
+                e.name as created_by_name
             FROM job_orders jo
             LEFT JOIN customers c ON jo.customer_id = c.id
             LEFT JOIN vehicles v ON jo.vehicle_id = v.id
             LEFT JOIN brands b ON v.brand_id = b.id
-            LEFT JOIN users u ON jo.created_by = u.id
+            LEFT JOIN Employees e ON jo.created_by = e.id
             WHERE jo.id = %s
         """, (order_id,))
         

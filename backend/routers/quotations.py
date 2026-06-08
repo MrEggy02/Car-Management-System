@@ -24,13 +24,13 @@ def get_quotations(
                        c.name as customer_name,
                        v.plate_number,
                        b.name as brand,
-                       u.fullname as created_by_name
+                       e.name as created_by_name
                 FROM quotations q
                 LEFT JOIN job_orders jo ON q.job_order_id = jo.id
                 LEFT JOIN customers c ON jo.customer_id = c.id
                 LEFT JOIN vehicles v ON jo.vehicle_id = v.id
                 LEFT JOIN brands b ON v.brand_id = b.id
-                LEFT JOIN users u ON q.created_by = u.id
+                LEFT JOIN Employees e ON q.created_by = e.id
                 WHERE q.job_order_id = %s
                 ORDER BY q.id DESC
             """, (job_order_id,))
@@ -41,13 +41,13 @@ def get_quotations(
                        c.name as customer_name,
                        v.plate_number,
                        b.name as brand,
-                       u.fullname as created_by_name
+                       e.name as created_by_name
                 FROM quotations q
                 LEFT JOIN job_orders jo ON q.job_order_id = jo.id
                 LEFT JOIN customers c ON jo.customer_id = c.id
                 LEFT JOIN vehicles v ON jo.vehicle_id = v.id
                 LEFT JOIN brands b ON v.brand_id = b.id
-                LEFT JOIN users u ON q.created_by = u.id
+                LEFT JOIN Employees e ON q.created_by = e.id
                 ORDER BY q.id DESC
             """)
         
@@ -78,7 +78,6 @@ def get_quotation(quotation_id: int, user: dict = Depends(authenticate_user)):
     db = get_db()
     cursor = db.cursor(dictionary=True)
     try:
-        # Fixed: Changed v.brand to b.name as brand
         cursor.execute("""
             SELECT q.*, 
                    jo.job_no,
@@ -91,13 +90,13 @@ def get_quotation(quotation_id: int, user: dict = Depends(authenticate_user)):
                    v.model,
                    v.year,
                    v.color,
-                   u.fullname as created_by_name
+                   e.name as created_by_name
             FROM quotations q
             LEFT JOIN job_orders jo ON q.job_order_id = jo.id
             LEFT JOIN customers c ON jo.customer_id = c.id
             LEFT JOIN vehicles v ON jo.vehicle_id = v.id
             LEFT JOIN brands b ON v.brand_id = b.id
-            LEFT JOIN users u ON q.created_by = u.id
+            LEFT JOIN Employees e ON q.created_by = e.id
             WHERE q.id = %s
         """, (quotation_id,))
         
@@ -418,7 +417,6 @@ def search_parts(
     db = get_db()
     cursor = db.cursor(dictionary=True)
     try:
-        # Remove part_code since it doesn't exist in your parts table
         query = """
             SELECT id, name, sell_price, stock_qty
             FROM parts
@@ -447,7 +445,6 @@ def search_services(
     db = get_db()
     cursor = db.cursor(dictionary=True)
     try:
-        # Fixed: services table has 'name' column, not 'service_name'
         query = """
             SELECT id, name, description, price
             FROM services
