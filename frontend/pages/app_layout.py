@@ -1,4 +1,4 @@
-# app_layout.py (Complete with Repair Management, Personal Page, Reports, and Master Data)
+# app_layout.py (Complete with Repair Management, Personal Page, Reports)
 import flet as ft
 from flet import Alignment
 import sys
@@ -399,33 +399,30 @@ class AppLayout:
         """Handle navigation click"""
         print(f"DEBUG: Nav clicked index {index}")
 
-        # ❌ REMOVED: No logout condition here anymore
-        # Logout is now handled only from TopNavBarManager
-
         # Auto-expand menus if needed
-        # Updated range to include index 7 (Master Data) and index 8 (if any)
-        if index in range(1, 9) and not self.data_menu_expanded:
+        # For Data Management (indices 1-9)
+        if index in range(1, 10) and not self.data_menu_expanded:
             self.data_menu_expanded = True
             if self.sidebar_manager.submenu_column:
                 self.sidebar_manager.submenu_column.visible = True
                 self.sidebar_manager.update_arrow_icons()
                 self.page.update()
 
-        if index in range(8, 12) and not self.customer_menu_expanded:
+        if index in range(11, 12) and not self.customer_menu_expanded:
             self.customer_menu_expanded = True
             if self.sidebar_manager.customer_submenu_column:
                 self.sidebar_manager.customer_submenu_column.visible = True
                 self.sidebar_manager.update_arrow_icons()
                 self.page.update()
 
-        if index in range(12, 14) and not self.job_order_menu_expanded:
+        if index in range(13, 14) and not self.job_order_menu_expanded:
             self.job_order_menu_expanded = True
             if self.sidebar_manager.job_order_submenu_column:
                 self.sidebar_manager.job_order_submenu_column.visible = True
                 self.sidebar_manager.update_arrow_icons()
                 self.page.update()
 
-        if index in range(14, 16) and not self.quotation_menu_expanded:
+        if index in range(15, 16) and not self.quotation_menu_expanded:
             self.quotation_menu_expanded = True
             if hasattr(self.sidebar_manager, 'quotation_submenu_column') and self.sidebar_manager.quotation_submenu_column:
                 self.sidebar_manager.quotation_submenu_column.visible = True
@@ -439,7 +436,7 @@ class AppLayout:
                 self.sidebar_manager.update_arrow_icons()
                 self.page.update()
 
-        if index in range(19, 21) and not self.invoice_menu_expanded:
+        if index in range(19, 22) and not self.invoice_menu_expanded:
             self.invoice_menu_expanded = True
             if hasattr(self.sidebar_manager, 'invoice_submenu_column') and self.sidebar_manager.invoice_submenu_column:
                 self.sidebar_manager.invoice_submenu_column.visible = True
@@ -453,7 +450,7 @@ class AppLayout:
                 self.sidebar_manager.update_arrow_icons()
                 self.page.update()
 
-        if index in range(29, 35) and not self.reports_menu_expanded:
+        if index in range(29, 34) and not self.reports_menu_expanded:
             self.reports_menu_expanded = True
             if hasattr(self.sidebar_manager, 'reports_submenu_column') and self.sidebar_manager.reports_submenu_column:
                 self.sidebar_manager.reports_submenu_column.visible = True
@@ -480,9 +477,11 @@ class AppLayout:
             "parts": 4,
             "shop": 5,
             "promotions": 6,
-            "master_data": 7,
-            "input_customer": 8,
-            "edit_customer": 10,
+            "brands": 7,
+            "units": 8,
+            "part_categories": 9,
+            "input_customer": 10,
+            "edit_customer": 11,
             "customer_list": 11,
             "job_order_create": 12,
             "job_order_list": 13,

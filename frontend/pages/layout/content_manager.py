@@ -1,4 +1,3 @@
-# pages/layout/content_manager.py
 import flet as ft
 from flet import Alignment
 from i18n import get_text
@@ -34,8 +33,12 @@ class ContentManager:
             content = self._get_shop_content()
         elif index == 6:
             content = self._get_promotions_content()
-        elif index == 7:
-            content = self._get_master_data_content()
+        elif index == 7:  # Brands page
+            content = self._get_brands_content()
+        elif index == 8:  # Units page
+            content = self._get_units_content()
+        elif index == 9:  # Part Categories page
+            content = self._get_part_categories_content()
         elif index == 11:
             content = self._get_customer_list_content()
         elif index == 12:
@@ -101,6 +104,27 @@ class ContentManager:
             self.parent.navigate_to(page_name, **kwargs)
         return EmployeesContent(self.parent.page, self.parent.client, self.parent.user, navigate).build()
     
+    def _get_brands_content(self):
+        """Get brands page - in Management folder"""
+        from Management.brands.brands_page import BrandsPageContent
+        def navigate(page_name, *args, **kwargs):
+            self.parent.navigate_to(page_name, **kwargs)
+        return BrandsPageContent(self.parent.page, self.parent.client, self.parent.user, navigate).build()
+    
+    def _get_units_content(self):
+        """Get units page - in Management folder"""
+        from Management.units.units_page import UnitsPageContent
+        def navigate(page_name, *args, **kwargs):
+            self.parent.navigate_to(page_name, **kwargs)
+        return UnitsPageContent(self.parent.page, self.parent.client, self.parent.user, navigate).build()
+    
+    def _get_part_categories_content(self):
+        """Get part categories page - in Management folder"""
+        from Management.part_categories.part_categories_page import PartCategoriesPageContent
+        def navigate(page_name, *args, **kwargs):
+            self.parent.navigate_to(page_name, **kwargs)
+        return PartCategoriesPageContent(self.parent.page, self.parent.client, self.parent.user, navigate).build()
+    
     def _get_invoice_detail_content(self):
         """Get invoice detail page"""
         from pages.invoices.invoice_detail import InvoiceDetailContent
@@ -149,12 +173,6 @@ class ContentManager:
         def navigate(page_name, *args, **kwargs):
             self.parent.navigate_to(page_name, **kwargs)
         return PromotionsContent(self.parent.page, self.parent.client, self.parent.user, navigate).build()
-    
-    def _get_master_data_content(self):
-        from Management.master_data.master_data_page import MasterDataContent
-        def navigate(page_name, *args, **kwargs):
-            self.parent.navigate_to(page_name, **kwargs)
-        return MasterDataContent(self.parent.page, self.parent.client, self.parent.user, navigate).build()
     
     def _get_customer_list_content(self):
         """Get customer list page (add and edit are now dialogs)"""

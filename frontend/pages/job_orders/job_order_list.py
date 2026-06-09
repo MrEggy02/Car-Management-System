@@ -1,4 +1,3 @@
-# pages/job_orders/job_order_list.py
 import flet as ft
 from flet import Alignment
 from typing import Dict, Callable
@@ -36,7 +35,7 @@ class JobOrderListContent:
         self.items_per_page = 10
         self.total_pages = 1
         
-        # Status colors (keep for internal use)
+        # Status colors
         self.status_colors = {
             "pending": "#FF9800",
             "quoting": "#2196F3",
@@ -55,12 +54,10 @@ class JobOrderListContent:
             "cancelled": ft.Icons.CANCEL
         }
         
-        # Container for orders list
         self.table_rows = ft.Column(spacing=0, scroll=ft.ScrollMode.AUTO, expand=True)
         self.pagination_container = ft.Container()
 
     def build(self):
-        # Header
         header = ft.Container(
             content=ft.Row(
                 [
@@ -102,7 +99,6 @@ class JobOrderListContent:
             border_radius=ft.BorderRadius.only(bottom_left=20, bottom_right=20),
         )
         
-        # Filter section
         self.status_filter = ft.Dropdown(
             hint_text=get_text("filter_by_status"),
             border_radius=12,
@@ -151,10 +147,8 @@ class JobOrderListContent:
             margin=ft.margin.only(bottom=16),
         )
         
-        # Create table header - NO STATUS COLUMN
         table_header = self._create_table_header()
         
-        # Table container
         table_container = ft.Container(
             content=ft.Column([
                 table_header,
@@ -168,7 +162,6 @@ class JobOrderListContent:
             expand=True,
         )
         
-        # Loading indicator
         self.loading_indicator = ft.Container(
             content=ft.Column([
                 ft.ProgressRing(width=40, height=40, stroke_width=4),
@@ -180,7 +173,6 @@ class JobOrderListContent:
             visible=False,
         )
         
-        # Empty state
         self.empty_state = ft.Container(
             content=ft.Column([
                 ft.Icon(ft.Icons.RECEIPT_OUTLINED, size=64, color=ft.Colors.GREY_300),
@@ -202,7 +194,6 @@ class JobOrderListContent:
             visible=False,
         )
         
-        # Main content
         content_area = ft.Container(
             content=ft.Column([
                 filter_row,
@@ -228,37 +219,13 @@ class JobOrderListContent:
         return main_content
     
     def _create_table_header(self):
-        """Create table header row - NO STATUS COLUMN"""
         return ft.Container(
             content=ft.Row([
-                ft.Container(
-                    content=ft.Text(get_text("job_no"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=140,
-                    alignment=ft.Alignment(-1, 0),
-                    padding=ft.padding.only(left=10),
-                ),
-                ft.Container(
-                    content=ft.Text(get_text("customer_name"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=200,
-                    alignment=ft.Alignment(-1, 0),
-                    padding=ft.padding.only(left=10),
-                ),
-                ft.Container(
-                    content=ft.Text(get_text("plate_number"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=130,
-                    alignment=ft.Alignment(-1, 0),
-                    padding=ft.padding.only(left=10),
-                ),
-                ft.Container(
-                    content=ft.Text(get_text("receive_date"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=120,
-                    alignment=ft.Alignment(0, 0),
-                ),
-                ft.Container(
-                    content=ft.Text(get_text("actions"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=200,
-                    alignment=ft.Alignment(0, 0),
-                ),
+                ft.Container(content=ft.Text(get_text("job_no"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=140, alignment=ft.Alignment(-1, 0), padding=ft.padding.only(left=10)),
+                ft.Container(content=ft.Text(get_text("customer_name"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=200, alignment=ft.Alignment(-1, 0), padding=ft.padding.only(left=10)),
+                ft.Container(content=ft.Text(get_text("plate_number"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=130, alignment=ft.Alignment(-1, 0), padding=ft.padding.only(left=10)),
+                ft.Container(content=ft.Text(get_text("receive_date"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=120, alignment=ft.Alignment(0, 0)),
+                ft.Container(content=ft.Text(get_text("actions"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=200, alignment=ft.Alignment(0, 0)),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
             padding=ft.padding.symmetric(vertical=14, horizontal=10),
             bgcolor=ft.Colors.GREY_100,
@@ -266,7 +233,6 @@ class JobOrderListContent:
         )
     
     def _create_table_row(self, order: Dict, index: int):
-        """Create a table row - NO STATUS COLUMN"""
         order_id = order.get("id")
         job_no = order.get("job_no", "N/A")
         customer_name = order.get("customer_name", "-")
@@ -283,42 +249,29 @@ class JobOrderListContent:
         
         row_bg = ft.Colors.GREY_50 if index % 2 == 0 else ft.Colors.WHITE
         
-        # Action buttons
         view_btn = ft.Container(
-            content=ft.Row([
-                ft.Icon(ft.Icons.VISIBILITY_OUTLINED, size=16, color=self.primary_color),
-                ft.Text(get_text("view"), size=12, color=self.primary_color),
-            ], spacing=4),
+            content=ft.Row([ft.Icon(ft.Icons.VISIBILITY_OUTLINED, size=16, color=self.primary_color), ft.Text(get_text("view"), size=12, color=self.primary_color)], spacing=4),
             on_click=lambda e, oid=order_id: self.show_detail_dialog(oid),
             padding=ft.padding.symmetric(horizontal=8, vertical=4),
             border_radius=6,
         )
         
         print_btn = ft.Container(
-            content=ft.Row([
-                ft.Icon(ft.Icons.PRINT_OUTLINED, size=16, color=self.primary_color),
-                ft.Text(get_text("print"), size=12, color=self.primary_color),
-            ], spacing=4),
+            content=ft.Row([ft.Icon(ft.Icons.PRINT_OUTLINED, size=16, color=self.primary_color), ft.Text(get_text("print"), size=12, color=self.primary_color)], spacing=4),
             on_click=lambda e, oid=order_id: self.print_job_order(oid),
             padding=ft.padding.symmetric(horizontal=8, vertical=4),
             border_radius=6,
         )
         
         status_btn = ft.Container(
-            content=ft.Row([
-                ft.Icon(ft.Icons.UPDATE, size=16, color="#64748B"),
-                ft.Text(get_text("status"), size=12, color="#64748B"),
-            ], spacing=4),
+            content=ft.Row([ft.Icon(ft.Icons.UPDATE, size=16, color="#64748B"), ft.Text(get_text("status"), size=12, color="#64748B")], spacing=4),
             on_click=lambda e, oid=order_id: self.show_status_dialog(oid),
             padding=ft.padding.symmetric(horizontal=8, vertical=4),
             border_radius=6,
         )
         
         invoice_btn = ft.Container(
-            content=ft.Row([
-                ft.Icon(ft.Icons.RECEIPT, size=16, color=ft.Colors.GREEN_600),
-                ft.Text(get_text("invoice"), size=12, color=ft.Colors.GREEN_600),
-            ], spacing=4),
+            content=ft.Row([ft.Icon(ft.Icons.RECEIPT, size=16, color=ft.Colors.GREEN_600), ft.Text(get_text("invoice"), size=12, color=ft.Colors.GREEN_600)], spacing=4),
             on_click=lambda e, oid=order_id: self.create_invoice(oid),
             padding=ft.padding.symmetric(horizontal=8, vertical=4),
             border_radius=6,
@@ -326,56 +279,69 @@ class JobOrderListContent:
         
         row = ft.Container(
             content=ft.Row([
-                ft.Container(
-                    content=ft.Text(job_no, size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
-                    width=140,
-                    alignment=ft.Alignment(-1, 0),
-                    padding=ft.padding.only(left=10),
-                ),
-                ft.Container(
-                    content=ft.Text(customer_name, size=13, color="#1E293B", max_lines=1),
-                    width=200,
-                    alignment=ft.Alignment(-1, 0),
-                    padding=ft.padding.only(left=10),
-                ),
-                ft.Container(
-                    content=ft.Text(plate_number, size=12, color="#64748B", max_lines=1),
-                    width=130,
-                    alignment=ft.Alignment(-1, 0),
-                    padding=ft.padding.only(left=10),
-                ),
-                ft.Container(
-                    content=ft.Text(receive_date, size=12, color="#64748B"),
-                    width=120,
-                    alignment=ft.Alignment(0, 0),
-                ),
-                ft.Container(
-                    content=ft.Row([view_btn, print_btn, status_btn, invoice_btn], spacing=4),
-                    width=200,
-                    alignment=ft.Alignment(0, 0),
-                ),
+                ft.Container(content=ft.Text(job_no, size=13, weight=ft.FontWeight.W_500, color="#1E293B"), width=140, alignment=ft.Alignment(-1, 0), padding=ft.padding.only(left=10)),
+                ft.Container(content=ft.Text(customer_name, size=13, color="#1E293B", max_lines=1), width=200, alignment=ft.Alignment(-1, 0), padding=ft.padding.only(left=10)),
+                ft.Container(content=ft.Text(plate_number, size=12, color="#64748B", max_lines=1), width=130, alignment=ft.Alignment(-1, 0), padding=ft.padding.only(left=10)),
+                ft.Container(content=ft.Text(receive_date, size=12, color="#64748B"), width=120, alignment=ft.Alignment(0, 0)),
+                ft.Container(content=ft.Row([view_btn, print_btn, status_btn, invoice_btn], spacing=4), width=200, alignment=ft.Alignment(0, 0)),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
             padding=ft.padding.symmetric(vertical=12, horizontal=10),
             bgcolor=row_bg,
         )
         
-        return ft.Column([
-            row,
-            ft.Divider(height=1, color=ft.Colors.GREY_200),
-        ], spacing=0)
+        return ft.Column([row, ft.Divider(height=1, color=ft.Colors.GREY_200)], spacing=0)
     
     def load_customers_and_vehicles(self):
-        """Load all customers and their vehicles for dialog"""
+        """Load all customers and their vehicles for dialog with brand and model info"""
         try:
+            print("DEBUG: Loading customers...")
             self.customers = self.client.get_customers() or []
+            print(f"DEBUG: Found {len(self.customers)} customers")
+            
+            # Load brands for mapping
+            brands = {}
+            try:
+                brands_list = self.client.get_brands() or []
+                for b in brands_list:
+                    brands[b.get('id')] = b.get('name', '')
+                print(f"DEBUG: Loaded {len(brands)} brands")
+            except Exception as e:
+                print(f"DEBUG: Error loading brands: {e}")
+            
             for customer in self.customers:
-                vehicles = self.client.get_vehicles(customer_id=customer.get("id")) or []
-                self.vehicles_by_customer[customer.get("id")] = vehicles
+                customer_id = customer.get("id")
+                try:
+                    vehicles = self.client.get_vehicles(customer_id=customer_id) or []
+                    print(f"DEBUG: Customer {customer_id} has {len(vehicles)} vehicles")
+                    
+                    vehicles_with_info = []
+                    for v in vehicles:
+                        brand_id = v.get("brand_id")
+                        brand_name = v.get("brand", "")
+                        # If brand name not directly available, get from brands dict
+                        if not brand_name and brand_id and brand_id in brands:
+                            brand_name = brands.get(brand_id, "")
+                        
+                        vehicles_with_info.append({
+                            "id": v.get("id"),
+                            "plate_number": v.get("plate_number", "-"),
+                            "brand": brand_name,
+                            "model": v.get("model", "-"),
+                        })
+                        print(f"DEBUG: Vehicle - Plate: {v.get('plate_number')}, Brand: {brand_name}, Model: {v.get('model')}")
+                    
+                    self.vehicles_by_customer[customer_id] = vehicles_with_info
+                except Exception as e:
+                    print(f"DEBUG: Error loading vehicles for customer {customer_id}: {e}")
+                    self.vehicles_by_customer[customer_id] = []
+            
+            print(f"DEBUG: vehicles_by_customer = {self.vehicles_by_customer}")
         except Exception as ex:
             print(f"Error loading customers: {ex}")
+            import traceback
+            traceback.print_exc()
     
     def load_orders(self):
-        """Load orders from API"""
         self.loading_indicator.visible = True
         self.empty_state.visible = False
         self.table_rows.controls.clear()
@@ -408,7 +374,6 @@ class JobOrderListContent:
             self.page.update()
     
     def display_orders(self):
-        """Display orders with pagination"""
         self.table_rows.controls.clear()
         
         total_items = len(self.filtered_orders)
@@ -436,7 +401,6 @@ class JobOrderListContent:
         self.page.update()
     
     def update_pagination_controls(self):
-        """Update pagination controls"""
         prev_disabled = self.current_page <= 1
         next_disabled = self.current_page >= self.total_pages
         
@@ -535,7 +499,8 @@ class JobOrderListContent:
             self.customers,
             self.vehicles_by_customer,
             on_save,
-            self._close_dialog
+            self._close_dialog,
+            self.page  # Pass page reference
         )
         self._open_dialog(dialog)
     
@@ -578,7 +543,6 @@ class JobOrderListContent:
         self.navigate("invoice_create", job_order_id=job_order_id)
     
     def print_job_order(self, order_id):
-        """Print job order using browser print dialog"""
         try:
             self.show_snack_bar(get_text("preparing_print"), is_error=False)
             
@@ -614,9 +578,6 @@ class JobOrderListContent:
             self.show_snack_bar(f"{get_text('error')}: {str(ex)}", is_error=True)
     
     def _generate_print_html(self, order):
-        """Generate HTML for printing with custom Phetsarath font"""
-        
-        # Get the font path
         font_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "assets/fonts/Phetsarath.ttf")
         
         job_no = order.get("job_no", "N/A")
@@ -1040,11 +1001,15 @@ class JobOrderListContent:
                 if self.current_dialog in self.page.overlay:
                     self.page.overlay.remove(self.current_dialog)
             self.current_dialog = dialog
+            
+            # Add to overlay first, then set page property through the dialog itself
             self.page.overlay.append(dialog)
             dialog.open = True
             self.page.update()
         except Exception as e:
             print(f"DEBUG: Error opening dialog: {e}")
+            import traceback
+            traceback.print_exc()
     
     def _close_dialog(self, e=None):
         try:

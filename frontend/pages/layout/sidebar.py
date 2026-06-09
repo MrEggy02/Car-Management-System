@@ -1,4 +1,3 @@
-# pages/layout/sidebar_manager.py
 import flet as ft
 from i18n import get_text
 
@@ -36,10 +35,10 @@ class SidebarManager:
         # สร้างปุ่มหลัก
         self._create_main_nav_buttons(nav_column)
         
-        # สร้าง Data Management Menu
+        # สร้าง Data Management Menu (รวม Brands, Units, Part Categories แล้ว)
         self._create_data_management_menu(nav_column)
         
-        # สร้าง Customer Management Menu (เฉพาะ Customer List)
+        # สร้าง Customer Management Menu
         self._create_customer_management_menu(nav_column)
         
         # สร้าง Job Order Management Menu
@@ -54,10 +53,10 @@ class SidebarManager:
         # สร้าง Invoice Management Menu
         self._create_invoice_management_menu(nav_column)
         
-        # สร้าง Purchase Management Menu (Process 7)
+        # สร้าง Purchase Management Menu
         self._create_purchase_management_menu(nav_column)
         
-        # สร้าง Reports Management Menu (Process 8)
+        # สร้าง Reports Management Menu
         self._create_reports_management_menu(nav_column)
         
         # อัพเดทสถานะปุ่มที่ถูกเลือก
@@ -111,7 +110,7 @@ class SidebarManager:
             nav_column.controls.append(btn_container)
     
     def _create_data_management_menu(self, nav_column):
-        """สร้างเมนู Data Management และซับเมนู"""
+        """สร้างเมนู Data Management และซับเมนู (รวม Brands, Units, Part Categories)"""
         data_menu_items = [
             {"label": get_text("nav_employees"), "index": 1},
             {"label": get_text("nav_suppliers"), "index": 2},
@@ -119,8 +118,9 @@ class SidebarManager:
             {"label": get_text("nav_parts"), "index": 4},
             {"label": get_text("nav_shop"), "index": 5},
             {"label": get_text("nav_promotions"), "index": 6},
-            {"label": get_text("nav_master_data"), "index": 7},
-            
+            {"label": get_text("brands"), "index": 7},
+            {"label": get_text("units"), "index": 8},
+            {"label": get_text("part_categories"), "index": 9},
         ]
         
         data_menu_container = ft.Container(
@@ -495,7 +495,6 @@ class SidebarManager:
         
         nav_column.controls.append(reports_menu_container)
     
-    
     def _create_nav_button(self, item, idx):
         """สร้างปุ่มนำทางหลัก (มีไอคอน)"""
         btn_container = ft.Container(
@@ -532,84 +531,6 @@ class SidebarManager:
             data=item["index"],
             on_click=lambda e, i=item["index"]: self.parent.on_nav_click(i),
             on_hover=lambda e, i=item["index"]: self.parent.on_submenu_hover(e, i),
-        )
-        
-        label = ft.Text(item["label"], size=13, weight=ft.FontWeight.W_400, color=self.parent.unselected_color)
-        
-        row = ft.Row(
-            [
-                ft.Container(width=8),
-                label,
-            ], 
-            spacing=12, 
-            alignment=ft.MainAxisAlignment.START
-        )
-        btn_container.content = row
-        
-        return btn_container, label
-    
-    def _create_customer_submenu_button(self, item):
-        """สร้างปุ่มซับเมนูสำหรับ Customer Management (ไม่ใช้แล้ว แต่เก็บไว้)"""
-        btn_container = ft.Container(
-            padding=ft.padding.symmetric(vertical=6, horizontal=16),
-            margin=ft.margin.symmetric(horizontal=12, vertical=1),
-            border_radius=10,
-            ink=True,
-            data=item["index"],
-            on_click=lambda e, i=item["index"]: self.parent.on_nav_click(i),
-            on_hover=lambda e, i=item["index"]: self.parent.on_customer_submenu_hover(e, i),
-        )
-        
-        label = ft.Text(item["label"], size=13, weight=ft.FontWeight.W_400, color=self.parent.unselected_color)
-        
-        row = ft.Row(
-            [
-                ft.Container(width=8),
-                label,
-            ], 
-            spacing=12, 
-            alignment=ft.MainAxisAlignment.START
-        )
-        btn_container.content = row
-        
-        return btn_container, label
-    
-    def _create_job_order_submenu_button(self, item):
-        """สร้างปุ่มซับเมนูสำหรับ Job Order Management (ไม่ใช้แล้ว แต่เก็บไว้)"""
-        btn_container = ft.Container(
-            padding=ft.padding.symmetric(vertical=6, horizontal=16),
-            margin=ft.margin.symmetric(horizontal=12, vertical=1),
-            border_radius=10,
-            ink=True,
-            data=item["index"],
-            on_click=lambda e, i=item["index"]: self.parent.on_nav_click(i),
-            on_hover=lambda e, i=item["index"]: self.parent.on_job_order_submenu_hover(e, i),
-        )
-        
-        label = ft.Text(item["label"], size=13, weight=ft.FontWeight.W_400, color=self.parent.unselected_color)
-        
-        row = ft.Row(
-            [
-                ft.Container(width=8),
-                label,
-            ], 
-            spacing=12, 
-            alignment=ft.MainAxisAlignment.START
-        )
-        btn_container.content = row
-        
-        return btn_container, label
-    
-    def _create_quotation_submenu_button(self, item):
-        """สร้างปุ่มซับเมนูสำหรับ Quotation Management (ไม่ใช้แล้ว แต่เก็บไว้)"""
-        btn_container = ft.Container(
-            padding=ft.padding.symmetric(vertical=6, horizontal=16),
-            margin=ft.margin.symmetric(horizontal=12, vertical=1),
-            border_radius=10,
-            ink=True,
-            data=item["index"],
-            on_click=lambda e, i=item["index"]: self.parent.on_nav_click(i),
-            on_hover=lambda e, i=item["index"]: self.parent.on_quotation_submenu_hover(e, i),
         )
         
         label = ft.Text(item["label"], size=13, weight=ft.FontWeight.W_400, color=self.parent.unselected_color)

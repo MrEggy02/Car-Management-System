@@ -1,10 +1,12 @@
-# pages/job_orders/job_order_dialogs.py
 import flet as ft
 from i18n import get_text
 
 
-def show_create_job_order_dialog(primary_color, customers, vehicles_by_customer, on_save, on_close):
+def show_create_job_order_dialog(primary_color, customers, vehicles_by_customer, on_save, on_close, page):
     """Show dialog to create new job order"""
+    
+    print(f"DEBUG DIALOG: customers count = {len(customers)}")
+    print(f"DEBUG DIALOG: vehicles_by_customer keys = {list(vehicles_by_customer.keys())}")
     
     # Customer selection
     customer_dropdown = ft.Dropdown(
@@ -21,7 +23,7 @@ def show_create_job_order_dialog(primary_color, customers, vehicles_by_customer,
         expand=True,
     )
     
-    # Vehicle selection
+    # Vehicle selection - back to dropdown
     vehicle_dropdown = ft.Dropdown(
         label=get_text("select_vehicle"),
         hint_text=get_text("select_vehicle"),
@@ -90,6 +92,7 @@ def show_create_job_order_dialog(primary_color, customers, vehicles_by_customer,
     )
     
     def on_customer_change(e):
+        print(f"DEBUG DIALOG: Customer selected: {customer_dropdown.value}")
         if customer_dropdown.value:
             selected = next((c for c in customers if str(c.get("id")) == customer_dropdown.value), None)
             if selected:
@@ -98,24 +101,282 @@ def show_create_job_order_dialog(primary_color, customers, vehicles_by_customer,
                 customer_info_card.visible = True
                 
                 # Load vehicles for this customer
-                vehicles_list = vehicles_by_customer.get(int(customer_dropdown.value), [])
-                vehicle_dropdown.options = [
-                    ft.dropdown.Option(str(v.get("id")), f"{v.get('plate_number')} - {v.get('brand')} {v.get('model')}")
-                    for v in vehicles_list
-                ]
+                customer_id = int(customer_dropdown.value)
+                vehicles_list = vehicles_by_customer.get(customer_id, [])
+                print(f"DEBUG DIALOG: Vehicles found for customer {customer_id}: {len(vehicles_list)}")
+                print(f"DEBUG DIALOG: Vehicles list: {vehicles_list}")
+                
+                # Clear and set new options
+                vehicle_dropdown.options.clear()
+                
+                for v in vehicles_list:
+                    # Build display text with plate number, brand, model
+                    plate = v.get('plate_number', '-')
+                    brand = v.get('brand', '')
+                    model = v.get('model', '')
+                    
+                    display_text = plate
+                    if brand and brand != '-':
+                        display_text += f" - {brand}"
+                    if model and model != '-':
+                        display_text += f" {model}"
+                    
+                    print(f"DEBUG DIALOG: Adding vehicle option: id={v.get('id')}, text={display_text}")
+                    vehicle_dropdown.options.append(
+                        ft.dropdown.Option(str(v.get("id")), display_text)
+                    )
+                
                 if vehicles_list:
-                    vehicle_dropdown.options.append(ft.dropdown.Option("new", f"+ {get_text('add_new_vehicle')}"))
+                    vehicle_dropdown.options.append(
+                        ft.dropdown.Option("new", f"+ {get_text('add_new_vehicle')}")
+                    )
+                
+                # Force update the dropdown
+                vehicle_dropdown.update()
         else:
             customer_info_card.visible = False
-            vehicle_dropdown.options = []
+            vehicle_dropdown.options.clear()
+            vehicle_dropdown.update()
         
         dialog.update()
     
     customer_dropdown.on_change = on_customer_change
     
+    # Function to show add vehicle dialog
+    def show_add_vehicle_dialog(customer_id, customer_name):
+        """Show dialog to add new vehicle"""
+        print(f"DEBUG: show_add_vehicle_dialog called for customer {customer_id}")
+        
+        # Get brands for dropdown
+        brands = []
+        try:
+            from api_client import APIClient
+            temp_client = APIClient()
+            brands = temp_client.get_brands() or []
+            print(f"DEBUG: Loaded {len(brands)} brands")
+        except Exception as e:
+            print(f"DEBUG: Error loading brands: {e}")
+        
+        plate_number = ft.TextField(
+            label=get_text("plate_number"),
+            hint_text="ກຂ 1234",
+            border_radius=10,
+            bgcolor=ft.Colors.WHITE,
+            filled=True,
+            expand=True,
+        )
+        
+        brand_dropdown = ft.Dropdown(
+            label=get_text("car_brand"),
+            hint_text=get_text("select_brand"),
+            border_radius=10,
+            bgcolor=ft.Colors.WHITE,
+            filled=True,
+            options=[
+                ft.dropdown.Option(str(b.get("id")), b.get("name"))
+                for b in brands
+            ],
+            expand=True,
+        )
+        
+        model = ft.TextField(
+            label=get_text("car_model"),
+            hint_text="Corolla",
+            border_radius=10,
+            bgcolor=ft.Colors.WHITE,
+            filled=True,
+            expand=True,
+        )
+        
+        year = ft.TextField(
+            label=get_text("car_year"),
+            hint_text="2020",
+            border_radius=10,
+            bgcolor=ft.Colors.WHITE,
+            filled=True,
+            expand=True,
+        )
+        
+        color = ft.TextField(
+            label=get_text("car_color"),
+            hint_text="Black",
+            border_radius=10,
+            bgcolor=ft.Colors.WHITE,
+            filled=True,
+            expand=True,
+        )
+        
+        def save_vehicle(e):
+            if not plate_number.value:
+                plate_number.error_text = get_text("required_field")
+                add_dialog.update()
+                return
+            if not brand_dropdown.value:
+                brand_dropdown.error_text = get_text("required_field")
+                add_dialog.update()
+                return
+            
+            year_value = 0
+            if year.value and year.value.isdigit():
+                year_value = int(year.value)
+            
+            try:
+                from api_client import APIClient
+                temp_client = APIClient()
+                result = temp_client.add_vehicle({
+                    "customer_id": customer_id,
+                    "plate_number": plate_number.value.upper(),
+                    "brand_id": int(brand_dropdown.value),
+                    "model": model.value,
+                    "year": year_value,
+                    "color": color.value,
+                })
+                
+                if result:
+                    # Refresh vehicles and update dropdown
+                    new_vehicles = temp_client.get_vehicles(customer_id=customer_id) or []
+                    vehicles_list = []
+                    for v in new_vehicles:
+                        # Get brand name
+                        brand_name = ""
+                        brand_id = v.get("brand_id", 0)
+                        for b in brands:
+                            if b.get("id") == brand_id:
+                                brand_name = b.get("name", "")
+                                break
+                        
+                        vehicles_list.append({
+                            "id": v.get("id"),
+                            "plate_number": v.get("plate_number", "-"),
+                            "brand": brand_name,
+                            "model": v.get("model", "-"),
+                        })
+                    
+                    # Update vehicles_by_customer cache
+                    vehicles_by_customer[customer_id] = vehicles_list
+                    
+                    # Update dropdown options
+                    vehicle_dropdown.options.clear()
+                    for v in vehicles_list:
+                        plate = v.get('plate_number', '-')
+                        brand = v.get('brand', '')
+                        model = v.get('model', '')
+                        
+                        display_text = plate
+                        if brand and brand != '-':
+                            display_text += f" - {brand}"
+                        if model and model != '-':
+                            display_text += f" {model}"
+                        
+                        vehicle_dropdown.options.append(
+                            ft.dropdown.Option(str(v.get("id")), display_text)
+                        )
+                    
+                    vehicle_dropdown.options.append(
+                        ft.dropdown.Option("new", f"+ {get_text('add_new_vehicle')}")
+                    )
+                    
+                    add_dialog.open = False
+                    dialog.update()
+                    
+                    # Show success message
+                    show_snackbar(f"✅ {get_text('vehicle_added_successfully')}")
+            except Exception as err:
+                show_snackbar(f"{get_text('error')}: {err}")
+        
+        def show_snackbar(message):
+            snack = ft.SnackBar(content=ft.Text(message), bgcolor=ft.Colors.GREY_800, duration=3000)
+            if page:
+                page.snack_bar = snack
+                page.snack_bar.open = True
+                page.update()
+        
+        add_dialog = ft.AlertDialog(
+            modal=True,
+            shape=ft.RoundedRectangleBorder(radius=14),
+            bgcolor=ft.Colors.WHITE,
+            title=ft.Container(
+                content=ft.Row(
+                    [
+                        ft.Container(
+                            content=ft.Icon(ft.Icons.ADD_CIRCLE, size=20, color=ft.Colors.WHITE),
+                            bgcolor=primary_color,
+                            border_radius=10,
+                            padding=ft.padding.all(5),
+                        ),
+                        ft.Text(f"{get_text('add_new_vehicle')} - {customer_name}", size=15, weight=ft.FontWeight.BOLD, color="#1E293B"),
+                    ],
+                    spacing=8,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                ),
+                padding=ft.padding.symmetric(horizontal=16, vertical=10),
+                border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
+            ),
+            content=ft.Container(
+                content=ft.Column([
+                    ft.Row([plate_number, brand_dropdown], spacing=10, expand=True),
+                    ft.Container(height=8),
+                    ft.Row([model, year, color], spacing=10, expand=True),
+                ], spacing=0),
+                padding=ft.padding.all(16),
+                width=500,
+                height=220,
+            ),
+            actions=[
+                ft.Container(
+                    content=ft.Row([
+                        ft.TextButton(
+                            content=ft.Text(get_text("cancel"), color="#64748B"),
+                            on_click=lambda e: close_add_dialog(add_dialog),
+                            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=6)),
+                        ),
+                        ft.ElevatedButton(
+                            content=ft.Text(get_text("save"), color=ft.Colors.WHITE),
+                            on_click=save_vehicle,
+                            style=ft.ButtonStyle(
+                                bgcolor=primary_color,
+                                shape=ft.RoundedRectangleBorder(radius=6),
+                                elevation=0,
+                            ),
+                        ),
+                    ], spacing=8, alignment=ft.MainAxisAlignment.END),
+                    padding=ft.padding.symmetric(horizontal=16, vertical=10),
+                    border=ft.border.only(top=ft.BorderSide(1, ft.Colors.GREY_100)),
+                ),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+        
+        def close_add_dialog(d):
+            d.open = False
+            dialog.update()
+        
+        page.overlay.append(add_dialog)
+        add_dialog.open = True
+        page.update()
+    
+    # Handle vehicle dropdown change (for "add new vehicle" option)
+    def on_vehicle_change(e):
+        if vehicle_dropdown.value == "new":
+            # Show add vehicle dialog
+            if customer_dropdown.value:
+                selected = next((c for c in customers if str(c.get("id")) == customer_dropdown.value), None)
+                if selected:
+                    show_add_vehicle_dialog(int(customer_dropdown.value), selected.get("name", ""))
+            # Reset dropdown value
+            vehicle_dropdown.value = None
+            vehicle_dropdown.update()
+    
+    vehicle_dropdown.on_change = on_vehicle_change
+    
     def save(e):
+        print(f"DEBUG DIALOG: Save clicked")
         if not customer_dropdown.value:
             customer_dropdown.error_text = get_text("required_field")
+            dialog.update()
+            return
+        if not vehicle_dropdown.value or vehicle_dropdown.value == "new":
+            vehicle_dropdown.error_text = get_text("required_field")
             dialog.update()
             return
         if not problem_description.value:
@@ -124,9 +385,9 @@ def show_create_job_order_dialog(primary_color, customers, vehicles_by_customer,
             return
         
         customer_id = int(customer_dropdown.value)
-        vehicle_id = None
-        if vehicle_dropdown.value and vehicle_dropdown.value != "new":
-            vehicle_id = int(vehicle_dropdown.value)
+        vehicle_id = int(vehicle_dropdown.value)
+        
+        print(f"DEBUG DIALOG: customer_id={customer_id}, vehicle_id={vehicle_id}")
         
         data = {
             "customer_id": customer_id,
@@ -172,7 +433,7 @@ def show_create_job_order_dialog(primary_color, customers, vehicles_by_customer,
             ], spacing=0, scroll=ft.ScrollMode.AUTO),
             padding=ft.padding.all(16),
             width=500,
-            height=480,
+            height=520,
         ),
         actions=[
             ft.Container(
@@ -245,7 +506,6 @@ def show_job_order_detail_dialog(order, primary_color, on_close, on_print=None):
         padding=ft.padding.symmetric(horizontal=12, vertical=4),
     )
     
-    # Build actions row
     actions_row = ft.Row([
         ft.TextButton(
             content=ft.Text(get_text("close"), color="#64748B"),
@@ -254,7 +514,6 @@ def show_job_order_detail_dialog(order, primary_color, on_close, on_print=None):
         ),
     ], spacing=8, alignment=ft.MainAxisAlignment.END)
     
-    # Add print button if provided
     if on_print:
         actions_row.controls.insert(0, ft.TextButton(
             content=ft.Row([
@@ -288,13 +547,11 @@ def show_job_order_detail_dialog(order, primary_color, on_close, on_print=None):
         ),
         content=ft.Container(
             content=ft.Column([
-                # Job status
                 ft.Row([
                     ft.Text(get_text("status"), size=12, color="#64748B", width=100),
                     status_badge,
                 ], spacing=8),
                 ft.Divider(height=1, color=ft.Colors.GREY_100),
-                # Customer info
                 ft.Text(get_text("customer_information"), size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
                 ft.Row([
                     ft.Column([
@@ -306,7 +563,6 @@ def show_job_order_detail_dialog(order, primary_color, on_close, on_print=None):
                         ft.Text(customer_phone, size=13),
                     ], spacing=2, expand=True),
                 ]),
-                # Vehicle info
                 ft.Text(get_text("vehicle_information"), size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
                 ft.Row([
                     ft.Column([
@@ -318,7 +574,6 @@ def show_job_order_detail_dialog(order, primary_color, on_close, on_print=None):
                         ft.Text(f"{brand} {model}", size=13),
                     ], spacing=2, expand=True),
                 ]),
-                # Job details
                 ft.Text(get_text("job_details"), size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
                 ft.Row([
                     ft.Column([
