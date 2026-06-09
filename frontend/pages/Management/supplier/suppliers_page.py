@@ -84,7 +84,7 @@ class SuppliersContent:
         
         # Search Bar
         self.search_input = ft.TextField(
-            hint_text=f"🔍 {get_text('search')} {get_text('suppliers_title')}...",
+            hint_text=f"{get_text('search')} {get_text('suppliers_title')}...",
             border_radius=12,
             bgcolor=ft.Colors.WHITE,
             filled=True,
