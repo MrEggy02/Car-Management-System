@@ -213,8 +213,9 @@ class JobOrderListContent:
             bgcolor="#F5F7FA",
         )
         
-        self.load_orders()
+        # Load customers and vehicles first, then load orders
         self.load_customers_and_vehicles()
+        self.load_orders()
         
         return main_content
     
@@ -298,7 +299,7 @@ class JobOrderListContent:
             self.customers = self.client.get_customers() or []
             print(f"DEBUG: Found {len(self.customers)} customers")
             
-            # Load brands for mapping
+            # Load brands for mapping (fallback)
             brands = {}
             try:
                 brands_list = self.client.get_brands() or []
@@ -316,26 +317,36 @@ class JobOrderListContent:
                     
                     vehicles_with_info = []
                     for v in vehicles:
-                        brand_id = v.get("brand_id")
-                        brand_name = v.get("brand", "")
-                        # If brand name not directly available, get from brands dict
+                        # IMPORTANT: Get brand_name directly from API response
+                        brand_name = v.get("brand_name", "")
+                        brand_id = v.get("brand_id", 0)
+                        
+                        # If brand_name is empty, try fallback
                         if not brand_name and brand_id and brand_id in brands:
                             brand_name = brands.get(brand_id, "")
                         
+                        model_name = v.get("model", "")
+                        if not model_name:
+                            model_name = "-"
+                        
+                        plate = v.get("plate_number", "-")
+                        
                         vehicles_with_info.append({
                             "id": v.get("id"),
-                            "plate_number": v.get("plate_number", "-"),
-                            "brand": brand_name,
-                            "model": v.get("model", "-"),
+                            "plate_number": plate,
+                            "brand": brand_name if brand_name else "",
+                            "model": model_name,
                         })
-                        print(f"DEBUG: Vehicle - Plate: {v.get('plate_number')}, Brand: {brand_name}, Model: {v.get('model')}")
+                        print(f"DEBUG: Vehicle - Plate: {plate}, Brand: {brand_name}, Model: {model_name}")
                     
                     self.vehicles_by_customer[customer_id] = vehicles_with_info
                 except Exception as e:
                     print(f"DEBUG: Error loading vehicles for customer {customer_id}: {e}")
                     self.vehicles_by_customer[customer_id] = []
             
-            print(f"DEBUG: vehicles_by_customer = {self.vehicles_by_customer}")
+            # DEBUG: Print vehicles_by_customer for customer 44
+            print(f"DEBUG: vehicles_by_customer for customer 44 = {self.vehicles_by_customer.get(44, [])}")
+            
         except Exception as ex:
             print(f"Error loading customers: {ex}")
             import traceback
@@ -500,7 +511,7 @@ class JobOrderListContent:
             self.vehicles_by_customer,
             on_save,
             self._close_dialog,
-            self.page  # Pass page reference
+            self.page
         )
         self._open_dialog(dialog)
     
@@ -1001,8 +1012,6 @@ class JobOrderListContent:
                 if self.current_dialog in self.page.overlay:
                     self.page.overlay.remove(self.current_dialog)
             self.current_dialog = dialog
-            
-            # Add to overlay first, then set page property through the dialog itself
             self.page.overlay.append(dialog)
             dialog.open = True
             self.page.update()

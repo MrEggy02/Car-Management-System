@@ -1,4 +1,3 @@
-# backend/routers/invoices.py
 from fastapi import APIRouter, HTTPException, Depends, Form
 from database import get_db
 from auth import authenticate_user
@@ -22,11 +21,14 @@ def get_invoices(
             SELECT i.*, 
                    jo.job_no,
                    c.name as customer_name,
-                   v.plate_number, v.brand, v.model
+                   v.plate_number,
+                   b.name as brand,
+                   v.model
             FROM invoices i
             LEFT JOIN job_orders jo ON i.job_order_id = jo.id
             LEFT JOIN customers c ON jo.customer_id = c.id
             LEFT JOIN vehicles v ON jo.vehicle_id = v.id
+            LEFT JOIN brands b ON v.brand_id = b.id
             WHERE 1=1
         """
         params = []
@@ -46,10 +48,16 @@ def get_invoices(
         for invoice in invoices:
             if invoice.get('paid_date'):
                 invoice['paid_date'] = str(invoice['paid_date'])
+            if invoice.get('brand') is None:
+                invoice['brand'] = ""
+            if invoice.get('model') is None:
+                invoice['model'] = ""
         
         return invoices
     except Exception as e:
         print(f"Error in get_invoices: {e}")
+        import traceback
+        traceback.print_exc()
         return []
     finally:
         cursor.close()
@@ -66,21 +74,31 @@ def get_invoice(invoice_id: int, user: dict = Depends(authenticate_user)):
             SELECT i.*, 
                    jo.job_no,
                    c.name as customer_name, c.phone as customer_phone,
-                   v.plate_number, v.brand, v.model
+                   v.plate_number,
+                   b.name as brand,
+                   v.model
             FROM invoices i
             LEFT JOIN job_orders jo ON i.job_order_id = jo.id
             LEFT JOIN customers c ON jo.customer_id = c.id
             LEFT JOIN vehicles v ON jo.vehicle_id = v.id
+            LEFT JOIN brands b ON v.brand_id = b.id
             WHERE i.id = %s
         """, (invoice_id,))
         
         invoice = cursor.fetchone()
-        if invoice and invoice.get('paid_date'):
-            invoice['paid_date'] = str(invoice['paid_date'])
+        if invoice:
+            if invoice.get('paid_date'):
+                invoice['paid_date'] = str(invoice['paid_date'])
+            if invoice.get('brand') is None:
+                invoice['brand'] = ""
+            if invoice.get('model') is None:
+                invoice['model'] = ""
         
         return invoice
     except Exception as e:
         print(f"Error in get_invoice: {e}")
+        import traceback
+        traceback.print_exc()
         return None
     finally:
         cursor.close()
@@ -96,15 +114,17 @@ def get_invoice_info_by_job_order(
     db = get_db()
     cursor = db.cursor(dictionary=True)
     try:
-        # Get job order basic info
+        # Get job order basic info with brand from brands table
         cursor.execute("""
             SELECT 
                 jo.id, jo.job_no, jo.problem_description, jo.mileage, jo.fuel_level,
                 c.id as customer_id, c.name as customer_name, c.phone as customer_phone,
-                v.id as vehicle_id, v.plate_number, v.brand, v.model, v.year
+                v.id as vehicle_id, v.plate_number, v.model, v.year,
+                b.name as brand
             FROM job_orders jo
             LEFT JOIN customers c ON jo.customer_id = c.id
             LEFT JOIN vehicles v ON jo.vehicle_id = v.id
+            LEFT JOIN brands b ON v.brand_id = b.id
             WHERE jo.id = %s
         """, (job_order_id,))
         

@@ -27,6 +27,8 @@ class SidebarManager:
         self.customer_main_btn = None
         self.job_order_main_btn = None
         self.quotation_main_btn = None
+        self.repair_main_btn = None
+        self.invoice_main_btn = None
         
     def build(self):
         """สร้าง Sidebar"""
@@ -259,27 +261,18 @@ class SidebarManager:
     def _on_single_menu_hover(self, e, btn_container):
         """Handle hover for single item menus"""
         if e.data == "true":
-            if self.parent.current_index not in [11, 13, 15]:
+            if self.parent.current_index not in [11, 13, 15, 17, 20]:
                 btn_container.bgcolor = self.parent.hover_color
         else:
-            if self.parent.current_index not in [11, 13, 15]:
+            if self.parent.current_index not in [11, 13, 15, 17, 20]:
                 btn_container.bgcolor = None
         if btn_container.page:
             btn_container.page.update()
     
     def _create_repair_management_menu(self, nav_column):
-        """สร้างเมนู Repair Management - มี dropdown"""
-        repair_menu_items = [
-            {"label": get_text("new_repair"), "index": 16},
-            {"label": get_text("repair_list"), "index": 17},
-        ]
+        """สร้างเมนู Repair Management - Single Menu (ไม่มี dropdown)"""
         
-        repair_menu_container = ft.Container(
-            padding=ft.padding.symmetric(vertical=2, horizontal=0),
-            margin=ft.margin.symmetric(horizontal=0, vertical=0),
-        )
-        
-        repair_main_btn = ft.Container(
+        self.repair_main_btn = ft.Container(
             content=ft.Row(
                 [
                     ft.Image(src="assets/icons/repair.png", width=22, height=22, color=self.parent.unselected_color),
@@ -289,12 +282,7 @@ class SidebarManager:
                         weight=ft.FontWeight.W_500,
                         color=self.parent.unselected_color,
                         expand=True,
-                    ),
-                    ft.Icon(
-                        ft.Icons.KEYBOARD_ARROW_DOWN if not self.parent.repair_menu_expanded else ft.Icons.KEYBOARD_ARROW_UP,
-                        color=self.parent.unselected_color,
-                        size=20,
-                    ),
+                    ),   
                 ],
                 spacing=16,
             ),
@@ -302,40 +290,17 @@ class SidebarManager:
             margin=ft.margin.symmetric(horizontal=12, vertical=2),
             border_radius=12,
             ink=True,
-            on_click=lambda e: self.parent.toggle_repair_menu(),
+            data="repair_menu",
+            on_click=lambda e: self.parent.on_nav_click(17),  # ไปที่ repair_list
+            on_hover=lambda e: self._on_single_menu_hover(e, self.repair_main_btn),
         )
         
-        self.repair_submenu_column = ft.Column(spacing=1, visible=self.parent.repair_menu_expanded)
-        
-        for item in repair_menu_items:
-            sub_btn_container, sub_label = self._create_repair_submenu_button(item)
-            self.repair_submenu_buttons.append({
-                "container": sub_btn_container,
-                "label": sub_label,
-                "index": item["index"]
-            })
-            self.repair_submenu_column.controls.append(sub_btn_container)
-        
-        repair_menu_container.content = ft.Column([
-            repair_main_btn,
-            self.repair_submenu_column,
-        ], spacing=0)
-        
-        nav_column.controls.append(repair_menu_container)
+        nav_column.controls.append(self.repair_main_btn)
     
     def _create_invoice_management_menu(self, nav_column):
-        """สร้างเมนู Invoice Management - มี dropdown"""
-        invoice_menu_items = [
-            {"label": get_text("new_invoice"), "index": 19},
-            {"label": get_text("invoice_list"), "index": 20},
-        ]
+        """สร้างเมนู Invoice Management - Single Menu (ไม่มี dropdown)"""
         
-        invoice_menu_container = ft.Container(
-            padding=ft.padding.symmetric(vertical=2, horizontal=0),
-            margin=ft.margin.symmetric(horizontal=0, vertical=0),
-        )
-        
-        invoice_main_btn = ft.Container(
+        self.invoice_main_btn = ft.Container(
             content=ft.Row(
                 [
                     ft.Image(src="assets/icons/invoice.png", width=22, height=22, color=self.parent.unselected_color),
@@ -346,11 +311,6 @@ class SidebarManager:
                         color=self.parent.unselected_color,
                         expand=True,
                     ),
-                    ft.Icon(
-                        ft.Icons.KEYBOARD_ARROW_DOWN if not self.parent.invoice_menu_expanded else ft.Icons.KEYBOARD_ARROW_UP,
-                        color=self.parent.unselected_color,
-                        size=20,
-                    ),
                 ],
                 spacing=16,
             ),
@@ -358,26 +318,12 @@ class SidebarManager:
             margin=ft.margin.symmetric(horizontal=12, vertical=2),
             border_radius=12,
             ink=True,
-            on_click=lambda e: self.parent.toggle_invoice_menu(),
+            data="invoice_menu",
+            on_click=lambda e: self.parent.on_nav_click(20),  # ไปที่ invoice_list
+            on_hover=lambda e: self._on_single_menu_hover(e, self.invoice_main_btn),
         )
         
-        self.invoice_submenu_column = ft.Column(spacing=1, visible=self.parent.invoice_menu_expanded)
-        
-        for item in invoice_menu_items:
-            sub_btn_container, sub_label = self._create_invoice_submenu_button(item)
-            self.invoice_submenu_buttons.append({
-                "container": sub_btn_container,
-                "label": sub_label,
-                "index": item["index"]
-            })
-            self.invoice_submenu_column.controls.append(sub_btn_container)
-        
-        invoice_menu_container.content = ft.Column([
-            invoice_main_btn,
-            self.invoice_submenu_column,
-        ], spacing=0)
-        
-        nav_column.controls.append(invoice_menu_container)
+        nav_column.controls.append(self.invoice_main_btn)
     
     def _create_purchase_management_menu(self, nav_column):
         """สร้างเมนู Purchase Management - มี dropdown"""
@@ -548,7 +494,7 @@ class SidebarManager:
         return btn_container, label
     
     def _create_repair_submenu_button(self, item):
-        """สร้างปุ่มซับเมนูสำหรับ Repair Management"""
+        """สร้างปุ่มซับเมนูสำหรับ Repair Management (ไม่ใช้แล้ว แต่เก็บไว้)"""
         btn_container = ft.Container(
             padding=ft.padding.symmetric(vertical=6, horizontal=16),
             margin=ft.margin.symmetric(horizontal=12, vertical=1),
@@ -574,7 +520,7 @@ class SidebarManager:
         return btn_container, label
     
     def _create_invoice_submenu_button(self, item):
-        """สร้างปุ่มซับเมนูสำหรับ Invoice Management"""
+        """สร้างปุ่มซับเมนูสำหรับ Invoice Management (ไม่ใช้แล้ว แต่เก็บไว้)"""
         btn_container = ft.Container(
             padding=ft.padding.symmetric(vertical=6, horizontal=16),
             margin=ft.margin.symmetric(horizontal=12, vertical=1),
@@ -672,8 +618,9 @@ class SidebarManager:
                 btn_data["container"].bgcolor = None
                 btn_data["container"].border = None
         
-        # Reset single item menu buttons (Customer, Job Order, Quotation)
-        for btn in [self.customer_main_btn, self.job_order_main_btn, self.quotation_main_btn]:
+        # Reset single item menu buttons (Customer, Job Order, Quotation, Repair, Invoice)
+        for btn in [self.customer_main_btn, self.job_order_main_btn, self.quotation_main_btn, 
+                    self.repair_main_btn, self.invoice_main_btn]:
             if btn:
                 # Reset icon and text color
                 for child in btn.content.controls:
@@ -701,12 +648,14 @@ class SidebarManager:
             selected["label"].color = self.parent.selected_color
             selected["container"].bgcolor = ft.Colors.with_opacity(0.1, self.parent.selected_color)
             selected["container"].border = ft.border.only(left=ft.border.BorderSide(3, self.parent.selected_color))
-        elif current in [11, 13, 15]:
+        elif current in [11, 13, 15, 17, 20]:
             # Single item menu
             btn_map = {
                 11: self.customer_main_btn,
                 13: self.job_order_main_btn,
-                15: self.quotation_main_btn
+                15: self.quotation_main_btn,
+                17: self.repair_main_btn,
+                20: self.invoice_main_btn,
             }
             btn = btn_map.get(current)
             if btn:

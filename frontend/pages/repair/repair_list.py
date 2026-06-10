@@ -1,7 +1,6 @@
-# pages/repair/repair_list.py
 import flet as ft
 from flet import Alignment
-from typing import Dict, Callable, List
+from typing import Dict, Callable
 from datetime import datetime
 
 from i18n import get_text
@@ -31,19 +30,20 @@ class RepairListContent:
         table = self._build_table()
         self.pagination_container = ft.Container(padding=ft.padding.symmetric(vertical=12, horizontal=20))
         
+        # Main scrollable content area - vertical scroll
         content_area = ft.Container(
             content=ft.Column([
                 search_bar,
                 table,
                 self.pagination_container,
-            ], expand=True),
+            ], expand=True, scroll=ft.ScrollMode.AUTO),
             expand=True,
             padding=ft.padding.all(24),
             bgcolor="#F5F7FA",
         )
         
         main_content = ft.Container(
-            content=ft.Column([header, content_area]),
+            content=ft.Column([header, content_area], scroll=ft.ScrollMode.AUTO),
             expand=True,
             bgcolor="#F5F7FA",
         )
@@ -144,41 +144,47 @@ class RepairListContent:
         )
     
     def _build_table(self):
+        # Table header
         table_header = ft.Container(
             content=ft.Row([
                 ft.Container(
                     content=ft.Text(get_text("repair_no"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
                     width=100,
+                    alignment=ft.Alignment(-1, 0),
                     padding=ft.padding.only(left=10),
                 ),
                 ft.Container(
                     content=ft.Text(get_text("job_number"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
                     width=100,
+                    alignment=ft.Alignment(-1, 0),
                     padding=ft.padding.only(left=10),
                 ),
                 ft.Container(
                     content=ft.Text(get_text("customer_name"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=130,
+                    width=150,
+                    alignment=ft.Alignment(-1, 0),
                     padding=ft.padding.only(left=10),
                 ),
                 ft.Container(
                     content=ft.Text(get_text("plate_number"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=100,
+                    width=80,
+                    alignment=ft.Alignment(-1, 0),
                     padding=ft.padding.only(left=10),
                 ),
                 ft.Container(
                     content=ft.Text(get_text("mechanic"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=120,
+                    width=130,
+                    alignment=ft.Alignment(-1, 0),
                     padding=ft.padding.only(left=10),
                 ),
                 ft.Container(
                     content=ft.Text(get_text("status"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=110,
+                    width=100,
                     alignment=ft.Alignment(0, 0),
                 ),
                 ft.Container(
                     content=ft.Text(get_text("start_date"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=100,
+                    width=110,
                     alignment=ft.Alignment(0, 0),
                 ),
                 ft.Container(
@@ -192,18 +198,35 @@ class RepairListContent:
             border_radius=ft.BorderRadius.only(top_left=12, top_right=12),
         )
         
+        # Table body
         self.table_rows = ft.Column(spacing=0, scroll=ft.ScrollMode.AUTO, expand=True)
         
-        return ft.Container(
-            content=ft.Column([
-                table_header,
-                ft.Divider(height=1, color=ft.Colors.GREY_300),
-                self.table_rows,
-            ], spacing=0),
-            margin=ft.margin.only(left=20, right=20),
-            bgcolor=ft.Colors.WHITE,
-            border_radius=ft.BorderRadius.only(top_left=12, top_right=12, bottom_left=12, bottom_right=12),
+        # Wrap table in Column with horizontal scroll (using Row with scroll)
+        table_content = ft.Column([
+            table_header,
+            ft.Divider(height=1, color=ft.Colors.GREY_300),
+            self.table_rows,
+        ], spacing=0)
+        
+        # Use Container with fixed width to enable horizontal scroll
+        table_scroll = ft.Container(
+            content=table_content,
             border=ft.border.all(1, ft.Colors.GREY_200),
+            border_radius=12,
+            bgcolor=ft.Colors.WHITE,
+            width=970,  # Fixed width wider than parent to enable horizontal scroll
+        )
+        
+        # Wrap in Row with horizontal scroll
+        scrollable_table = ft.Row(
+            [table_scroll],
+            scroll=ft.ScrollMode.AUTO,  # Horizontal scroll on Row
+            expand=True,
+        )
+        
+        return ft.Container(
+            content=scrollable_table,
+            margin=ft.margin.only(left=20, right=20),
             expand=True,
         )
     
@@ -243,7 +266,6 @@ class RepairListContent:
         if keyword:
             self.filtered_orders = []
             for r in self.repair_orders:
-                # Build repair number as string without format code
                 repair_id = r.get('id', 0)
                 repair_no = f"R{repair_id:04d}" if isinstance(repair_id, int) else f"R{str(repair_id)}"
                 
@@ -323,7 +345,6 @@ class RepairListContent:
             "completed": get_text("completed")
         }
         
-        # Status badge with click to change
         status_badge = ft.Container(
             content=ft.Row([
                 ft.Icon(ft.Icons.CIRCLE, size=8, color=ft.Colors.WHITE),
@@ -338,8 +359,8 @@ class RepairListContent:
         
         view_btn = ft.Container(
             content=ft.Row([
-                ft.Icon(ft.Icons.VISIBILITY_OUTLINED, size=16, color="#1565C0"),
-                ft.Text(get_text("view"), size=12, color="#1565C0"),
+                ft.Icon(ft.Icons.VISIBILITY_OUTLINED, size=16, color=self.primary_color),
+                ft.Text(get_text("view"), size=12, color=self.primary_color),
             ], spacing=4),
             on_click=lambda e, rid=repair_id: self.view_repair_detail(rid),
             padding=ft.padding.symmetric(horizontal=8, vertical=4),
@@ -351,36 +372,42 @@ class RepairListContent:
                 ft.Container(
                     content=ft.Text(repair_no, size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
                     width=100,
+                    alignment=ft.Alignment(-1, 0),
                     padding=ft.padding.only(left=10),
                 ),
                 ft.Container(
                     content=ft.Text(job_no, size=13, color="#1E293B"),
                     width=100,
+                    alignment=ft.Alignment(-1, 0),
                     padding=ft.padding.only(left=10),
                 ),
                 ft.Container(
                     content=ft.Text(customer_name, size=13, color="#1E293B", max_lines=1),
-                    width=130,
+                    width=150,
+                    alignment=ft.Alignment(-1, 0),
                     padding=ft.padding.only(left=10),
+                    tooltip=customer_name,
                 ),
                 ft.Container(
                     content=ft.Text(plate_number, size=12, color="#64748B", max_lines=1),
-                    width=100,
+                    width=80,
+                    alignment=ft.Alignment(-1, 0),
                     padding=ft.padding.only(left=10),
                 ),
                 ft.Container(
                     content=ft.Text(mechanic_name, size=12, color="#64748B", max_lines=1),
-                    width=120,
+                    width=130,
+                    alignment=ft.Alignment(-1, 0),
                     padding=ft.padding.only(left=10),
                 ),
                 ft.Container(
                     content=status_badge,
-                    width=110,
+                    width=100,
                     alignment=ft.Alignment(0, 0),
                 ),
                 ft.Container(
                     content=ft.Text(start_date, size=12, color="#64748B"),
-                    width=100,
+                    width=110,
                     alignment=ft.Alignment(0, 0),
                 ),
                 ft.Container(
@@ -451,7 +478,7 @@ class RepairListContent:
             self.display_repairs()
     
     def view_repair_detail(self, repair_id: int):
-        """ดูรายละเอียดการซ่อม"""
+        """Navigate to repair detail page"""
         self.navigate("repair_detail", repair_id=repair_id)
     
     def show_update_status_dialog(self, repair_id: int, current_status: str):
@@ -537,5 +564,6 @@ class RepairListContent:
             content=ft.Text(message),
             bgcolor=ft.Colors.RED_600 if is_error else ft.Colors.GREEN_600,
             open=True,
+            duration=3000,
         )
         self.page.update()

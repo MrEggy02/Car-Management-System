@@ -1,4 +1,3 @@
-# pages/quotations/quotation_list.py
 import flet as ft
 from flet import Alignment
 from typing import Dict, Callable
@@ -11,7 +10,6 @@ from datetime import datetime
 
 from i18n import get_text, get_current_language
 from pages.quotations.quotation_dialogs import (
-    show_create_quotation_dialog,
     show_quotation_detail_dialog,
     show_update_status_dialog,
     show_delete_quotation_dialog
@@ -51,7 +49,7 @@ class QuotationListContent:
                                 weight=ft.FontWeight.BOLD,
                                 color=ft.Colors.WHITE,
                             ),
-                            
+                          
                         ],
                         spacing=2,
                     ),
@@ -61,7 +59,7 @@ class QuotationListContent:
                             ft.Icon(ft.Icons.ADD, size=18, color=ft.Colors.WHITE),
                             ft.Text(get_text("new_quotation"), size=14, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500),
                         ], spacing=6),
-                        on_click=lambda e: self.show_create_quotation_dialog(),
+                        on_click=lambda e: self.navigate("quotation_create"),
                         style=ft.ButtonStyle(
                             bgcolor=ft.Colors.with_opacity(0.2, ft.Colors.WHITE),
                             shape=ft.RoundedRectangleBorder(radius=10),
@@ -155,7 +153,7 @@ class QuotationListContent:
                 ft.Container(height=20),
                 ft.ElevatedButton(
                     content=ft.Text(get_text("new_quotation"), size=14),
-                    on_click=lambda e: self.show_create_quotation_dialog(),
+                    on_click=lambda e: self.navigate("quotation_create"),
                     style=ft.ButtonStyle(
                         bgcolor=self.primary_color,
                         shape=ft.RoundedRectangleBorder(radius=10),
@@ -191,19 +189,8 @@ class QuotationListContent:
         )
         
         self.load_quotations()
-        self.load_parts_and_services()
         
         return main_content
-    
-    def load_parts_and_services(self):
-        """Load parts and services for quotation creation"""
-        try:
-            self.parts_list = self.client.get_parts()
-            self.services_list = self.client.get_services()
-        except Exception as ex:
-            print(f"Error loading parts/services: {ex}")
-            self.parts_list = []
-            self.services_list = []
     
     def _create_table_header(self):
         """Create table header row"""
@@ -485,71 +472,6 @@ class QuotationListContent:
             self.current_page += 1
             self.display_quotations()
     
-    def show_create_quotation_dialog(self, e=None):
-        """Show dialog to create new quotation"""
-        
-        # Load job orders
-        try:
-            all_orders = self.client.get_job_orders()
-            pending_orders = [o for o in all_orders if o.get('status') in ['pending', 'quoting']]
-        except Exception as ex:
-            print(f"Error loading job orders: {ex}")
-            pending_orders = []
-        
-        if not pending_orders:
-            self.show_snack_bar(get_text("no_pending_job_orders"), is_error=True)
-            return
-        
-        def on_save(job_order_id, items):
-            try:
-                result = self.client.create_quotation(job_order_id)
-                if result:
-                    quotation_id = result.get("id")
-                    for item in items:
-                        self.client.add_quotation_item(
-                            quotation_id, 
-                            item["item_type"], 
-                            item["ref_id"], 
-                            item["qty"]
-                        )
-                    self.client.calculate_quotation_total(quotation_id)
-                    self._close_dialog()
-                    self.load_quotations()
-                    self.show_snack_bar(f"✅ {get_text('quotation_created_successfully')}", is_error=False)
-            except Exception as ex:
-                self.show_snack_bar(f"{get_text('error')}: {str(ex)}", is_error=True)
-        
-        def on_approve(job_order_id, items):
-            try:
-                result = self.client.create_quotation(job_order_id)
-                if result:
-                    quotation_id = result.get("id")
-                    for item in items:
-                        self.client.add_quotation_item(
-                            quotation_id, 
-                            item["item_type"], 
-                            item["ref_id"], 
-                            item["qty"]
-                        )
-                    self.client.calculate_quotation_total(quotation_id)
-                    self.client.update_quotation_status(quotation_id, "approved")
-                    self._close_dialog()
-                    self.load_quotations()
-                    self.show_snack_bar(f"✅ {get_text('quotation_approved_successfully')}", is_error=False)
-            except Exception as ex:
-                self.show_snack_bar(f"{get_text('error')}: {str(ex)}", is_error=True)
-        
-        dialog = show_create_quotation_dialog(
-            self.primary_color,
-            self.parts_list,
-            self.services_list,
-            pending_orders,
-            on_save,
-            on_approve,
-            self._close_dialog
-        )
-        self._open_dialog(dialog)
-    
     def show_quotation_detail(self, quotation_id: int):
         """Show detailed quotation in a scrollable dialog"""
         self.loading_indicator.visible = True
@@ -815,13 +737,27 @@ class QuotationListContent:
                     <div class="barcode"></div>
                     
                     <table>
-                        <thead><tr><th style="width: 40px;">#</th><th>ລາຍການ / ITEM</th><th style="width: 60px; text-align: center;">ຈຳນວນ</th><th style="width: 100px; text-align: right;">ລາຄາ (KIP)</th><th style="width: 100px; text-align: right;">ສ່ວນຫຼຸດ</th><th style="width: 110px; text-align: right;">ລວມ (KIP)</th></tr></thead>
+                        <thead>
+                            <tr>
+                                <th style="width: 40px;">#</th>
+                                <th>ລາຍການ / ITEM</th>
+                                <th style="width: 60px; text-align: center;">ຈຳນວນ</th>
+                                <th style="width: 100px; text-align: right;">ລາຄາ (KIP)</th>
+                                <th style="width: 100px; text-align: right;">ສ່ວນຫຼຸດ</th>
+                                <th style="width: 110px; text-align: right;">ລວມ (KIP)</th>
+                            </tr>
+                        </thead>
                         <tbody>{items_html if items_html else '<tr><td colspan="6" style="text-align: center; padding: 40px;">ບໍ່ມີລາຍການ / No items</td></tr>'}</tbody>
-                    能有
+                    </table>
                     
-                    <div class="total-section"><div class="total-row">ລວມທັງໝົດ / TOTAL: <span class="grand-total">{int(quotation.get('total_price', 0)):,} KIP</span></div></div>
+                    <div class="total-section">
+                        <div class="total-row">ລວມທັງໝົດ / TOTAL: <span class="grand-total">{int(quotation.get('total_price', 0)):,} KIP</span></div>
+                    </div>
                     
-                    <div class="stamp"><div class="signature">ລາຍເຊັນລູກຄ້າ</div><div class="signature">ລາຍເຊັນຜູ້ຂາຍ</div></div>
+                    <div class="stamp">
+                        <div class="signature">ລາຍເຊັນລູກຄ້າ</div>
+                        <div class="signature">ລາຍເຊັນຜູ້ຂາຍ</div>
+                    </div>
                 </div>
                 
                 <div class="footer">

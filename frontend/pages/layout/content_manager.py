@@ -46,11 +46,11 @@ class ContentManager:
         elif index == 13:
             content = self._get_job_order_list_content()
         elif index == 14:
-            content = self._get_placeholder("Quotation Creation (Use from Quotation List)")
+            content = self._get_quotation_create_content()
         elif index == 15:
             content = self._get_quotation_list_content()
         elif index == 16:
-            content = self._get_repair_create_content()
+            content = self._get_repair_create_content()  
         elif index == 17:
             content = self._get_repair_list_content()
         elif index == 18:
@@ -196,7 +196,7 @@ class ContentManager:
         return JobOrderListContent(self.parent.page, self.parent.client, self.parent.user, navigate).build()
     
     def _get_quotation_create_content(self):
-        """Get quotation create page (Process 4)"""
+        """Get quotation create page (Process 4) - FIXED IMPORT"""
         from pages.quotations.quotation_create import QuotationCreateContent
         def navigate(page_name, *args, **kwargs):
             self.parent.navigate_to(page_name, **kwargs)
