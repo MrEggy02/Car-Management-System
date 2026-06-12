@@ -16,6 +16,7 @@ class PurchaseOrderDetailContent:
         self.po_data = None
         self.primary_color = "#1565C0"
         self.primary_dark = "#0D47A1"
+        self.success_color = "#10B981"
         
     def build(self):
         header = self._build_header()
@@ -24,9 +25,9 @@ class PurchaseOrderDetailContent:
             error_container = ft.Container(
                 content=ft.Column([
                     ft.Icon(ft.Icons.WARNING_AMBER, size=64, color=ft.Colors.ORANGE_600),
-                    ft.Text("ບໍ່ພົບໃບສັ່ງຊື້", size=18, weight=ft.FontWeight.BOLD, color="#1E293B"),
+                    ft.Text(get_text("no_purchase_order_selected"), size=18, weight=ft.FontWeight.BOLD, color="#1E293B"),
                     ft.ElevatedButton(
-                        get_text("back"),
+                        get_text("back_to_list"),
                         on_click=lambda e: self.navigate("purchase_order_list"),
                         style=ft.ButtonStyle(bgcolor=self.primary_color, color=ft.Colors.WHITE),
                     ),
@@ -68,8 +69,8 @@ class PurchaseOrderDetailContent:
         content_area = ft.Container(
             content=scrollable_content,
             expand=True,
-            padding=ft.padding.all(32),
-            bgcolor="#F5F7FA",
+            padding=ft.padding.all(24),
+            bgcolor="#F0F2F5",
         )
         
         main_content = ft.Container(
@@ -86,41 +87,43 @@ class PurchaseOrderDetailContent:
                 [
                     ft.IconButton(
                         icon=ft.Icons.ARROW_BACK,
-                        icon_size=24,
+                        icon_size=20,
                         icon_color=ft.Colors.WHITE,
                         on_click=lambda e: self.navigate("purchase_order_list"),
                         tooltip=get_text("back"),
                         style=ft.ButtonStyle(
                             bgcolor=ft.Colors.with_opacity(0.2, ft.Colors.WHITE),
-                            shape=ft.RoundedRectangleBorder(radius=10),
+                            shape=ft.RoundedRectangleBorder(radius=8),
                         ),
                     ),
                     ft.Column(
                         [
                             ft.Text(
                                 get_text("purchase_order_detail"),
-                                size=18,
+                                size=20,
                                 weight=ft.FontWeight.BOLD,
                                 color=ft.Colors.WHITE,
                             ),
-                            
+                            ft.Text(
+                                get_text("purchase_order_detail_subtitle"),
+                                size=12,
+                                color=ft.Colors.with_opacity(0.85, ft.Colors.WHITE),
+                            ),
                         ],
                         spacing=2,
                     ),
                     ft.Container(expand=True),
-                  
                 ],
-                spacing=16,
+                spacing=12,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(vertical=12, horizontal=24),
+            padding=ft.padding.symmetric(vertical=14, horizontal=24),
             gradient=ft.LinearGradient(
                 begin=ft.Alignment(-1, -1),
                 end=ft.Alignment(1, 1),
                 colors=[self.primary_color, self.primary_dark],
             ),
             border_radius=ft.BorderRadius.only(bottom_left=20, bottom_right=20),
-           
         )
     
     def load_purchase_order(self):
@@ -167,21 +170,21 @@ class PurchaseOrderDetailContent:
         }
         
         status_badge = ft.Container(
-            content=ft.Text(status_texts.get(status, status), size=14, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500),
+            content=ft.Text(status_texts.get(status, status), size=13, color=ft.Colors.WHITE, weight=ft.FontWeight.W_600),
             bgcolor=status_colors.get(status, "#607D8B"),
-            border_radius=12,
-            padding=ft.padding.symmetric(horizontal=20, vertical=8),
+            border_radius=20,
+            padding=ft.padding.symmetric(horizontal=16, vertical=6),
         )
         
-        # PO Info Card
+        # ========== PO INFO CARD ==========
         po_info_card = ft.Card(
             content=ft.Container(
                 content=ft.Column([
                     ft.Row(
                         [
                             ft.Container(
-                                content=ft.Icon(ft.Icons.INFO, size=20, color=self.primary_color),
-                                bgcolor="#E3F2FD",
+                                content=ft.Icon(ft.Icons.LOCAL_SHIPPING, size=20, color=self.primary_color),
+                                bgcolor=ft.Colors.with_opacity(0.1, self.primary_color),
                                 border_radius=10,
                                 padding=ft.padding.all(8),
                             ),
@@ -194,79 +197,108 @@ class PurchaseOrderDetailContent:
                     ft.Container(height=12),
                     ft.Row([
                         ft.Column([
-                            ft.Text(get_text("po_no"), size=12, color="#64748B"),
-                            ft.Text(po_no, size=14, weight=ft.FontWeight.W_500),
-                        ], spacing=2, expand=True),
+                            ft.Text(get_text("po_no"), size=11, color="#64748B"),
+                            ft.Text(po_no, size=15, weight=ft.FontWeight.W_700, color=self.primary_color),
+                        ], spacing=4, expand=True),
                         ft.Column([
-                            ft.Text(get_text("status"), size=12, color="#64748B"),
+                            ft.Text(get_text("status"), size=11, color="#64748B"),
                             status_badge,
-                        ], spacing=2, expand=True),
+                        ], spacing=4, expand=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
                         ft.Column([
-                            ft.Text(get_text("supplier"), size=12, color="#64748B"),
-                            ft.Text(supplier_name, size=14, weight=ft.FontWeight.W_500),
-                        ], spacing=2, expand=True),
+                            ft.Text(get_text("supplier"), size=11, color="#64748B"),
+                            ft.Text(supplier_name, size=14, weight=ft.FontWeight.W_600, color="#1E293B"),
+                        ], spacing=4, expand=True),
                     ]),
                     ft.Container(height=8),
                     ft.Row([
                         ft.Column([
-                            ft.Text(get_text("order_date"), size=12, color="#64748B"),
-                            ft.Text(order_date, size=14),
-                        ], spacing=2, expand=True),
+                            ft.Text(get_text("order_date"), size=11, color="#64748B"),
+                            ft.Text(order_date, size=13, color="#1E293B"),
+                        ], spacing=4, expand=True),
                         ft.Column([
-                            ft.Text(get_text("created_by"), size=12, color="#64748B"),
-                            ft.Text(created_by, size=14),
-                        ], spacing=2, expand=True),
+                            ft.Text(get_text("created_by"), size=11, color="#64748B"),
+                            ft.Text(created_by, size=13, color="#1E293B"),
+                        ], spacing=4, expand=True),
                     ]),
                     ft.Container(height=8),
                     ft.Row([
                         ft.Column([
-                            ft.Text(get_text("received_by"), size=12, color="#64748B"),
-                            ft.Text(received_by if received_by != '-' else '-', size=14),
-                        ], spacing=2, expand=True),
+                            ft.Text(get_text("received_by"), size=11, color="#64748B"),
+                            ft.Text(received_by if received_by != '-' else '-', size=13, color="#1E293B"),
+                        ], spacing=4, expand=True),
                         ft.Column([
-                            ft.Text(get_text("received_date"), size=12, color="#64748B"),
-                            ft.Text(received_at, size=14),
-                        ], spacing=2, expand=True),
+                            ft.Text(get_text("received_date"), size=11, color="#64748B"),
+                            ft.Text(received_at, size=13, color="#1E293B"),
+                        ], spacing=4, expand=True),
                     ]),
                 ]),
                 padding=ft.padding.all(20),
             ),
             elevation=2,
-            margin=ft.margin.only(bottom=20),
+            margin=ft.margin.only(bottom=16),
         )
         
-        # Items List Card
-        items_list = ft.Column(spacing=8)
+        # ========== ITEMS CARD ==========
+        items_list = ft.Column(spacing=6)
         
-        for item in items:
-            part_name = item.get('part_name', '-')
-            qty = item.get('qty', 0)
-            unit_cost = item.get('unit_cost', 0)
-            total_line = item.get('total_line', 0)
-            received_qty = item.get('received_qty', 0)
-            
-            item_row = ft.Container(
-                content=ft.Row([
-                    ft.Text(part_name, size=13, expand=True),
-                    ft.Text(f"{qty}", size=12, color="#64748B", width=60),
-                    ft.Text(f"{int(unit_cost):,}", size=12, color="#64748B", width=120),
-                    ft.Text(f"{int(total_line):,} KIP", size=13, weight=ft.FontWeight.W_500, color="#1E293B", width=130),
-                    ft.Container(
-                        content=ft.Container(
-                            content=ft.Text(f"{received_qty}/{qty}", size=11, color=ft.Colors.GREEN_600 if received_qty == qty else ft.Colors.ORANGE_600),
-                            bgcolor=ft.Colors.with_opacity(0.1, ft.Colors.GREEN_600 if received_qty == qty else ft.Colors.ORANGE_600),
-                            border_radius=10,
-                            padding=ft.padding.symmetric(horizontal=8, vertical=2),
+        if items:
+            for idx, item in enumerate(items):
+                part_name = item.get('part_name', '-')
+                qty = item.get('qty', 0)
+                unit_cost = item.get('unit_cost', 0)
+                total_line = item.get('total_line', qty * unit_cost)
+                received_qty = item.get('received_qty', 0)
+                
+                bg_color = ft.Colors.GREY_50 if idx % 2 == 0 else ft.Colors.WHITE
+                
+                # Received status
+                if received_qty >= qty:
+                    received_color = self.success_color
+                    received_text = get_text("received")
+                elif received_qty > 0:
+                    received_color = "#F59E0B"
+                    received_text = get_text("partial")
+                else:
+                    received_color = "#64748B"
+                    received_text = get_text("pending")
+                
+                item_row = ft.Container(
+                    content=ft.Row([
+                        ft.Container(
+                            content=ft.Icon(ft.Icons.INVENTORY, size=16, color=self.primary_color),
+                            width=30,
                         ),
-                        width=80,
-                        alignment=ft.Alignment(0, 0),
-                    ),
-                ], spacing=8, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                padding=ft.padding.symmetric(vertical=8, horizontal=12),
-                bgcolor=ft.Colors.GREY_50,
-                border_radius=8,
+                        ft.Column([
+                            ft.Text(part_name, size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
+                            ft.Text(f"{get_text('unit_cost')}: {int(unit_cost):,} KIP", size=11, color="#64748B"),
+                        ], spacing=2, expand=True),
+                        ft.Text(f"{qty}", size=13, color="#1E293B", width=60, text_align=ft.TextAlign.CENTER),
+                        ft.Text(f"{int(total_line):,} KIP", size=13, weight=ft.FontWeight.W_600, color=self.primary_color, width=120, text_align=ft.TextAlign.RIGHT),
+                        ft.Container(
+                            content=ft.Text(f"{received_qty}/{qty}", size=11, color=ft.Colors.WHITE),
+                            bgcolor=received_color,
+                            border_radius=12,
+                            padding=ft.padding.symmetric(horizontal=10, vertical=4),
+                            width=80,
+                            alignment=ft.Alignment(0, 0),
+                        ),
+                    ], spacing=12, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                    padding=ft.padding.symmetric(vertical=10, horizontal=12),
+                    bgcolor=bg_color,
+                    border_radius=8,
+                )
+                items_list.controls.append(item_row)
+        else:
+            items_list.controls.append(
+                ft.Container(
+                    content=ft.Column([
+                        ft.Icon(ft.Icons.INBOX, size=40, color="#CBD5E1"),
+                        ft.Text(get_text("no_items"), size=13, color="#94A3B8"),
+                    ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=8),
+                    padding=ft.padding.all(30),
+                    alignment=ft.Alignment(0, 0),
+                )
             )
-            items_list.controls.append(item_row)
         
         items_card = ft.Card(
             content=ft.Container(
@@ -274,61 +306,75 @@ class PurchaseOrderDetailContent:
                     ft.Row(
                         [
                             ft.Container(
-                                content=ft.Icon(ft.Icons.LIST, size=20, color=self.primary_color),
-                                bgcolor="#E3F2FD",
+                                content=ft.Icon(ft.Icons.LIST_ALT, size=18, color=self.primary_color),
+                                bgcolor=ft.Colors.with_opacity(0.1, self.primary_color),
                                 border_radius=10,
                                 padding=ft.padding.all(8),
                             ),
-                            ft.Text(get_text("items"), size=16, weight=ft.FontWeight.BOLD, color="#1E293B"),
+                            ft.Text(get_text("items"), size=15, weight=ft.FontWeight.BOLD, color="#1E293B"),
                             ft.Container(expand=True),
-                            ft.Text(f"{get_text('total_amount')}: {int(total_amount):,} KIP", size=14, weight=ft.FontWeight.BOLD, color=self.primary_color),
+                            ft.Container(
+                                content=ft.Row([
+                                    ft.Text(get_text("total_amount") + ":", size=12, color="#64748B"),
+                                    ft.Text(f"{int(total_amount):,} KIP", size=15, weight=ft.FontWeight.BOLD, color=self.success_color),
+                                ], spacing=6),
+                                padding=ft.padding.symmetric(horizontal=12, vertical=6),
+                                bgcolor=ft.Colors.GREY_50,
+                                border_radius=16,
+                            ),
                         ],
-                        spacing=12,
+                        spacing=10,
                         vertical_alignment=ft.CrossAxisAlignment.CENTER,
                     ),
-                    ft.Divider(height=1, color=ft.Colors.GREY_100),
+                    ft.Divider(height=1, color=ft.Colors.GREY_200),
                     ft.Container(height=8),
                     ft.Row([
+                        ft.Container(
+                            content=ft.Icon(ft.Icons.INVENTORY, size=14, color="#64748B"),
+                            width=30,
+                        ),
                         ft.Text(get_text("part_name"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", expand=True),
-                        ft.Text(get_text("qty"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=60),
-                        ft.Text(get_text("unit_cost"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=120),
-                        ft.Text(get_text("total"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=130),
-                        ft.Text(get_text("received"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=80),
-                    ], spacing=8),
+                        ft.Text(get_text("qty"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=60, text_align=ft.TextAlign.CENTER),
+                        ft.Text(get_text("total"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=120, text_align=ft.TextAlign.RIGHT),
+                        ft.Text(get_text("received"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=80, text_align=ft.TextAlign.CENTER),
+                    ], spacing=12),
                     ft.Container(height=8),
                     items_list,
                 ]),
                 padding=ft.padding.all(20),
             ),
             elevation=2,
-            margin=ft.margin.only(bottom=20),
+            margin=ft.margin.only(bottom=16),
         )
         
-        # Action Buttons
+        # ========== ACTION BUTTONS ==========
         back_btn = ft.OutlinedButton(
             content=ft.Row([
                 ft.Icon(ft.Icons.ARROW_BACK, size=18, color=self.primary_color),
-                ft.Text(get_text("back_to_list"), size=14, color=self.primary_color),
+                ft.Text(get_text("back_to_list"), size=14, color=self.primary_color, weight=ft.FontWeight.W_500),
             ], spacing=6),
             on_click=lambda e: self.navigate("purchase_order_list"),
             style=ft.ButtonStyle(
-                shape=ft.RoundedRectangleBorder(radius=8),
+                shape=ft.RoundedRectangleBorder(radius=10),
                 side=ft.BorderSide(1, self.primary_color),
+                padding=ft.padding.symmetric(horizontal=24, vertical=12),
             ),
         )
         
-        action_row = ft.Row([back_btn], spacing=12, alignment=ft.MainAxisAlignment.END)
+        action_row = ft.Row([back_btn], spacing=12, alignment=ft.MainAxisAlignment.CENTER)
         
         return ft.Column([
             po_info_card,
             items_card,
+            ft.Container(height=20),
             action_row,
-        ], spacing=20)
+        ], spacing=0)
     
     def show_snack_bar(self, message: str, is_error: bool = False):
         self.page.snack_bar = ft.SnackBar(
-            content=ft.Text(message),
+            content=ft.Text(message, size=13),
             bgcolor=ft.Colors.RED_600 if is_error else ft.Colors.GREEN_600,
             open=True,
+            duration=3000,
         )
         self.page.update()

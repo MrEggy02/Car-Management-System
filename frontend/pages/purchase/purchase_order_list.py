@@ -16,6 +16,7 @@ class PurchaseOrderListContent:
         self.primary_dark = "#0D47A1"
         self.purchase_orders = []
         self.filtered_orders = []
+        self.low_stock_parts = []
         self.current_page = 1
         self.items_per_page = 10
         self.total_pages = 1
@@ -23,30 +24,43 @@ class PurchaseOrderListContent:
         self.status_filter = None
         self.table_rows = None
         self.pagination_container = None
+        self.low_stock_container = None
+        self.low_stock_visible = True
 
     def build(self):
         header = self._build_header()
+        
+        # Low Stock Alert Section (Process 7.1)
+        self.low_stock_container = ft.Container(
+            content=self._build_low_stock_alert(),
+            margin=ft.margin.only(bottom=16),
+            visible=True,
+        )
+        
         search_bar = self._build_search_bar()
         table = self._build_table()
         self.pagination_container = ft.Container(padding=ft.padding.symmetric(vertical=12, horizontal=20))
         
+        # Main scrollable content area
         content_area = ft.Container(
             content=ft.Column([
+                self.low_stock_container,
                 search_bar,
                 table,
                 self.pagination_container,
-            ], expand=True),
+            ], spacing=0, scroll=ft.ScrollMode.AUTO, expand=True),
             expand=True,
             padding=ft.padding.all(24),
             bgcolor="#F5F7FA",
         )
         
         main_content = ft.Container(
-            content=ft.Column([header, content_area]),
+            content=ft.Column([header, content_area], expand=True),
             expand=True,
             bgcolor="#F5F7FA",
         )
         
+        self.load_low_stock_parts()
         self.load_purchase_orders()
         
         return main_content
@@ -63,7 +77,6 @@ class PurchaseOrderListContent:
                                 weight=ft.FontWeight.BOLD,
                                 color=ft.Colors.WHITE,
                             ),
-                            
                         ],
                         spacing=2,
                     ),
@@ -93,6 +106,152 @@ class PurchaseOrderListContent:
             ),
             border_radius=ft.BorderRadius.only(bottom_left=20, bottom_right=20),
         )
+    
+    def _build_low_stock_alert(self):
+        """Build low stock alert section (Process 7.1) with scrollable list"""
+        
+        # Header with toggle button (using KEYBOARD_ARROW_UP/DOWN instead of ARROW_UP/DOWN)
+        header_row = ft.Row([
+            ft.Container(
+                content=ft.Icon(ft.Icons.WARNING, size=20, color=ft.Colors.WHITE),
+                bgcolor="#F59E0B",
+                border_radius=8,
+                padding=ft.padding.all(6),
+            ),
+            ft.Text(get_text("low_stock_alert"), size=15, weight=ft.FontWeight.BOLD, color="#1E293B"),
+            ft.Container(expand=True),
+            ft.IconButton(
+                icon=ft.Icons.KEYBOARD_ARROW_UP if self.low_stock_visible else ft.Icons.KEYBOARD_ARROW_DOWN,
+                icon_size=18,
+                icon_color="#64748B",
+                tooltip=get_text("collapse"),
+                on_click=self._toggle_low_stock_alert,
+            ),
+        ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER)
+        
+        # Low stock list with max height and scroll
+        low_stock_list = ft.Column(spacing=6, scroll=ft.ScrollMode.AUTO, height=250)
+        
+        def create_low_stock_card(part):
+            part_id = part.get('id')
+            part_name = part.get('name', '-')
+            stock_qty = part.get('stock_qty', 0)
+            min_stock = part.get('min_stock', 5)
+            supplier_name = part.get('supplier_name', '-')
+            supplier_phone = part.get('supplier_phone', '-')
+            
+            # Calculate percentage
+            percentage = (stock_qty / min_stock * 100) if min_stock > 0 else 0
+            
+            # Determine urgency color
+            if percentage <= 25:
+                urgency_color = "#EF4444"
+                urgency_text = get_text("critical_stock")
+            elif percentage <= 50:
+                urgency_color = "#F59E0B"
+                urgency_text = get_text("warning_stock")
+            else:
+                urgency_color = "#10B981"
+                urgency_text = get_text("low_stock")
+            
+            return ft.Container(
+                content=ft.Row([
+                    ft.Container(
+                        content=ft.Icon(ft.Icons.WARNING_AMBER, size=20, color=urgency_color),
+                        bgcolor=ft.Colors.with_opacity(0.1, urgency_color),
+                        border_radius=10,
+                        padding=ft.padding.all(8),
+                    ),
+                    ft.Column([
+                        ft.Text(part_name, size=14, weight=ft.FontWeight.W_600, color="#1E293B"),
+                        ft.Text(f"{get_text('supplier')}: {supplier_name} | {get_text('phone')}: {supplier_phone}", size=11, color="#64748B"),
+                    ], spacing=2, expand=True),
+                    ft.Column([
+                        ft.Container(
+                            content=ft.Text(f"{stock_qty} / {min_stock}", size=13, weight=ft.FontWeight.W_700, color=urgency_color),
+                            bgcolor=ft.Colors.with_opacity(0.1, urgency_color),
+                            border_radius=12,
+                            padding=ft.padding.symmetric(horizontal=12, vertical=4),
+                        ),
+                        ft.Text(urgency_text, size=10, color=urgency_color),
+                    ], spacing=2, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                    ft.ElevatedButton(
+                        content=ft.Row([
+                            ft.Icon(ft.Icons.SHOPPING_CART, size=14, color=ft.Colors.WHITE),
+                            ft.Text(get_text("order_now"), size=12, color=ft.Colors.WHITE),
+                        ], spacing=4),
+                        on_click=lambda e, pid=part_id: self.navigate("purchase_order_create", part_id=pid),
+                        style=ft.ButtonStyle(
+                            bgcolor=self.primary_color,
+                            shape=ft.RoundedRectangleBorder(radius=8),
+                            padding=ft.padding.symmetric(horizontal=12, vertical=6),
+                        ),
+                    ),
+                ], spacing=12, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                padding=ft.padding.all(12),
+                bgcolor=ft.Colors.WHITE,
+                border_radius=10,
+                border=ft.border.all(1, ft.Colors.GREY_200),
+            )
+        
+        if self.low_stock_parts:
+            for part in self.low_stock_parts[:10]:  # Show max 10 items
+                low_stock_list.controls.append(create_low_stock_card(part))
+            
+            # Show more indicator if more than 10
+            if len(self.low_stock_parts) > 10:
+                low_stock_list.controls.append(
+                    ft.Container(
+                        content=ft.Text(f"... {get_text('and_more')} {len(self.low_stock_parts) - 10} {get_text('items')}", size=11, color="#64748B"),
+                        padding=ft.padding.all(8),
+                        alignment=ft.Alignment(0, 0),
+                    )
+                )
+        else:
+            low_stock_list.controls.append(
+                ft.Container(
+                    content=ft.Text(get_text("no_low_stock_parts"), size=13, color="#94A3B8"),
+                    padding=ft.padding.all(30),
+                    alignment=ft.Alignment(0, 0),
+                )
+            )
+        
+        info_text = ft.Text(
+            f"{get_text('parts_need_reorder')}: {len(self.low_stock_parts)} {get_text('items')}",
+            size=12,
+            color="#64748B",
+        )
+        
+        content_column = ft.Column([
+            header_row,
+            ft.Divider(height=1, color=ft.Colors.GREY_200),
+            ft.Container(height=8),
+            info_text,
+            ft.Container(height=8),
+            low_stock_list,
+        ], spacing=0)
+        
+        # Make the low stock card collapsible
+        if not self.low_stock_visible:
+            content_column = ft.Column([
+                header_row,
+                ft.Divider(height=1, color=ft.Colors.GREY_200),
+            ], spacing=0)
+        
+        return ft.Card(
+            content=ft.Container(
+                content=content_column,
+                padding=ft.padding.all(16),
+            ),
+            elevation=2,
+            margin=ft.margin.only(bottom=16),
+        )
+    
+    def _toggle_low_stock_alert(self, e):
+        """Toggle low stock alert visibility"""
+        self.low_stock_visible = not self.low_stock_visible
+        self.low_stock_container.content = self._build_low_stock_alert()
+        self.low_stock_container.update()
     
     def _build_search_bar(self):
         self.status_filter = ft.Dropdown(
@@ -127,7 +286,7 @@ class PurchaseOrderListContent:
             icon=ft.Icons.REFRESH,
             icon_size=22,
             tooltip=get_text("refresh"),
-            on_click=lambda e: self.load_purchase_orders(),
+            on_click=lambda e: self.refresh_all(),
             style=ft.ButtonStyle(
                 shape=ft.RoundedRectangleBorder(radius=10),
                 side=ft.BorderSide(1, ft.Colors.GREY_300),
@@ -186,18 +345,42 @@ class PurchaseOrderListContent:
         
         self.table_rows = ft.Column(spacing=0, scroll=ft.ScrollMode.AUTO, expand=True)
         
+        # Add horizontal scroll for table
+        table_content = ft.Column([
+            table_header,
+            ft.Divider(height=1, color=ft.Colors.GREY_300),
+            self.table_rows,
+        ], spacing=0)
+        
+        table_scroll = ft.Container(
+            content=table_content,
+            width=1000,
+        )
+        
         return ft.Container(
-            content=ft.Column([
-                table_header,
-                ft.Divider(height=1, color=ft.Colors.GREY_300),
-                self.table_rows,
-            ], spacing=0),
+            content=ft.Row([table_scroll], scroll=ft.ScrollMode.AUTO),
             margin=ft.margin.only(left=20, right=20),
             bgcolor=ft.Colors.WHITE,
             border_radius=12,
             border=ft.border.all(1, ft.Colors.GREY_200),
             expand=True,
         )
+    
+    def refresh_all(self):
+        """Refresh both low stock and purchase orders"""
+        self.load_low_stock_parts()
+        self.load_purchase_orders()
+    
+    def load_low_stock_parts(self):
+        """Load low stock parts for alert (Process 7.1)"""
+        try:
+            parts = self.client.get_low_stock_parts()
+            self.low_stock_parts = parts
+            
+            self.low_stock_container.content = self._build_low_stock_alert()
+            self.low_stock_container.update()
+        except Exception as ex:
+            print(f"Error loading low stock parts: {ex}")
     
     def load_purchase_orders(self):
         self.table_rows.controls.clear()
@@ -547,8 +730,9 @@ class PurchaseOrderListContent:
     
     def show_snack_bar(self, message: str, is_error: bool = False):
         self.page.snack_bar = ft.SnackBar(
-            content=ft.Text(message),
+            content=ft.Text(message, size=13),
             bgcolor=ft.Colors.RED_600 if is_error else ft.Colors.GREEN_600,
             open=True,
+            duration=3000,
         )
         self.page.update()

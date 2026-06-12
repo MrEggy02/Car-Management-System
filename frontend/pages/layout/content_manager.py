@@ -42,7 +42,7 @@ class ContentManager:
         elif index == 11:
             content = self._get_customer_list_content()
         elif index == 12:
-            content = self._get_placeholder("Job Order Creation (Use Dialog)")
+            content = self._get_job_order_create_content()
         elif index == 13:
             content = self._get_job_order_list_content()
         elif index == 14:

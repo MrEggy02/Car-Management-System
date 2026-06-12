@@ -1,3 +1,4 @@
+# pages/repair/repair_list.py
 import flet as ft
 from flet import Alignment
 from typing import Dict, Callable
@@ -14,6 +15,7 @@ class RepairListContent:
         self.navigate = navigate
         self.primary_color = "#1565C0"
         self.primary_dark = "#0D47A1"
+        self.success_color = "#10B981"
         self.repair_orders = []
         self.filtered_orders = []
         self.current_page = 1
@@ -64,7 +66,6 @@ class RepairListContent:
                                 weight=ft.FontWeight.BOLD,
                                 color=ft.Colors.WHITE,
                             ),
-                            
                         ],
                         spacing=2,
                     ),
@@ -345,17 +346,34 @@ class RepairListContent:
             "completed": get_text("completed")
         }
         
-        status_badge = ft.Container(
-            content=ft.Row([
-                ft.Icon(ft.Icons.CIRCLE, size=8, color=ft.Colors.WHITE),
-                ft.Text(status_texts.get(status, status), size=11, color=ft.Colors.WHITE),
-                ft.Icon(ft.Icons.ARROW_DROP_DOWN, size=16, color=ft.Colors.WHITE),
-            ], spacing=4),
-            bgcolor=status_colors.get(status, "#607D8B"),
-            border_radius=12,
-            padding=ft.padding.symmetric(horizontal=10, vertical=4),
-            on_click=lambda e, rid=repair_id, cur_status=status: self.show_update_status_dialog(rid, cur_status),
-        )
+        # Check if status is completed - no dropdown icon, not clickable
+        is_completed = status == "completed"
+        
+        if is_completed:
+            # Simple badge without dropdown arrow
+            status_badge = ft.Container(
+                content=ft.Row([
+                    ft.Icon(ft.Icons.CIRCLE, size=8, color=ft.Colors.WHITE),
+                    ft.Text(status_texts.get(status, status), size=11, color=ft.Colors.WHITE),
+                ], spacing=4),
+                bgcolor=status_colors.get(status, "#607D8B"),
+                border_radius=12,
+                padding=ft.padding.symmetric(horizontal=10, vertical=4),
+                # No on_click event for completed status
+            )
+        else:
+            # Clickable badge with dropdown arrow
+            status_badge = ft.Container(
+                content=ft.Row([
+                    ft.Icon(ft.Icons.CIRCLE, size=8, color=ft.Colors.WHITE),
+                    ft.Text(status_texts.get(status, status), size=11, color=ft.Colors.WHITE),
+                    ft.Icon(ft.Icons.ARROW_DROP_DOWN, size=16, color=ft.Colors.WHITE),
+                ], spacing=4),
+                bgcolor=status_colors.get(status, "#607D8B"),
+                border_radius=12,
+                padding=ft.padding.symmetric(horizontal=10, vertical=4),
+                on_click=lambda e, rid=repair_id, cur_status=status: self.show_update_status_dialog(rid, cur_status),
+            )
         
         view_btn = ft.Container(
             content=ft.Row([
@@ -482,6 +500,11 @@ class RepairListContent:
         self.navigate("repair_detail", repair_id=repair_id)
     
     def show_update_status_dialog(self, repair_id: int, current_status: str):
+        # Don't show dialog if status is completed
+        if current_status == "completed":
+            self.show_snack_bar(get_text("cannot_update_completed_status"), is_error=True)
+            return
+        
         status_dropdown = ft.Dropdown(
             label=get_text("select_status"),
             value=current_status,
@@ -561,7 +584,7 @@ class RepairListContent:
     
     def show_snack_bar(self, message: str, is_error: bool = False):
         self.page.snack_bar = ft.SnackBar(
-            content=ft.Text(message),
+            content=ft.Text(message, size=13),
             bgcolor=ft.Colors.RED_600 if is_error else ft.Colors.GREEN_600,
             open=True,
             duration=3000,

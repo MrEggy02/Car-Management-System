@@ -299,7 +299,8 @@ class APIClient:
         sell_price: float = 0,
         stock_qty: int = 0,
         min_stock: int = 5,
-        unit: str = "ຊິ້ນ",
+        unit_id: Optional[int] = None,
+        category_id: Optional[int] = None,
         supplier_id: Optional[int] = None
     ) -> Dict:
         data = {
@@ -308,8 +309,12 @@ class APIClient:
             "sell_price": sell_price,
             "stock_qty": stock_qty,
             "min_stock": min_stock,
-            "unit": unit,
+            
         }
+        if unit_id:
+            data["unit_id"] = unit_id
+        if category_id:
+            data["category_id"] = category_id
         if supplier_id:
             data["supplier_id"] = supplier_id
         return self._request("POST", "/parts", data=data)
@@ -841,3 +846,39 @@ class APIClient:
     def clear_promotion_services(self, promotion_id: int) -> Dict:
         """Clear all services from promotion"""
         return self._request("DELETE", f"/promotions/{promotion_id}/services")
+    
+    def add_job_order_part(self, job_order_id: int, part_id: int, quantity: int = 1, unit_price: float = 0) -> Dict:
+        """Add part to job order"""
+        return self._request("POST", f"/job-orders/{job_order_id}/parts", data={
+            "part_id": part_id,
+            "quantity": quantity,
+            "unit_price": unit_price
+        })
+
+    def add_job_order_service(self, job_order_id: int, service_id: int, quantity: int = 1, unit_price: float = 0) -> Dict:
+        """Add service to job order"""
+        return self._request("POST", f"/job-orders/{job_order_id}/services", data={
+            "service_id": service_id,
+            "quantity": quantity,
+            "unit_price": unit_price
+        })
+
+    def get_job_order_parts(self, job_order_id: int) -> List[Dict]:
+        """Get all parts for a job order"""
+        return self._request("GET", f"/job-orders/{job_order_id}/parts")
+
+    def get_job_order_services(self, job_order_id: int) -> List[Dict]:
+        """Get all services for a job order"""
+        return self._request("GET", f"/job-orders/{job_order_id}/services")
+    
+    def delete_job_order_part(self, job_order_id: int, item_id: int) -> Dict:
+        """Delete part from job order"""
+        return self._request("DELETE", f"/job-orders/{job_order_id}/parts/{item_id}")
+
+    def delete_job_order_service(self, job_order_id: int, item_id: int) -> Dict:
+        """Delete service from job order"""
+        return self._request("DELETE", f"/job-orders/{job_order_id}/services/{item_id}")
+    
+    def get_quotation_items(self, quotation_id: int) -> List[Dict]:
+        """Get all items for a quotation"""
+        return self._request("GET", f"/quotations/{quotation_id}/items")

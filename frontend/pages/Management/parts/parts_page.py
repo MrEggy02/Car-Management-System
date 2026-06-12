@@ -22,6 +22,8 @@ class PartsContent:
         self.parts_data = []
         self.filtered_parts = []
         self.search_input = None
+        self.category_chips = None
+        self.current_category_id = None
         self.current_page = 1
         self.items_per_page = 25
         self.total_pages = 1
@@ -55,7 +57,6 @@ class PartsContent:
                                 weight=ft.FontWeight.BOLD, 
                                 color=ft.Colors.WHITE
                             ),
-                            
                         ],
                         spacing=2,
                     ),
@@ -100,13 +101,16 @@ class PartsContent:
             focused_border_color=self.primary_color,
         )
         
-        search_container = ft.Container(
-            content=self.search_input,
-            expand=True,
-        )
+        # Category Chips (like quotation create page)
+        self.category_chips = ft.Row(spacing=8, scroll=ft.ScrollMode.AUTO)
         
+        # Control bar with search
         control_bar = ft.Container(
-            content=search_container,
+            content=ft.Column([
+                self.search_input,
+                ft.Container(height=12),
+                self.category_chips,
+            ], spacing=0),
             padding=ft.padding.all(20),
             bgcolor="#F5F7FA",
         )
@@ -233,7 +237,7 @@ class PartsContent:
         
         row_bg = ft.Colors.GREY_50 if index % 2 == 0 else ft.Colors.WHITE
         
-        # Stock status badge - simplified and smaller
+        # Stock status badge
         if is_low_stock:
             stock_badge = ft.Container(
                 content=ft.Text(formatted_stock, size=11, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500),
@@ -259,7 +263,7 @@ class PartsContent:
                 alignment=ft.Alignment(0, 0),
             )
         
-        # Status badge - simplified
+        # Status badge
         if is_low_stock:
             status_badge = ft.Container(
                 content=ft.Text(get_text("low_stock"), size=10, color=ft.Colors.WHITE),
@@ -275,7 +279,7 @@ class PartsContent:
                 padding=ft.padding.symmetric(horizontal=5, vertical=2),
             )
         
-        # Action buttons - smaller
+        # Action buttons
         edit_btn = ft.IconButton(
             icon=ft.Icons.EDIT_OUTLINED,
             icon_size=18,
@@ -443,19 +447,76 @@ class PartsContent:
             self.display_parts(self.filtered_parts)
     
     def filter_parts(self, e=None):
+        """Filter parts by search keyword and category"""
         query = self.search_input.value.lower() if self.search_input.value else ""
+        
         self.current_page = 1
         
-        if not query:
-            self.filtered_parts = self.parts_data.copy()
-        else:
-            self.filtered_parts = [
-                part for part in self.parts_data
+        # Start with all parts
+        filtered = self.parts_data.copy()
+        
+        # Apply search filter
+        if query:
+            filtered = [
+                part for part in filtered
                 if query in part.get('name', '').lower()
                 or (part.get('supplier_name') and query in part.get('supplier_name', '').lower())
             ]
         
+        # Apply category filter
+        if self.current_category_id:
+            filtered = [
+                part for part in filtered
+                if part.get('category_id') == self.current_category_id
+            ]
+        
+        self.filtered_parts = filtered
         self.display_parts(self.filtered_parts)
+    
+    def filter_by_category(self, category_id):
+        """Filter by category chip click"""
+        self.current_category_id = category_id
+        self.load_category_chips()
+        self.filter_parts()
+    
+    def load_category_chips(self):
+        """Load category chips from categories data"""
+        self.category_chips.controls.clear()
+        
+        # Add "All" chip
+        all_chip = ft.Container(
+            content=ft.Row([
+                ft.Icon(ft.Icons.VIEW_LIST, size=14, color=ft.Colors.WHITE if self.current_category_id is None else "#64748B"),
+                ft.Text(get_text("all_items"), size=12, weight=ft.FontWeight.W_500,
+                       color=ft.Colors.WHITE if self.current_category_id is None else "#64748B"),
+            ], spacing=6),
+            bgcolor=self.primary_color if self.current_category_id is None else ft.Colors.GREY_200,
+            border_radius=20,
+            padding=ft.padding.symmetric(horizontal=12, vertical=5),
+            ink=True,
+            on_click=lambda e: self.filter_by_category(None),
+        )
+        self.category_chips.controls.append(all_chip)
+        
+        # Add category chips from database
+        for cat in self.categories:
+            if cat.get('status') == 'active':
+                is_active = self.current_category_id == cat.get('id')
+                chip = ft.Container(
+                    content=ft.Row([
+                        ft.Icon(ft.Icons.CATEGORY, size=14, color=ft.Colors.WHITE if is_active else "#64748B"),
+                        ft.Text(cat.get('name', '-'), size=12, weight=ft.FontWeight.W_500,
+                               color=ft.Colors.WHITE if is_active else "#64748B"),
+                    ], spacing=6),
+                    bgcolor=self.primary_color if is_active else ft.Colors.GREY_200,
+                    border_radius=20,
+                    padding=ft.padding.symmetric(horizontal=12, vertical=5),
+                    ink=True,
+                    on_click=lambda e, cid=cat.get('id'): self.filter_by_category(cid),
+                )
+                self.category_chips.controls.append(chip)
+        
+        self.page.update()
     
     def display_parts(self, parts):
         self.table_rows.controls.clear()
@@ -493,8 +554,11 @@ class PartsContent:
             
             print(f"DEBUG: Loaded {len(self.units)} units, {len(self.categories)} categories, {len(self.suppliers)} suppliers")
             
+            # Load category chips
+            self.load_category_chips()
+            
             # Load parts
-            self.parts_data = self.client.get_parts()
+            self.parts_data = self.client.get_parts() or []
             self.filtered_parts = self.parts_data.copy()
             print(f"DEBUG: Loaded {len(self.parts_data)} parts")
             
@@ -540,9 +604,7 @@ class PartsContent:
             self.show_snackbar(f"❌ {get_text('error')}")
             return
         
-        active_units = [u for u in self.units]
-        active_categories = [c for c in self.categories]
-        self.dialogs.show_edit_dialog(part, active_units, active_categories, self.suppliers)
+        self.dialogs.show_edit_dialog(part, self.units, self.categories, self.suppliers)
     
     def delete_part(self, part_id):
         """Delete part with confirmation dialog"""

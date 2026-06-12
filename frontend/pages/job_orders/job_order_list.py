@@ -489,31 +489,8 @@ class JobOrderListContent:
         self.display_orders()
     
     def show_create_dialog(self):
-        def on_save(data):
-            try:
-                result = self.client.create_job_order(
-                    customer_id=data["customer_id"],
-                    vehicle_id=data["vehicle_id"],
-                    problem_description=data["problem_description"],
-                    mileage=data["mileage"],
-                    fuel_level=data["fuel_level"],
-                )
-                if result:
-                    self._close_dialog()
-                    self.load_orders()
-                    self.show_success_popup(result.get("job_no", "N/A"))
-            except Exception as err:
-                self.show_snack_bar(f"{get_text('error')}: {err}", is_error=True)
-        
-        dialog = show_create_job_order_dialog(
-            self.primary_color,
-            self.customers,
-            self.vehicles_by_customer,
-            on_save,
-            self._close_dialog,
-            self.page
-        )
-        self._open_dialog(dialog)
+        """Navigate to create job order page"""
+        self.navigate("job_order_create")
     
     def show_detail_dialog(self, order_id):
         order = next((o for o in self.job_orders if o.get("id") == order_id), None)

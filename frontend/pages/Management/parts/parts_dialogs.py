@@ -200,7 +200,7 @@ class PartsDialogs:
             selected_supplier_name[0] = item_name
             print(f"Supplier selected: {item_id} - {item_name}")
         
-        # Create searchable dropdowns with hint text
+        # Create searchable dropdowns
         unit_container, unit_field = self.create_searchable_dropdown(
             get_text("unit"), 
             get_text("select_unit_hint"),
@@ -291,27 +291,40 @@ class PartsDialogs:
         )
         
         def save(e):
-            if name.value and sell_price.value:
-                try:
-                    self.parent.client.add_part(
-                        name=name.value,
-                        cost_price=float(cost_price.value) if cost_price.value else 0,
-                        sell_price=float(sell_price.value) if sell_price.value else 0,
-                        stock_qty=int(stock_qty.value) if stock_qty.value else 0,
-                        min_stock=int(min_stock.value) if min_stock.value else 5,
-                        unit=selected_unit_id[0],
-                        supplier_id=selected_supplier_id[0],
-                        category_id=selected_category_id[0]
-                    )
-                    self._close_dialog()
-                    self.parent.load_data()
-                    self.parent.show_snackbar(f"✅ {get_text('add_success')}")
-                except Exception as err:
-                    print(f"Error saving: {err}")
-                    traceback.print_exc()
-                    self.parent.show_snackbar(f"{get_text('error')}: {err}")
-            else:
-                self.parent.show_snackbar(get_text("fill_all_fields"))
+            if not name.value:
+                name.error_text = get_text("required_field")
+                if self.current_dialog:
+                    self.current_dialog.update()
+                return
+            if not sell_price.value:
+                sell_price.error_text = get_text("required_field")
+                if self.current_dialog:
+                    self.current_dialog.update()
+                return
+            
+            try:
+                sell_price_val = float(sell_price.value) if sell_price.value else 0
+                cost_price_val = float(cost_price.value) if cost_price.value else 0
+                stock_qty_val = int(stock_qty.value) if stock_qty.value else 0
+                min_stock_val = int(min_stock.value) if min_stock.value else 5
+                
+                self.parent.client.add_part(
+                    name=name.value,
+                    cost_price=cost_price_val,
+                    sell_price=sell_price_val,
+                    stock_qty=stock_qty_val,
+                    min_stock=min_stock_val,
+                    unit_id=selected_unit_id[0] if selected_unit_id[0] else None,
+                    category_id=selected_category_id[0] if selected_category_id[0] else None,
+                    supplier_id=selected_supplier_id[0] if selected_supplier_id[0] else None,
+                )
+                self._close_dialog()
+                self.parent.load_data()
+                self.parent.show_snackbar(f"✅ {get_text('add_success')}")
+            except Exception as err:
+                print(f"Error saving: {err}")
+                traceback.print_exc()
+                self.parent.show_snackbar(f"{get_text('error')}: {err}")
         
         dialog = ft.AlertDialog(
             modal=True,
@@ -413,7 +426,7 @@ class PartsDialogs:
             selected_supplier_name[0] = item_name
             print(f"Supplier selected: {item_id} - {item_name}")
         
-        # Create searchable dropdowns with hint text
+        # Create searchable dropdowns with values
         unit_container, unit_field = self.create_searchable_dropdown(
             get_text("unit"), 
             get_text("select_unit_hint"),
@@ -447,6 +460,7 @@ class PartsDialogs:
             content_padding=ft.padding.symmetric(horizontal=14, vertical=12),
             border_color=ft.Colors.GREY_300,
             focused_border_color=self.parent.primary_color,
+            expand=True,
         )
         
         cost_price = ft.TextField(
@@ -507,20 +521,34 @@ class PartsDialogs:
         
         def save_edit(e):
             try:
-                if not name.value or not sell_price.value:
-                    self.parent.show_snackbar(get_text("fill_all_fields"))
+                if not name.value:
+                    name.error_text = get_text("required_field")
+                    if self.current_dialog:
+                        self.current_dialog.update()
+                    return
+                if not sell_price.value:
+                    sell_price.error_text = get_text("required_field")
+                    if self.current_dialog:
+                        self.current_dialog.update()
                     return
                 
-                self.parent.client.update_part(part.get('id'), {
+                sell_price_val = float(sell_price.value) if sell_price.value else 0
+                cost_price_val = float(cost_price.value) if cost_price.value else 0
+                stock_qty_val = int(stock_qty.value) if stock_qty.value else 0
+                min_stock_val = int(min_stock.value) if min_stock.value else 5
+                
+                update_data = {
                     'name': name.value,
-                    'cost_price': float(cost_price.value) if cost_price.value else 0,
-                    'sell_price': float(sell_price.value) if sell_price.value else 0,
-                    'stock_qty': int(stock_qty.value) if stock_qty.value else 0,
-                    'min_stock': int(min_stock.value) if min_stock.value else 5,
-                    'unit': selected_unit_id[0],
-                    'supplier_id': selected_supplier_id[0],
-                    'category_id': selected_category_id[0]
-                })
+                    'cost_price': cost_price_val,
+                    'sell_price': sell_price_val,
+                    'stock_qty': stock_qty_val,
+                    'min_stock': min_stock_val,
+                    'unit_id': selected_unit_id[0] if selected_unit_id[0] else None,
+                    'category_id': selected_category_id[0] if selected_category_id[0] else None,
+                    'supplier_id': selected_supplier_id[0] if selected_supplier_id[0] else None,
+                }
+                
+                self.parent.client.update_part(part.get('id'), update_data)
                 self._close_dialog()
                 self.parent.load_data()
                 self.parent.show_snackbar(f"✅ {get_text('edit_success')}")

@@ -282,6 +282,220 @@ def delete_job_order(order_id: int, user: dict = Depends(authenticate_user)):
         db.close()
 
 
+# ========== NEW ENDPOINTS FOR JOB ORDER PARTS AND SERVICES ==========
+
+@router.post("/job-orders/{job_order_id}/parts")
+def add_job_order_part(
+    job_order_id: int,
+    part_id: int = Form(...),
+    quantity: int = Form(1),
+    unit_price: float = Form(0),
+    user: dict = Depends(authenticate_user)
+):
+    """Add a part to job order"""
+    db = get_db()
+    cursor = db.cursor()
+    try:
+        # Check if job order exists
+        cursor.execute("SELECT id FROM job_orders WHERE id = %s", (job_order_id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail="Job order not found")
+        
+        # Check if job_order_parts table exists, if not create it
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS job_order_parts (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                job_order_id INT NOT NULL,
+                part_id INT NOT NULL,
+                quantity INT NOT NULL DEFAULT 1,
+                unit_price DECIMAL(12,2) NOT NULL DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (job_order_id) REFERENCES job_orders(id) ON DELETE CASCADE,
+                FOREIGN KEY (part_id) REFERENCES parts(id)
+            )
+        """)
+        db.commit()
+        
+        # Insert into job_order_parts
+        cursor.execute("""
+            INSERT INTO job_order_parts (job_order_id, part_id, quantity, unit_price)
+            VALUES (%s, %s, %s, %s)
+        """, (job_order_id, part_id, quantity, unit_price))
+        
+        db.commit()
+        return {"message": "Part added successfully", "id": cursor.lastrowid}
+    except Exception as e:
+        db.rollback()
+        print(f"Error adding job order part: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        db.close()
+
+
+@router.post("/job-orders/{job_order_id}/services")
+def add_job_order_service(
+    job_order_id: int,
+    service_id: int = Form(...),
+    quantity: int = Form(1),
+    unit_price: float = Form(0),
+    user: dict = Depends(authenticate_user)
+):
+    """Add a service to job order"""
+    db = get_db()
+    cursor = db.cursor()
+    try:
+        # Check if job order exists
+        cursor.execute("SELECT id FROM job_orders WHERE id = %s", (job_order_id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail="Job order not found")
+        
+        # Check if job_order_services table exists, if not create it
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS job_order_services (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                job_order_id INT NOT NULL,
+                service_id INT NOT NULL,
+                quantity INT NOT NULL DEFAULT 1,
+                unit_price DECIMAL(12,2) NOT NULL DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (job_order_id) REFERENCES job_orders(id) ON DELETE CASCADE,
+                FOREIGN KEY (service_id) REFERENCES services(id)
+            )
+        """)
+        db.commit()
+        
+        # Insert into job_order_services
+        cursor.execute("""
+            INSERT INTO job_order_services (job_order_id, service_id, quantity, unit_price)
+            VALUES (%s, %s, %s, %s)
+        """, (job_order_id, service_id, quantity, unit_price))
+        
+        db.commit()
+        return {"message": "Service added successfully", "id": cursor.lastrowid}
+    except Exception as e:
+        db.rollback()
+        print(f"Error adding job order service: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        db.close()
+
+
+@router.get("/job-orders/{job_order_id}/parts")
+def get_job_order_parts(
+    job_order_id: int,
+    user: dict = Depends(authenticate_user)
+):
+    """Get all parts for a job order"""
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+    try:
+        # Check if table exists
+        cursor.execute("""
+            SELECT COUNT(*) as cnt FROM information_schema.tables 
+            WHERE table_schema = DATABASE() AND table_name = 'job_order_parts'
+        """)
+        table_exists = cursor.fetchone()
+        
+        if not table_exists or table_exists['cnt'] == 0:
+            return []
+        
+        cursor.execute("""
+            SELECT jop.*, p.name as part_name, p.sell_price
+            FROM job_order_parts jop
+            LEFT JOIN parts p ON jop.part_id = p.id
+            WHERE jop.job_order_id = %s
+        """, (job_order_id,))
+        return cursor.fetchall()
+    except Exception as e:
+        print(f"Error getting job order parts: {e}")
+        return []
+    finally:
+        cursor.close()
+        db.close()
+
+
+@router.get("/job-orders/{job_order_id}/services")
+def get_job_order_services(
+    job_order_id: int,
+    user: dict = Depends(authenticate_user)
+):
+    """Get all services for a job order"""
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+    try:
+        # Check if table exists
+        cursor.execute("""
+            SELECT COUNT(*) as cnt FROM information_schema.tables 
+            WHERE table_schema = DATABASE() AND table_name = 'job_order_services'
+        """)
+        table_exists = cursor.fetchone()
+        
+        if not table_exists or table_exists['cnt'] == 0:
+            return []
+        
+        cursor.execute("""
+            SELECT jos.*, s.name as service_name, s.price
+            FROM job_order_services jos
+            LEFT JOIN services s ON jos.service_id = s.id
+            WHERE jos.job_order_id = %s
+        """, (job_order_id,))
+        return cursor.fetchall()
+    except Exception as e:
+        print(f"Error getting job order services: {e}")
+        return []
+    finally:
+        cursor.close()
+        db.close()
+
+
+@router.delete("/job-orders/{job_order_id}/parts/{item_id}")
+def delete_job_order_part(
+    job_order_id: int,
+    item_id: int,
+    user: dict = Depends(authenticate_user)
+):
+    """Delete a part from job order"""
+    db = get_db()
+    cursor = db.cursor()
+    try:
+        cursor.execute("DELETE FROM job_order_parts WHERE id = %s AND job_order_id = %s", 
+                      (item_id, job_order_id))
+        db.commit()
+        return {"message": "Part removed successfully"}
+    except Exception as e:
+        db.rollback()
+        print(f"Error deleting job order part: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        db.close()
+
+
+@router.delete("/job-orders/{job_order_id}/services/{item_id}")
+def delete_job_order_service(
+    job_order_id: int,
+    item_id: int,
+    user: dict = Depends(authenticate_user)
+):
+    """Delete a service from job order"""
+    db = get_db()
+    cursor = db.cursor()
+    try:
+        cursor.execute("DELETE FROM job_order_services WHERE id = %s AND job_order_id = %s", 
+                      (item_id, job_order_id))
+        db.commit()
+        return {"message": "Service removed successfully"}
+    except Exception as e:
+        db.rollback()
+        print(f"Error deleting job order service: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        db.close()
+
+
 @router.get("/job-orders/{job_order_id}/invoice-info")
 def get_invoice_info_by_job_order(
     job_order_id: int, 
@@ -321,94 +535,61 @@ def get_invoice_info_by_job_order(
                     "problem_description": ""
                 },
                 "parts": [],
-                "services": [
-                    {
-                        "id": 1,
-                        "name": "ຄ່າແຮງງານຊ່າງ",
-                        "qty": 1,
-                        "unit_price": 100000,
-                        "total": 100000,
-                        "discount_amount": 0
-                    }
-                ],
+                "services": [],
                 "summary": {
-                    "total_amount": 100000,
+                    "total_amount": 0,
                     "total_discount": 0,
-                    "final_total": 100000
+                    "final_total": 0
                 }
             }
         
-        # Get parts usage from repair orders
-        cursor.execute("""
-            SELECT 
-                pu.id, pu.part_id, pu.qty, pu.cost_price,
-                p.name as part_name, p.sell_price
-            FROM parts_usage pu
-            LEFT JOIN parts p ON pu.part_id = p.id
-            LEFT JOIN repair_orders ro ON pu.repair_id = ro.id
-            WHERE ro.job_order_id = %s
-        """, (job_order_id,))
-        
-        parts_usage = cursor.fetchall()
-        
-        # Format parts list
+        # Get parts from job_order_parts
         parts_list = []
-        for part in parts_usage:
-            price = part.get('sell_price', part.get('cost_price', 0)) or 0
-            parts_list.append({
-                'id': part.get('id'),
-                'name': part.get('part_name', '-'),
-                'qty': part.get('qty', 0),
-                'unit_price': price,
-                'total': (part.get('qty', 0) * price),
-                'discount_amount': 0
-            })
-        
-        # Get services (simple default if no quotation)
-        services_list = [
-            {
-                "id": 1,
-                "name": "ຄ່າແຮງງານຊ່າງ",
-                "qty": 1,
-                "unit_price": 100000,
-                "total": 100000,
-                "discount_amount": 0
-            }
-        ]
-        
-        # Try to get services from quotation
-        cursor.execute("""
-            SELECT q.id as quotation_id
-            FROM quotations q
-            WHERE q.job_order_id = %s AND q.status = 'approved'
-            ORDER BY q.id DESC LIMIT 1
-        """, (job_order_id,))
-        
-        quotation = cursor.fetchone()
-        
-        if quotation:
+        try:
             cursor.execute("""
-                SELECT 
-                    qi.id, qi.qty, qi.discount_amount,
-                    s.id as service_id, s.name as service_name, s.price as service_price
-                FROM quotation_items qi
-                LEFT JOIN services s ON qi.ref_id = s.id
-                WHERE qi.quotation_id = %s AND qi.item_type = 'service'
-            """, (quotation['quotation_id'],))
+                SELECT jop.*, p.name as part_name, p.sell_price
+                FROM job_order_parts jop
+                LEFT JOIN parts p ON jop.part_id = p.id
+                WHERE jop.job_order_id = %s
+            """, (job_order_id,))
+            parts = cursor.fetchall()
             
+            for part in parts:
+                price = part.get('unit_price', part.get('sell_price', 0)) or 0
+                parts_list.append({
+                    'id': part.get('id'),
+                    'name': part.get('part_name', '-'),
+                    'qty': part.get('quantity', 0),
+                    'unit_price': price,
+                    'total': (part.get('quantity', 0) * price),
+                    'discount_amount': 0
+                })
+        except Exception as e:
+            print(f"Error getting parts: {e}")
+        
+        # Get services from job_order_services
+        services_list = []
+        try:
+            cursor.execute("""
+                SELECT jos.*, s.name as service_name, s.price
+                FROM job_order_services jos
+                LEFT JOIN services s ON jos.service_id = s.id
+                WHERE jos.job_order_id = %s
+            """, (job_order_id,))
             services = cursor.fetchall()
-            if services:
-                services_list = []
-                for service in services:
-                    price = service.get('service_price', 0) or 0
-                    services_list.append({
-                        'id': service['id'],
-                        'name': service.get('service_name', '-'),
-                        'qty': service['qty'],
-                        'unit_price': price,
-                        'total': service['qty'] * price,
-                        'discount_amount': service.get('discount_amount', 0)
-                    })
+            
+            for service in services:
+                price = service.get('unit_price', service.get('price', 0)) or 0
+                services_list.append({
+                    'id': service.get('id'),
+                    'name': service.get('service_name', '-'),
+                    'qty': service.get('quantity', 1),
+                    'unit_price': price,
+                    'total': (service.get('quantity', 1) * price),
+                    'discount_amount': 0
+                })
+        except Exception as e:
+            print(f"Error getting services: {e}")
         
         # Calculate totals
         total_amount = sum(p['total'] for p in parts_list) + sum(s['total'] for s in services_list)
@@ -442,7 +623,6 @@ def get_invoice_info_by_job_order(
         print(f"Error getting invoice info: {e}")
         import traceback
         traceback.print_exc()
-        # Return default data
         return {
             "job_order": {
                 "id": job_order_id,
@@ -458,20 +638,11 @@ def get_invoice_info_by_job_order(
                 "problem_description": ""
             },
             "parts": [],
-            "services": [
-                {
-                    "id": 1,
-                    "name": "ຄ່າແຮງງານຊ່າງ",
-                    "qty": 1,
-                    "unit_price": 100000,
-                    "total": 100000,
-                    "discount_amount": 0
-                }
-            ],
+            "services": [],
             "summary": {
-                "total_amount": 100000,
+                "total_amount": 0,
                 "total_discount": 0,
-                "final_total": 100000
+                "final_total": 0
             }
         }
     finally:

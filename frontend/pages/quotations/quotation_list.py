@@ -1,3 +1,4 @@
+# pages/quotations/quotation_list.py
 import flet as ft
 from flet import Alignment
 from typing import Dict, Callable
@@ -38,6 +39,7 @@ class QuotationListContent:
         self.services_list = []
 
     def build(self):
+        # ส่วนหัว
         header = ft.Container(
             content=ft.Row(
                 [
@@ -49,7 +51,6 @@ class QuotationListContent:
                                 weight=ft.FontWeight.BOLD,
                                 color=ft.Colors.WHITE,
                             ),
-                          
                         ],
                         spacing=2,
                     ),
@@ -80,7 +81,7 @@ class QuotationListContent:
             border_radius=ft.BorderRadius.only(bottom_left=20, bottom_right=20),
         )
         
-        # Search bar
+        # ช่องค้นหา
         self.search_field = ft.TextField(
             hint_text=get_text("search_quotation"),
             border_radius=12,
@@ -105,13 +106,13 @@ class QuotationListContent:
             ),
         )
         
-        # Create table header
+        # สร้างส่วนหัวตาราง
         table_header = self._create_table_header()
         
-        # Table rows container (scrollable)
+        # ส่วนแสดงแถวตาราง
         self.table_rows = ft.Column(spacing=0, scroll=ft.ScrollMode.AUTO, expand=True)
         
-        # Table container
+        # คอนเทนเนอร์ตาราง
         table_container = ft.Container(
             content=ft.Column([
                 table_header,
@@ -125,13 +126,13 @@ class QuotationListContent:
             expand=True,
         )
         
-        # Pagination container
+        # ส่วนแบ่งหน้า
         self.pagination_container = ft.Container(
             padding=ft.padding.symmetric(vertical=12, horizontal=20),
             bgcolor="#F5F7FA",
         )
         
-        # Loading indicator
+        # ตัวโหลด
         self.loading_indicator = ft.Container(
             content=ft.Column([
                 ft.ProgressRing(width=40, height=40, stroke_width=4),
@@ -143,7 +144,7 @@ class QuotationListContent:
             visible=False,
         )
         
-        # Empty state
+        # สถานะไม่มีข้อมูล
         self.empty_state = ft.Container(
             content=ft.Column([
                 ft.Icon(ft.Icons.REQUEST_QUOTE, size=64, color=ft.Colors.GREY_300),
@@ -165,7 +166,7 @@ class QuotationListContent:
             visible=False,
         )
         
-        # Main content area
+        # ส่วนเนื้อหาหลัก
         content_area = ft.Container(
             content=ft.Column([
                 ft.Container(
@@ -193,7 +194,7 @@ class QuotationListContent:
         return main_content
     
     def _create_table_header(self):
-        """Create table header row"""
+        """สร้างส่วนหัวตาราง"""
         return ft.Container(
             content=ft.Row([
                 ft.Container(
@@ -242,7 +243,7 @@ class QuotationListContent:
         )
     
     def _create_table_row(self, quote: Dict, index: int):
-        """Create a table row"""
+        """สร้างแถวในตาราง"""
         quote_id = quote.get("id")
         customer_name = quote.get("customer_name", "-")
         plate_number = quote.get("plate_number", "-")
@@ -263,17 +264,34 @@ class QuotationListContent:
             "rejected": get_text("rejected")
         }
         
-        status_badge = ft.Container(
-            content=ft.Row([
-                ft.Icon(ft.Icons.CIRCLE, size=8, color=ft.Colors.WHITE),
-                ft.Text(status_texts.get(status, status), size=11, color=ft.Colors.WHITE),
-                ft.Icon(ft.Icons.ARROW_DROP_DOWN, size=16, color=ft.Colors.WHITE),
-            ], spacing=4),
-            bgcolor=status_colors.get(status, "#607D8B"),
-            border_radius=12,
-            padding=ft.padding.symmetric(horizontal=10, vertical=4),
-            on_click=lambda e, qid=quote_id, cur_status=status: self.show_update_status_dialog(qid, cur_status),
-        )
+        # Check if status is approved - no dropdown icon, not clickable
+        is_approved = status == "approved"
+        
+        if is_approved:
+            # Simple badge without dropdown arrow (not clickable)
+            status_badge = ft.Container(
+                content=ft.Row([
+                    ft.Icon(ft.Icons.CIRCLE, size=8, color=ft.Colors.WHITE),
+                    ft.Text(status_texts.get(status, status), size=11, color=ft.Colors.WHITE),
+                ], spacing=4),
+                bgcolor=status_colors.get(status, "#607D8B"),
+                border_radius=12,
+                padding=ft.padding.symmetric(horizontal=10, vertical=4),
+                # No on_click for approved status
+            )
+        else:
+            # Clickable badge with dropdown arrow for draft/rejected
+            status_badge = ft.Container(
+                content=ft.Row([
+                    ft.Icon(ft.Icons.CIRCLE, size=8, color=ft.Colors.WHITE),
+                    ft.Text(status_texts.get(status, status), size=11, color=ft.Colors.WHITE),
+                    ft.Icon(ft.Icons.ARROW_DROP_DOWN, size=16, color=ft.Colors.WHITE),
+                ], spacing=4),
+                bgcolor=status_colors.get(status, "#607D8B"),
+                border_radius=12,
+                padding=ft.padding.symmetric(horizontal=10, vertical=4),
+                on_click=lambda e, qid=quote_id, cur_status=status: self.show_update_status_dialog(qid, cur_status),
+            )
         
         view_btn = ft.Container(
             content=ft.Row([
@@ -295,15 +313,27 @@ class QuotationListContent:
             border_radius=6,
         )
         
-        delete_btn = ft.Container(
-            content=ft.Row([
-                ft.Icon(ft.Icons.DELETE_OUTLINE, size=16, color=ft.Colors.RED_600),
-                ft.Text(get_text("delete"), size=12, color=ft.Colors.RED_600),
-            ], spacing=4),
-            on_click=lambda e, qid=quote_id: self.delete_quotation(qid),
-            padding=ft.padding.symmetric(horizontal=8, vertical=4),
-            border_radius=6,
-        )
+        # Delete button - disabled for approved status
+        if is_approved:
+            delete_btn = ft.Container(
+                content=ft.Row([
+                    ft.Icon(ft.Icons.DELETE_OUTLINE, size=16, color=ft.Colors.GREY_400),
+                    ft.Text(get_text("delete"), size=12, color=ft.Colors.GREY_400),
+                ], spacing=4),
+                padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                border_radius=6,
+                tooltip=get_text("cannot_delete_approved_quotation"),
+            )
+        else:
+            delete_btn = ft.Container(
+                content=ft.Row([
+                    ft.Icon(ft.Icons.DELETE_OUTLINE, size=16, color=ft.Colors.RED_600),
+                    ft.Text(get_text("delete"), size=12, color=ft.Colors.RED_600),
+                ], spacing=4),
+                on_click=lambda e, qid=quote_id: self.delete_quotation(qid),
+                padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                border_radius=6,
+            )
         
         row = ft.Container(
             content=ft.Row([
@@ -357,7 +387,7 @@ class QuotationListContent:
         ], spacing=0)
     
     def load_quotations(self):
-        """Load quotations from API"""
+        """โหลดข้อมูลใบเสนอราคาจาก API"""
         self.loading_indicator.visible = True
         self.empty_state.visible = False
         self.table_rows.controls.clear()
@@ -374,7 +404,7 @@ class QuotationListContent:
             self.page.update()
     
     def filter_quotations(self, e):
-        """Filter quotations by search keyword"""
+        """กรองใบเสนอราคาตามคำค้นหา"""
         keyword = self.search_field.value.lower() if self.search_field.value else ""
         self.current_page = 1
         
@@ -392,7 +422,7 @@ class QuotationListContent:
         self.display_quotations()
     
     def display_quotations(self):
-        """Display quotations with pagination"""
+        """แสดงใบเสนอราคาพร้อมการแบ่งหน้า"""
         self.table_rows.controls.clear()
         
         total_items = len(self.filtered_quotations)
@@ -420,7 +450,7 @@ class QuotationListContent:
         self.page.update()
     
     def update_pagination_controls(self):
-        """Update pagination controls"""
+        """อัปเดตตัวควบคุมการแบ่งหน้า"""
         prev_disabled = self.current_page <= 1
         next_disabled = self.current_page >= self.total_pages
         
@@ -473,7 +503,7 @@ class QuotationListContent:
             self.display_quotations()
     
     def show_quotation_detail(self, quotation_id: int):
-        """Show detailed quotation in a scrollable dialog"""
+        """แสดงรายละเอียดใบเสนอราคาใน dialog"""
         self.loading_indicator.visible = True
         self.page.update()
         
@@ -500,15 +530,50 @@ class QuotationListContent:
             self.page.update()
     
     def show_update_status_dialog(self, quotation_id: int, current_status: str):
-        """Show dialog to update quotation status"""
+        """แสดง dialog สำหรับอัปเดตสถานะใบเสนอราคา"""
+        
+        # ไม่อนุญาตให้เปลี่ยนสถานะถ้าอนุมัติแล้ว
+        if current_status == "approved":
+            self.show_snack_bar(get_text("cannot_change_approved_quotation"), is_error=True)
+            return
         
         def on_update(qid, new_status):
             try:
+                # อัปเดตสถานะใบเสนอราคาเท่านั้น
+                # Backend จะอัปเดตสถานะ Job Order เป็น 'approved' ให้อัตโนมัติ
                 self.client.update_quotation_status(qid, new_status)
+                
                 self._close_dialog()
                 self.load_quotations()
                 self.show_snack_bar(f"✅ {get_text('status_updated_to')} {get_text(new_status)}", is_error=False)
+                
+                # ถ้าใบเสนอราคาถูกอนุมัติ ให้ถามว่าจะสร้างใบสั่งซ่อมเลยหรือไม่
+                if new_status == "approved":
+                    try:
+                        quotation = self.client.get_quotation(qid)
+                        if quotation and quotation.get('job_order_id'):
+                            def go_to_repair(e):
+                                dialog.open = False
+                                self.navigate("repair_create", job_order_id=quotation.get('job_order_id'))
+                            
+                            dialog = ft.AlertDialog(
+                                modal=True,
+                                title=ft.Text(get_text("quotation_approved"), size=16, weight=ft.FontWeight.BOLD),
+                                content=ft.Text(get_text("create_repair_order_now")),
+                                actions=[
+                                    ft.TextButton(get_text("later"), on_click=lambda e: setattr(dialog, 'open', False)),
+                                    ft.ElevatedButton(get_text("go_to_repair"), on_click=go_to_repair, style=ft.ButtonStyle(bgcolor=self.primary_color)),
+                                ],
+                                actions_alignment=ft.MainAxisAlignment.END,
+                            )
+                            self.page.overlay.append(dialog)
+                            dialog.open = True
+                            self.page.update()
+                    except:
+                        pass
+                        
             except Exception as ex:
+                print(f"DEBUG: Error in update: {ex}")
                 self.show_snack_bar(f"Error: {str(ex)}", is_error=True)
         
         dialog = show_update_status_dialog(
@@ -521,9 +586,14 @@ class QuotationListContent:
         self._open_dialog(dialog)
     
     def delete_quotation(self, quotation_id: int):
-        """Delete quotation with confirmation"""
+        """ลบใบเสนอราคาพร้อมยืนยัน"""
         quote = next((q for q in self.quotations if q.get("id") == quotation_id), None)
         quote_name = f"QT-{quotation_id:04d}" if quote else get_text("this_quotation")
+        
+        # ห้ามลบใบเสนอราคาที่อนุมัติแล้ว
+        if quote and quote.get("status") == "approved":
+            self.show_snack_bar(get_text("cannot_delete_approved_quotation"), is_error=True)
+            return
         
         def on_confirm():
             try:
@@ -542,7 +612,7 @@ class QuotationListContent:
         self._open_dialog(dialog)
     
     def print_quotation(self, quotation_id: int):
-        """Print quotation using browser print dialog"""
+        """พิมพ์ใบเสนอราคาโดยใช้ browser print dialog"""
         try:
             self.show_snack_bar(get_text("preparing_print"), is_error=False)
             
@@ -577,7 +647,7 @@ class QuotationListContent:
             self.show_snack_bar(f"{get_text('error')}: {str(ex)}", is_error=True)
     
     def _generate_print_html(self, quotation: Dict) -> str:
-        """Generate professional quotation HTML for printing"""
+        """สร้าง HTML สำหรับพิมพ์ใบเสนอราคา"""
         
         items = quotation.get("items", [])
         shop_info = {}
@@ -586,8 +656,8 @@ class QuotationListContent:
         except:
             pass
         
-        shop_name = shop_info.get('name', 'J&P Auto Maxing')
-        shop_address = shop_info.get('address', 'Vientiane, Lao PDR')
+        shop_name = shop_info.get('name', 'ຮ້ານຈີ້ ແອັບ ພີ ອໍໂຕ ແມັກຊິ້ງ')
+        shop_address = shop_info.get('address', 'ນະຄອນຫຼວງວຽງຈັນ')
         shop_phone = shop_info.get('phone', '020 92431434')
         
         quotation_no = f"QT-{quotation.get('id', 0):04d}"
@@ -601,9 +671,27 @@ class QuotationListContent:
         else:
             created_date = datetime.now().strftime("%d/%m/%Y")
         
-        items_html = ""
+        status = quotation.get("status", "draft")
+        if status == "draft":
+            status_text = "ຖ້າສະເໜີ"
+        elif status == "approved":
+            status_text = "ອະນຸມັດແລ້ວ"
+        elif status == "rejected":
+            status_text = "ປະຕິເສດ"
+        else:
+            status_text = status
+        
+        # คำนวณยอดรวม
+        subtotal = 0
+        total_discount = 0
         for item in items:
-            item_type = item.get("item_type", "part")
+            subtotal += item.get("total", 0)
+            total_discount += item.get("discount_amount", 0)
+        grand_total = subtotal - total_discount
+        
+        # สร้าง HTML ตารางรายการ
+        items_html = ""
+        for idx, item in enumerate(items, 1):
             name = item.get("name", "-")
             qty = item.get("qty", 1)
             unit_price = item.get("unit_price", 0)
@@ -612,14 +700,12 @@ class QuotationListContent:
             
             items_html += f"""
             <tr>
-                <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: center;">
-                    {"🛞" if item_type == "part" else "🔧"}
-                </td>
-                <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">{name}</td>
-                <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: center;">{qty}</td>
-                <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: right;">{int(unit_price):,}</td>
-                <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: right;">{int(discount):,}</td>
-                <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: right;"><strong>{int(total):,}</strong></td>
+                <td style="padding: 8px; border-bottom: 1px solid #ddd;">{idx}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #ddd;">{name}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: center;">{qty}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">{int(unit_price):,}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">{int(discount):,}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">{int(total):,}</td>
             </tr>
             """
         
@@ -628,91 +714,44 @@ class QuotationListContent:
         <html>
         <head>
             <meta charset="UTF-8">
-            <title>Quotation - {quotation_no}</title>
+            <title>ໃບສະເໜີລາຄາ {quotation_no}</title>
             <style>
-                @media print {{ body {{ margin: 0; padding: 0; }} }}
+                @media print {{
+                    body {{ margin: 0; padding: 15px; }}
+                }}
                 * {{ margin: 0; padding: 0; box-sizing: border-box; }}
                 body {{
                     font-family: 'Noto Sans', 'DejaVu Sans', 'Segoe UI', Arial, sans-serif;
-                    font-size: 12px;
-                    padding: 30px;
-                    background: #f1f5f9;
-                }}
-                .quotation {{
-                    max-width: 1000px;
-                    margin: 0 auto;
+                    font-size: 13px;
                     background: white;
-                    border-radius: 12px;
-                    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
-                    overflow: hidden;
+                    padding: 20px;
                 }}
-                .header {{
-                    background: linear-gradient(135deg, #1565C0 0%, #0D47A1 100%);
-                    color: white;
-                    padding: 25px 30px;
-                    text-align: center;
-                }}
-                .shop-name {{ font-size: 24px; font-weight: bold; letter-spacing: 1px; }}
-                .shop-address {{ font-size: 11px; opacity: 0.9; margin-top: 5px; }}
-                .shop-phone {{ font-size: 12px; font-weight: bold; margin-top: 5px; }}
-                .quotation-title {{
-                    font-size: 14px;
-                    letter-spacing: 3px;
-                    margin-top: 12px;
-                    padding-top: 8px;
-                    border-top: 1px dashed rgba(255,255,255,0.3);
-                    display: inline-block;
-                }}
-                .content {{ padding: 30px; }}
-                .info-grid {{
-                    display: grid;
-                    grid-template-columns: repeat(3, 1fr);
-                    gap: 15px;
-                    margin-bottom: 25px;
-                }}
-                .info-box {{
-                    background: #f8fafc;
-                    padding: 12px 15px;
-                    border-radius: 10px;
-                }}
-                .info-label {{ font-size: 10px; color: #64748B; text-transform: uppercase; margin-bottom: 4px; }}
-                .info-value {{ font-size: 14px; font-weight: bold; color: #1E293B; }}
+                .quotation {{ max-width: 1000px; margin: 0 auto; }}
+                .header {{ text-align: center; padding: 15px; border-bottom: 2px solid #1565C0; margin-bottom: 20px; }}
+                .shop-name {{ font-size: 20px; font-weight: bold; color: #1565C0; }}
+                .shop-address {{ font-size: 11px; color: #666; margin-top: 5px; }}
+                .shop-phone {{ font-size: 12px; font-weight: bold; margin-top: 3px; }}
+                .title {{ font-size: 16px; font-weight: bold; margin-top: 10px; }}
+                .info-row {{ display: flex; margin-bottom: 8px; padding: 4px 0; border-bottom: 1px dotted #ddd; }}
+                .info-label {{ font-weight: bold; width: 130px; }}
+                .info-value {{ flex: 1; }}
                 table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
-                th {{
-                    background: #f1f5f9;
-                    padding: 12px;
-                    text-align: left;
-                    font-size: 11px;
-                    font-weight: bold;
-                    color: #475569;
-                    border-bottom: 2px solid #e2e8f0;
-                }}
-                td {{ vertical-align: top; }}
-                .total-section {{ text-align: right; margin-top: 20px; padding-top: 15px; border-top: 2px solid #e2e8f0; }}
-                .total-row {{ font-size: 16px; font-weight: bold; margin-bottom: 5px; }}
-                .grand-total {{ font-size: 22px; font-weight: bold; color: #1565C0; }}
-                .footer {{
-                    background: #f8fafc;
-                    padding: 15px;
-                    text-align: center;
-                    font-size: 10px;
-                    color: #64748B;
-                    border-top: 1px solid #e2e8f0;
-                }}
-                .stamp {{ margin-top: 20px; display: flex; justify-content: space-between; padding: 0 20px; }}
-                .signature {{
-                    border-top: 1px solid #cbd5e1;
-                    width: 150px;
-                    padding-top: 5px;
-                    text-align: center;
-                    font-size: 9px;
-                    color: #64748B;
-                }}
-                .barcode {{
-                    height: 25px;
-                    background: repeating-linear-gradient(90deg, #000, #000 2px, transparent 2px, transparent 8px);
-                    margin: 15px 0;
-                }}
+                th {{ background: #f5f5f5; padding: 10px 8px; text-align: left; font-size: 12px; font-weight: bold; border-bottom: 2px solid #ddd; }}
+                th:first-child {{ width: 40px; text-align: center; }}
+                th:nth-child(2) {{ text-align: left; }}
+                th:nth-child(3) {{ width: 60px; text-align: center; }}
+                th:nth-child(4) {{ width: 100px; text-align: right; }}
+                th:nth-child(5) {{ width: 100px; text-align: right; }}
+                th:nth-child(6) {{ width: 120px; text-align: right; }}
+                td {{ padding: 8px; border-bottom: 1px solid #eee; }}
+                .total-section {{ margin-top: 20px; text-align: right; border-top: 2px solid #ddd; padding-top: 15px; }}
+                .total-line {{ margin-bottom: 5px; }}
+                .total-label {{ display: inline-block; width: 150px; font-weight: bold; }}
+                .total-amount {{ display: inline-block; width: 150px; text-align: right; }}
+                .grand-total {{ font-size: 16px; font-weight: bold; color: #1565C0; margin-top: 8px; padding-top: 8px; border-top: 1px solid #ddd; }}
+                .footer {{ text-align: center; margin-top: 30px; padding-top: 15px; border-top: 1px solid #ddd; font-size: 10px; color: #666; }}
+                .stamp {{ margin-top: 30px; display: flex; justify-content: space-between; }}
+                .signature {{ border-top: 1px solid #000; width: 180px; padding-top: 5px; text-align: center; font-size: 11px; }}
             </style>
         </head>
         <body>
@@ -720,53 +759,92 @@ class QuotationListContent:
                 <div class="header">
                     <div class="shop-name">{shop_name}</div>
                     <div class="shop-address">{shop_address}</div>
-                    <div class="shop-phone">📞 {shop_phone}</div>
-                    <div class="quotation-title">ໃບສະເໜີລາຄາ / QUOTATION</div>
+                    <div class="shop-phone">ເບີໂທ: {shop_phone}</div>
+                    <div class="title">ໃບສະເໜີລາຄາ</div>
                 </div>
                 
-                <div class="content">
-                    <div class="info-grid">
-                        <div class="info-box"><div class="info-label">📄 ເລກທີ່ / NO.</div><div class="info-value">{quotation_no}</div></div>
-                        <div class="info-box"><div class="info-label">📅 ວັນທີ / DATE</div><div class="info-value">{created_date}</div></div>
-                        <div class="info-box"><div class="info-label">🔖 ສະຖານະ / STATUS</div><div class="info-value">{quotation.get('status', 'DRAFT').upper()}</div></div>
-                        <div class="info-box"><div class="info-label">👤 ລູກຄ້າ / CUSTOMER</div><div class="info-value">{quotation.get('customer_name', '-')}</div><div style="font-size: 11px;">📞 {quotation.get('customer_phone', '-')}</div></div>
-                        <div class="info-box"><div class="info-label">🚗 ລົດ / VEHICLE</div><div class="info-value">{quotation.get('plate_number', '-')}</div><div style="font-size: 11px;">{quotation.get('brand', '')} {quotation.get('model', '')}</div></div>
-                        <div class="info-box"><div class="info-label">🔧 ໃບຮັບລົດ / JOB NO.</div><div class="info-value">{quotation.get('job_no', '-')}</div></div>
+                <div class="info-row">
+                    <div class="info-label">ເລກທີ່ໃບສະເໜີ:</div>
+                    <div class="info-value">{quotation_no}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">ວັນທີ:</div>
+                    <div class="info-value">{created_date}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">ສະຖານະ:</div>
+                    <div class="info-value">{status_text}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">ຊື່ລູກຄ້າ:</div>
+                    <div class="info-value">{quotation.get('customer_name', '-')}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">ເບີໂທ:</div>
+                    <div class="info-value">{quotation.get('customer_phone', '-')}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">ທະບຽນລົດ:</div>
+                    <div class="info-value">{quotation.get('plate_number', '-')}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">ຍີ່ຫໍ້/ລຸ້ນ:</div>
+                    <div class="info-value">{quotation.get('brand', '')} {quotation.get('model', '')}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">ເລກທີ່ໃບຮັບລົດ:</div>
+                    <div class="info-value">{quotation.get('job_no', '-')}</div>
+                </div>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ລຳດັບ</th>
+                            <th>ລາຍການ</th>
+                            <th>ຈຳນວນ</th>
+                            <th>ລາຄາ</th>
+                            <th>ສ່ວນຫຼຸດ</th>
+                            <th>ລວມ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {items_html if items_html else '<tr><td colspan="6" style="text-align: center; padding: 40px;">ບໍ່ມີລາຍການ</td></tr>'}
+                    </tbody>
+                </table>
+                
+                <div class="total-section">
+                    <div class="total-line">
+                        <span class="total-label">ລວມຍ່ອຍ:</span>
+                        <span class="total-amount">{int(subtotal):,} KIP</span>
                     </div>
-                    
-                    <div class="barcode"></div>
-                    
-                    <table>
-                        <thead>
-                            <tr>
-                                <th style="width: 40px;">#</th>
-                                <th>ລາຍການ / ITEM</th>
-                                <th style="width: 60px; text-align: center;">ຈຳນວນ</th>
-                                <th style="width: 100px; text-align: right;">ລາຄາ (KIP)</th>
-                                <th style="width: 100px; text-align: right;">ສ່ວນຫຼຸດ</th>
-                                <th style="width: 110px; text-align: right;">ລວມ (KIP)</th>
-                            </tr>
-                        </thead>
-                        <tbody>{items_html if items_html else '<tr><td colspan="6" style="text-align: center; padding: 40px;">ບໍ່ມີລາຍການ / No items</td></tr>'}</tbody>
-                    </table>
-                    
-                    <div class="total-section">
-                        <div class="total-row">ລວມທັງໝົດ / TOTAL: <span class="grand-total">{int(quotation.get('total_price', 0)):,} KIP</span></div>
+                    <div class="total-line">
+                        <span class="total-label">ສ່ວນຫຼຸດ:</span>
+                        <span class="total-amount">{int(total_discount):,} KIP</span>
                     </div>
-                    
-                    <div class="stamp">
-                        <div class="signature">ລາຍເຊັນລູກຄ້າ</div>
-                        <div class="signature">ລາຍເຊັນຜູ້ຂາຍ</div>
+                    <div class="grand-total">
+                        <span class="total-label">ລວມທັງໝົດ:</span>
+                        <span class="total-amount">{int(grand_total):,} KIP</span>
                     </div>
+                </div>
+                
+                <div class="stamp">
+                    <div class="signature">ລາຍເຊັນລູກຄ້າ</div>
+                    <div class="signature">ລາຍເຊັນຮ້ານ</div>
                 </div>
                 
                 <div class="footer">
                     <p>ຂອບໃຈທີ່ໄວ້ໃຈບໍລິການຂອງພວກເຮົາ</p>
-                    <p>J&P Auto Maxing - ສູນບໍລິການລົດ ແລະ ອາໄຫຼ່ຄົບວົງຈອນ</p>
-                    <p style="margin-top: 8px;">{shop_phone} | {shop_address}</p>
+                    <p>{shop_phone} | {shop_address}</p>
+                    <p>ພິມເມື່ອ: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</p>
                 </div>
             </div>
-            <script>window.onload = function() {{ setTimeout(function() {{ window.print(); }}, 200); }}</script>
+            <script>
+                window.onload = function() {{
+                    setTimeout(function() {{
+                        window.print();
+                    }}, 500);
+                }}
+            </script>
         </body>
         </html>
         """
@@ -797,9 +875,9 @@ class QuotationListContent:
     
     def show_snack_bar(self, message: str, is_error: bool = False):
         self.page.snack_bar = ft.SnackBar(
-            content=ft.Text(message),
+            content=ft.Text(message, size=13),
             bgcolor=ft.Colors.RED_600 if is_error else ft.Colors.GREEN_600,
             open=True,
-            duration=2000,
+            duration=3000,
         )
         self.page.update()

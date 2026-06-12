@@ -1,65 +1,54 @@
-# backend/routers/repair_orders.py
+# backend/routers/purchase_orders.py
 from fastapi import APIRouter, HTTPException, Depends, Form
 from database import get_db
 from auth import authenticate_user
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
+import json
 
 router = APIRouter()
 
 
-@router.get("/repair-orders")
-def get_repair_orders(
-    job_order_id: Optional[int] = None,
+@router.get("/purchase-orders")
+def get_purchase_orders(
     status: Optional[str] = None,
     user: dict = Depends(authenticate_user)
 ):
-    """Get all repair orders, optionally filtered by job_order_id or status"""
+    """Get all purchase orders, optionally filtered by status"""
     db = get_db()
     cursor = db.cursor(dictionary=True)
     try:
         query = """
-            SELECT ro.*, 
-                   jo.job_no,
-                   c.name as customer_name,
-                   c.phone as customer_phone,
-                   v.plate_number, b.name as brand, v.model,
-                   u.fullname as mechanic_name,
-                   q.total_price as quotation_total
-            FROM repair_orders ro
-            LEFT JOIN job_orders jo ON ro.job_order_id = jo.id
-            LEFT JOIN customers c ON jo.customer_id = c.id
-            LEFT JOIN vehicles v ON jo.vehicle_id = v.id
-            LEFT JOIN brands b ON v.brand_id = b.id
-            LEFT JOIN users u ON ro.mechanic_id = u.id
-            LEFT JOIN quotations q ON jo.id = q.job_order_id AND q.status = 'approved'
+            SELECT po.*, 
+                   s.name as supplier_name,
+                   e.name as created_by_name,
+                   r.name as received_by_name
+            FROM purchase_orders po
+            LEFT JOIN suppliers s ON po.supplier_id = s.id
+            LEFT JOIN employees e ON po.created_by = e.id
+            LEFT JOIN employees r ON po.received_by = r.id
             WHERE 1=1
         """
         params = []
         
-        if job_order_id:
-            query += " AND ro.job_order_id = %s"
-            params.append(job_order_id)
         if status:
-            query += " AND ro.status = %s"
+            query += " AND po.status = %s"
             params.append(status)
         
-        query += " ORDER BY ro.id DESC"
+        query += " ORDER BY po.id DESC"
         
         cursor.execute(query, params)
-        repair_orders = cursor.fetchall()
+        purchase_orders = cursor.fetchall()
         
-        for order in repair_orders:
-            if order.get('start_date'):
-                order['start_date'] = str(order['start_date'])
-            if order.get('end_date'):
-                order['end_date'] = str(order['end_date'])
-            if order.get('brand') is None:
-                order['brand'] = "-"
+        for po in purchase_orders:
+            if po.get('order_date'):
+                po['order_date'] = str(po['order_date'])
+            if po.get('received_at'):
+                po['received_at'] = str(po['received_at'])
         
-        return repair_orders
+        return purchase_orders
     except Exception as e:
-        print(f"Error in get_repair_orders: {e}")
+        print(f"Error in get_purchase_orders: {e}")
         import traceback
         traceback.print_exc()
         return []
@@ -68,103 +57,50 @@ def get_repair_orders(
         db.close()
 
 
-@router.get("/repair-orders/{repair_id}")
-def get_repair_order(repair_id: int, user: dict = Depends(authenticate_user)):
-    """Get a single repair order with parts usage"""
+@router.get("/purchase-orders/{po_id}")
+def get_purchase_order(po_id: int, user: dict = Depends(authenticate_user)):
+    """Get a single purchase order with its items"""
     db = get_db()
     cursor = db.cursor(dictionary=True)
     try:
+        # Get purchase order header
         cursor.execute("""
-            SELECT ro.*, 
-                   jo.job_no, jo.problem_description,
-                   c.name as customer_name, c.phone as customer_phone,
-                   v.plate_number, b.name as brand, v.model, v.year, v.color,
-                   u.fullname as mechanic_name
-            FROM repair_orders ro
-            LEFT JOIN job_orders jo ON ro.job_order_id = jo.id
-            LEFT JOIN customers c ON jo.customer_id = c.id
-            LEFT JOIN vehicles v ON jo.vehicle_id = v.id
-            LEFT JOIN brands b ON v.brand_id = b.id
-            LEFT JOIN users u ON ro.mechanic_id = u.id
-            WHERE ro.id = %s
-        """, (repair_id,))
+            SELECT po.*, 
+                   s.name as supplier_name,
+                   e.name as created_by_name,
+                   r.name as received_by_name
+            FROM purchase_orders po
+            LEFT JOIN suppliers s ON po.supplier_id = s.id
+            LEFT JOIN employees e ON po.created_by = e.id
+            LEFT JOIN employees r ON po.received_by = r.id
+            WHERE po.id = %s
+        """, (po_id,))
         
-        repair_order = cursor.fetchone()
-        if repair_order:
-            if repair_order.get('start_date'):
-                repair_order['start_date'] = str(repair_order['start_date'])
-            if repair_order.get('end_date'):
-                repair_order['end_date'] = str(repair_order['end_date'])
-            if repair_order.get('brand') is None:
-                repair_order['brand'] = "-"
-            
-            # Get parts usage - removed part_code and brand since they don't exist in parts table
-            cursor.execute("""
-                SELECT pu.*, p.name as part_name
-                FROM parts_usage pu
-                LEFT JOIN parts p ON pu.part_id = p.id
-                WHERE pu.repair_id = %s
-            """, (repair_id,))
-            repair_order['parts_usage'] = cursor.fetchall()
+        purchase_order = cursor.fetchone()
+        if not purchase_order:
+            raise HTTPException(status_code=404, detail="Purchase order not found")
         
-        return repair_order
-    except Exception as e:
-        print(f"Error in get_repair_order: {e}")
-        import traceback
-        traceback.print_exc()
-        return None
-    finally:
-        cursor.close()
-        db.close()
-
-
-@router.post("/repair-orders")
-def create_repair_order(
-    job_order_id: int = Form(...),
-    mechanic_id: Optional[int] = Form(None),
-    user: dict = Depends(authenticate_user)
-):
-    """Create a new repair order from a job order (can only create once per job order)"""
-    db = get_db()
-    cursor = db.cursor()
-    try:
-        # Check if repair order already exists for this job order
-        cursor.execute("SELECT id, mechanic_id, status FROM repair_orders WHERE job_order_id = %s", (job_order_id,))
-        existing = cursor.fetchone()
+        if purchase_order.get('order_date'):
+            purchase_order['order_date'] = str(purchase_order['order_date'])
+        if purchase_order.get('received_at'):
+            purchase_order['received_at'] = str(purchase_order['received_at'])
         
-        if existing:
-            existing_id = existing[0]
-            existing_mechanic_id = existing[1]
-            existing_status = existing[2]
-            
-            print(f"DEBUG: Repair order already exists for job_order_id={job_order_id}, id={existing_id}")
-            
-            raise HTTPException(
-                status_code=400, 
-                detail=f"Repair order already exists for this job order (ID: {existing_id}). Please use existing repair order."
-            )
-        
-        # Create new repair order
+        # Get purchase order items
         cursor.execute("""
-            INSERT INTO repair_orders (job_order_id, mechanic_id, status, start_date)
-            VALUES (%s, %s, %s, %s)
-        """, (job_order_id, mechanic_id, 'waiting', datetime.now()))
+            SELECT pi.*, p.name as part_name
+            FROM purchase_items pi
+            LEFT JOIN parts p ON pi.part_id = p.id
+            WHERE pi.purchase_id = %s
+        """, (po_id,))
         
-        db.commit()
-        repair_id = cursor.lastrowid
+        items = cursor.fetchall()
+        purchase_order['items'] = items
         
-        print(f"DEBUG: Created new repair order id={repair_id} for job_order_id={job_order_id}")
-        
-        return {
-            "id": repair_id,
-            "message": "Repair order created successfully",
-            "is_new": True
-        }
+        return purchase_order
     except HTTPException:
         raise
     except Exception as e:
-        db.rollback()
-        print(f"Error creating repair order: {e}")
+        print(f"Error in get_purchase_order: {e}")
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
@@ -173,141 +109,184 @@ def create_repair_order(
         db.close()
 
 
-@router.put("/repair-orders/{repair_id}/mechanic")
-def assign_mechanic(
-    repair_id: int,
-    mechanic_id: int = Form(...),
+@router.post("/purchase-orders")
+def create_purchase_order(
+    supplier_id: int = Form(...),
+    items: str = Form(...),  # JSON string of items
     user: dict = Depends(authenticate_user)
 ):
-    """Assign mechanic to repair order"""
+    """
+    Create a new purchase order (Process 7.2)
+    Updates: D17 (Purchase_Orders) and D18 (Purchase_Items)
+    """
     db = get_db()
     cursor = db.cursor()
     try:
+        # Parse items JSON
+        items_list = json.loads(items)
+        
+        # Calculate total amount
+        total_amount = sum(item.get('qty', 0) * item.get('unit_cost', 0) for item in items_list)
+        
+        # Generate PO number
+        year = datetime.now().year
+        cursor.execute("SELECT COUNT(*) as count FROM purchase_orders WHERE YEAR(order_date) = %s", (year,))
+        count = cursor.fetchone()
+        count_num = count[0] + 1 if count else 1
+        po_no = f"PO-{year}-{count_num:04d}"
+        
+        # Insert purchase order (D17)
         cursor.execute("""
-            UPDATE repair_orders SET mechanic_id = %s WHERE id = %s
-        """, (mechanic_id, repair_id))
+            INSERT INTO purchase_orders 
+            (po_no, supplier_id, order_date, total_amount, status, created_by)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (po_no, supplier_id, datetime.now(), total_amount, 'pending', user.get('id')))
+        
+        db.commit()
+        po_id = cursor.lastrowid
+        
+        # Insert purchase items (D18)
+        for item in items_list:
+            cursor.execute("""
+                INSERT INTO purchase_items 
+                (purchase_id, part_id, qty, unit_cost, total_line)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (po_id, item['part_id'], item['qty'], item['unit_cost'], 
+                  item['qty'] * item['unit_cost']))
+        
         db.commit()
         
-        if cursor.rowcount == 0:
-            raise HTTPException(status_code=404, detail="Repair order not found")
-        
-        return {"message": "Mechanic assigned successfully"}
+        return {
+            "id": po_id,
+            "po_no": po_no,
+            "message": "Purchase order created successfully"
+        }
     except Exception as e:
         db.rollback()
-        print(f"Error assigning mechanic: {e}")
+        print(f"Error creating purchase order: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         cursor.close()
         db.close()
 
 
-@router.put("/repair-orders/{repair_id}/status")
-def update_repair_status(
-    repair_id: int,
+@router.put("/purchase-orders/{po_id}/status")
+def update_purchase_order_status(
+    po_id: int,
     status: str = Form(...),
     user: dict = Depends(authenticate_user)
 ):
-    """Update repair order status (waiting/working/paused/completed)"""
+    """Update purchase order status"""
     db = get_db()
     cursor = db.cursor()
     try:
-        # Get current status and start date
-        cursor.execute("SELECT status, start_date FROM repair_orders WHERE id = %s", (repair_id,))
-        current = cursor.fetchone()
-        if not current:
-            raise HTTPException(status_code=404, detail="Repair order not found")
+        # Check if purchase order exists
+        cursor.execute("SELECT id, status FROM purchase_orders WHERE id = %s", (po_id,))
+        existing = cursor.fetchone()
+        if not existing:
+            raise HTTPException(status_code=404, detail="Purchase order not found")
         
-        current_status = current[0] if current else None
-        update_fields = ["status = %s"]
-        params = [status]
+        current_status = existing[1]
         
-        # If starting work, set start_date
-        if status == 'working' and current_status != 'working':
-            update_fields.append("start_date = %s")
-            params.append(datetime.now())
+        # Validate status transition
+        valid_transitions = {
+            'pending': ['ordered', 'cancelled'],
+            'ordered': ['received', 'cancelled'],
+            'received': [],
+            'cancelled': []
+        }
         
-        # If paused, set pause_reason
-        if status == 'paused':
-            pause_reason = "Paused by mechanic"
-            update_fields.append("pause_reason = %s")
-            params.append(pause_reason)
+        if status not in valid_transitions.get(current_status, []):
+            raise HTTPException(status_code=400, detail=f"Cannot change status from {current_status} to {status}")
         
-        # If completed, set end_date
-        if status == 'completed':
-            update_fields.append("end_date = %s")
-            params.append(datetime.now())
-        
-        params.append(repair_id)
-        cursor.execute(f"UPDATE repair_orders SET {', '.join(update_fields)} WHERE id = %s", params)
+        cursor.execute("""
+            UPDATE purchase_orders SET status = %s WHERE id = %s
+        """, (status, po_id))
         db.commit()
         
-        # Also update job order status if completed
-        if status == 'completed':
-            cursor.execute("""
-                UPDATE job_orders SET status = 'finished' 
-                WHERE id = (SELECT job_order_id FROM repair_orders WHERE id = %s)
-            """, (repair_id,))
-            db.commit()
-        
-        return {"message": f"Repair status updated to {status}"}
+        return {"message": f"Purchase order status updated to {status}"}
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
-        print(f"Error updating repair status: {e}")
+        print(f"Error updating purchase order status: {e}")
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         cursor.close()
         db.close()
 
 
-@router.post("/repair-orders/{repair_id}/parts-usage")
-def add_part_usage(
-    repair_id: int,
-    part_id: int = Form(...),
-    qty: int = Form(...),
-    note: Optional[str] = Form(None),
+@router.post("/purchase-orders/{po_id}/receive")
+def receive_purchase_order(
+    po_id: int,
+    received_items: str = Form(...),  # JSON string of received items with actual quantities
     user: dict = Depends(authenticate_user)
 ):
-    """Add part usage for repair (withdraw parts from stock)"""
+    """
+    Receive purchase order and update stock (Process 7.3)
+    Updates: D5 (Parts stock), D15 (Stock_Movement), D17 (Purchase_Orders status)
+    """
     db = get_db()
     cursor = db.cursor(dictionary=True)
     try:
-        # Check repair order exists
-        cursor.execute("SELECT id FROM repair_orders WHERE id = %s", (repair_id,))
-        if not cursor.fetchone():
-            raise HTTPException(status_code=404, detail="Repair order not found")
+        # Check if purchase order exists and is in 'ordered' status
+        cursor.execute("SELECT id, status FROM purchase_orders WHERE id = %s", (po_id,))
+        po = cursor.fetchone()
+        if not po:
+            raise HTTPException(status_code=404, detail="Purchase order not found")
         
-        # Get part cost price and stock
-        cursor.execute("SELECT cost_price, stock_qty FROM parts WHERE id = %s", (part_id,))
-        part = cursor.fetchone()
-        if not part:
-            raise HTTPException(status_code=404, detail="Part not found")
+        if po['status'] != 'ordered':
+            raise HTTPException(status_code=400, detail=f"Cannot receive order with status: {po['status']}")
         
-        # Check stock
-        if part['stock_qty'] < qty:
-            raise HTTPException(status_code=400, detail=f"Insufficient stock. Available: {part['stock_qty']}")
+        # Parse received items
+        received_list = json.loads(received_items)
         
-        # Add to parts usage
+        # Process each received item
+        for item in received_list:
+            part_id = item['part_id']
+            received_qty = item['received_qty']
+            
+            # Get current stock
+            cursor.execute("SELECT stock_qty FROM parts WHERE id = %s", (part_id,))
+            part = cursor.fetchone()
+            if not part:
+                raise HTTPException(status_code=404, detail=f"Part not found (ID: {part_id})")
+            
+            # Update part stock (D5)
+            cursor.execute("""
+                UPDATE parts SET stock_qty = stock_qty + %s WHERE id = %s
+            """, (received_qty, part_id))
+            
+            # Add stock movement log (D15)
+            cursor.execute("""
+                INSERT INTO stock_movement (part_id, type, qty, ref_type, ref_id, date)
+                VALUES (%s, 'IN', %s, 'purchase', %s, NOW())
+            """, (part_id, received_qty, po_id))
+            
+            # Update received quantity in purchase_items
+            cursor.execute("""
+                UPDATE purchase_items 
+                SET received_qty = COALESCE(received_qty, 0) + %s
+                WHERE purchase_id = %s AND part_id = %s
+            """, (received_qty, po_id, part_id))
+        
+        # Update purchase order status to 'received'
         cursor.execute("""
-            INSERT INTO parts_usage (repair_id, part_id, qty, cost_price, note)
-            VALUES (%s, %s, %s, %s, %s)
-        """, (repair_id, part_id, qty, part['cost_price'], note))
-        
-        # Update stock
-        cursor.execute("""
-            UPDATE parts SET stock_qty = stock_qty - %s WHERE id = %s
-        """, (qty, part_id))
+            UPDATE purchase_orders 
+            SET status = 'received', received_by = %s, received_at = NOW()
+            WHERE id = %s
+        """, (user.get('id'), po_id))
         
         db.commit()
         
-        return {
-            "id": cursor.lastrowid,
-            "message": "Part usage recorded successfully"
-        }
+        return {"message": "Purchase order received and stock updated successfully"}
     except HTTPException:
         raise
     except Exception as e:
         db.rollback()
-        print(f"Error adding part usage: {e}")
+        print(f"Error receiving purchase order: {e}")
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
@@ -316,64 +295,111 @@ def add_part_usage(
         db.close()
 
 
-@router.delete("/repair-orders/{repair_id}/parts-usage/{usage_id}")
-def delete_part_usage(
-    repair_id: int,
-    usage_id: int,
+@router.delete("/purchase-orders/{po_id}")
+def delete_purchase_order(
+    po_id: int,
     user: dict = Depends(authenticate_user)
 ):
-    """Delete part usage and return parts to stock"""
+    """Delete a purchase order (only if status is 'pending')"""
     db = get_db()
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor()
     try:
-        # Get part usage details
-        cursor.execute("""
-            SELECT part_id, qty FROM parts_usage WHERE id = %s AND repair_id = %s
-        """, (usage_id, repair_id))
-        usage = cursor.fetchone()
-        if not usage:
-            raise HTTPException(status_code=404, detail="Part usage not found")
+        # Check if purchase order exists and is pending
+        cursor.execute("SELECT id, status FROM purchase_orders WHERE id = %s", (po_id,))
+        po = cursor.fetchone()
+        if not po:
+            raise HTTPException(status_code=404, detail="Purchase order not found")
         
-        # Return parts to stock
-        cursor.execute("""
-            UPDATE parts SET stock_qty = stock_qty + %s WHERE id = %s
-        """, (usage['qty'], usage['part_id']))
+        if po[1] != 'pending':
+            raise HTTPException(status_code=400, detail="Cannot delete purchase order that is not in pending status")
         
-        # Delete usage record
-        cursor.execute("DELETE FROM parts_usage WHERE id = %s", (usage_id,))
+        # Delete purchase items first (foreign key)
+        cursor.execute("DELETE FROM purchase_items WHERE purchase_id = %s", (po_id,))
+        
+        # Delete purchase order
+        cursor.execute("DELETE FROM purchase_orders WHERE id = %s", (po_id,))
         
         db.commit()
         
-        return {"message": "Part usage deleted, stock updated"}
+        return {"message": "Purchase order deleted successfully"}
     except HTTPException:
         raise
     except Exception as e:
         db.rollback()
-        print(f"Error deleting part usage: {e}")
+        print(f"Error deleting purchase order: {e}")
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         cursor.close()
         db.close()
 
 
-@router.get("/employees/mechanics")
-def get_mechanics(user: dict = Depends(authenticate_user)):
-    """Get all mechanics (employees with role = technician or mechanic)"""
+@router.get("/stock-movements")
+def get_stock_movements(
+    part_id: Optional[int] = None,
+    limit: int = 100,
+    user: dict = Depends(authenticate_user)
+):
+    """Get stock movement history (D15)"""
     db = get_db()
     cursor = db.cursor(dictionary=True)
     try:
-        # Check which role column exists: role or role_name
-        cursor.execute("""
-            SELECT id, username, fullname, phone 
-            FROM users 
-            WHERE role IN ('technician', 'mechanic')
-            ORDER BY fullname
-        """)
-        mechanics = cursor.fetchall()
-        print(f"DEBUG: Found mechanics: {mechanics}")
-        return mechanics
+        query = """
+            SELECT sm.*, p.name as part_name
+            FROM stock_movement sm
+            LEFT JOIN parts p ON sm.part_id = p.id
+            WHERE 1=1
+        """
+        params = []
+        
+        if part_id:
+            query += " AND sm.part_id = %s"
+            params.append(part_id)
+        
+        query += " ORDER BY sm.date DESC LIMIT %s"
+        params.append(limit)
+        
+        cursor.execute(query, params)
+        movements = cursor.fetchall()
+        
+        for movement in movements:
+            if movement.get('date'):
+                movement['date'] = str(movement['date'])
+        
+        return movements
     except Exception as e:
-        print(f"Error getting mechanics: {e}")
+        print(f"Error getting stock movements: {e}")
+        import traceback
+        traceback.print_exc()
+        return []
+    finally:
+        cursor.close()
+        db.close()
+
+
+@router.get("/parts/low-stock")
+def get_low_stock_parts(user: dict = Depends(authenticate_user)):
+    """
+    Get low stock parts for alert (Process 7.1)
+    Returns parts where stock_qty <= min_stock
+    """
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+    try:
+        cursor.execute("""
+            SELECT p.id, p.name, p.stock_qty, p.min_stock, 
+                   s.name as supplier_name, s.phone as supplier_phone
+            FROM parts p
+            LEFT JOIN suppliers s ON p.supplier_id = s.id
+            WHERE p.stock_qty <= p.min_stock
+            ORDER BY (p.stock_qty / p.min_stock) ASC
+        """)
+        low_stock_parts = cursor.fetchall()
+        
+        return low_stock_parts
+    except Exception as e:
+        print(f"Error getting low stock parts: {e}")
+        import traceback
+        traceback.print_exc()
         return []
     finally:
         cursor.close()

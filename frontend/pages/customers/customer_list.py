@@ -9,7 +9,7 @@ from i18n import get_text
 from pages.customers.customer_dialogs import (
     show_add_dialog, 
     show_edit_dialog, 
-    show_detail_dialog, 
+    show_detail_dialog,
     show_delete_dialog,
     show_success_popup
 )
@@ -52,7 +52,6 @@ class CustomerListContent:
                                 weight=ft.FontWeight.BOLD, 
                                 color=ft.Colors.WHITE
                             ),
-                            
                         ],
                         spacing=2,
                     ),
@@ -189,7 +188,7 @@ class CustomerListContent:
                 ),
                 ft.Container(
                     content=ft.Text(get_text('actions'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=160,
+                    width=200,
                     alignment=ft.Alignment(0, 0),
                 ),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
@@ -243,7 +242,7 @@ class CustomerListContent:
                 ft.Icon(ft.Icons.DELETE_OUTLINE, size=16, color=ft.Colors.RED_600),
                 ft.Text(get_text("delete"), size=12, color=ft.Colors.RED_600),
             ], spacing=4),
-            on_click=lambda e, cid=customer_id: self.show_delete_dialog(cid, name),
+            on_click=lambda e, cid=customer_id, cname=name: self.show_delete_dialog(cid, cname),
             padding=ft.padding.symmetric(horizontal=8, vertical=4),
             border_radius=6,
         )
@@ -299,7 +298,7 @@ class CustomerListContent:
                 # Actions column
                 ft.Container(
                     content=ft.Row([view_btn, edit_btn, delete_btn], spacing=4),
-                    width=160,
+                    width=200,
                     alignment=ft.Alignment(0, 0),
                 ),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
@@ -373,6 +372,7 @@ class CustomerListContent:
             padding=ft.padding.symmetric(vertical=16, horizontal=20),
             bgcolor="#F5F7FA",
         )
+        self.page.update()
     
     def prev_page(self, e=None):
         if self.current_page > 1:
@@ -474,13 +474,13 @@ class CustomerListContent:
         except Exception as ex:
             print(f"DEBUG: Error closing dialog: {ex}")
     
-    def show_success_popup(self, customer_name, plate_number):
-        """Show animated success popup after registration"""
+    def show_success_popup(self, customer_id, customer_name, plate_number):
+        """Show success popup after registration"""
         def close_popup(popup):
             popup.open = False
             self.page.update()
         
-        popup = show_success_popup(customer_name, plate_number, self.primary_color, close_popup)
+        popup = show_success_popup(customer_id, customer_name, plate_number, self.primary_color, close_popup)
         self.page.overlay.append(popup)
         popup.open = True
         self.page.update()
@@ -490,34 +490,15 @@ class CustomerListContent:
             try:
                 result = self.client.register_customer_with_vehicle(customer_data, vehicle_data)
                 if result:
+                    customer_id = result.get('customer_id')
                     self._close_dialog()
                     self.load_data()
-                    # Show success popup
-                    self.show_success_popup(customer_data["name"], vehicle_data["plate_number"])
+                    self.show_success_popup(customer_id, customer_data["name"], vehicle_data["plate_number"])
             except Exception as err:
                 print(f"Error saving: {err}")
                 self.show_snackbar(f"{get_text('error')}: {err}", is_error=True)
         
         dialog = show_add_dialog(self.primary_color, self.brands_list, on_save, self._close_dialog)
-        self._open_dialog(dialog)
-    
-    def show_edit_dialog(self, customer_id):
-        customer = next((c for c in self.customers_data if c.get('id') == customer_id), None)
-        if not customer:
-            self.show_snackbar(f"❌ {get_text('error')}", is_error=True)
-            return
-        
-        def on_save(update_data):
-            try:
-                self.client.update_customer(customer_id, update_data)
-                self._close_dialog()
-                self.load_data()
-                self.show_snackbar(f"✅ {get_text('update_successful')}", is_error=False)
-            except Exception as err:
-                print(f"Error in save: {err}")
-                self.show_snackbar(f"{get_text('error')}: {err}", is_error=True)
-        
-        dialog = show_edit_dialog(customer, self.primary_color, on_save, self._close_dialog)
         self._open_dialog(dialog)
     
     def show_detail_dialog(self, customer_id):
@@ -530,7 +511,6 @@ class CustomerListContent:
         vehicles = []
         try:
             vehicles = self.client.get_vehicles(customer_id=customer_id)
-            # Add brand_name to each vehicle
             for vehicle in vehicles:
                 brand_id = vehicle.get('brand_id')
                 if brand_id:
@@ -545,26 +525,112 @@ class CustomerListContent:
             print(f"Error loading vehicles: {ex}")
             vehicles = []
         
-        def on_add_vehicle(vehicle_data):
+        dialog = show_detail_dialog(customer, vehicles, self.brands_list, self.primary_color, self._close_dialog)
+        self._open_dialog(dialog)
+    
+    def show_edit_dialog(self, customer_id):
+        customer = next((c for c in self.customers_data if c.get('id') == customer_id), None)
+        if not customer:
+            self.show_snackbar(f"❌ {get_text('error')}", is_error=True)
+            return
+        
+        # Get vehicles for this customer
+        vehicles = []
+        try:
+            vehicles = self.client.get_vehicles(customer_id=customer_id)
+            for vehicle in vehicles:
+                brand_id = vehicle.get('brand_id')
+                if brand_id:
+                    brand = next((b for b in self.brands_list if b.get('id') == brand_id), None)
+                    if brand:
+                        vehicle['brand_name'] = brand.get('name')
+                    else:
+                        vehicle['brand_name'] = "-"
+                else:
+                    vehicle['brand_name'] = "-"
+        except Exception as ex:
+            print(f"Error loading vehicles: {ex}")
+            vehicles = []
+        
+        def on_save_customer(update_data):
+            try:
+                self.client.update_customer(customer_id, update_data)
+                self.show_snackbar(f"✅ {get_text('update_successful')}", is_error=False)
+            except Exception as err:
+                self.show_snackbar(f"{get_text('error')}: {err}", is_error=True)
+        
+        def on_add_vehicle(vehicle_data, callback):
             try:
                 result = self.client.add_vehicle(vehicle_data)
                 if result:
-                    self._close_dialog()
-                    self.load_data()
+                    brand_name = "-"
+                    if vehicle_data.get('brand_id'):
+                        brand = next((b for b in self.brands_list if b.get('id') == vehicle_data['brand_id']), None)
+                        if brand:
+                            brand_name = brand.get('name')
+                    
+                    new_vehicle = {
+                        'id': result.get('id') if isinstance(result, dict) else result,
+                        'plate_number': vehicle_data['plate_number'],
+                        'brand_id': vehicle_data['brand_id'],
+                        'brand_name': brand_name,
+                        'model': vehicle_data['model'],
+                        'year': vehicle_data['year'],
+                        'color': vehicle_data['color'],
+                        'customer_id': customer_id
+                    }
+                    if callback:
+                        callback(new_vehicle)
                     self.show_snackbar(get_text("vehicle_added_successfully"), is_error=False)
             except Exception as err:
                 self.show_snackbar(f"{get_text('error')}: {err}", is_error=True)
         
-        def on_delete_vehicle(vehicle_id):
+        def on_edit_vehicle(vehicle_id, vehicle_data, callback):
+            try:
+                self.client.update_vehicle(vehicle_id, vehicle_data)
+                brand_name = "-"
+                if vehicle_data.get('brand_id'):
+                    brand = next((b for b in self.brands_list if b.get('id') == vehicle_data['brand_id']), None)
+                    if brand:
+                        brand_name = brand.get('name')
+                
+                updated_vehicle = {
+                    'id': vehicle_id,
+                    'plate_number': vehicle_data['plate_number'],
+                    'brand_id': vehicle_data['brand_id'],
+                    'brand_name': brand_name,
+                    'model': vehicle_data['model'],
+                    'year': vehicle_data['year'],
+                    'color': vehicle_data['color'],
+                    'customer_id': customer_id
+                }
+                if callback:
+                    callback(updated_vehicle)
+                self.show_snackbar(f"✅ {get_text('edit_success')}", is_error=False)
+            except Exception as err:
+                self.show_snackbar(f"{get_text('error')}: {err}", is_error=True)
+        
+        def on_delete_vehicle(vehicle_id, callback):
             try:
                 self.client.delete_vehicle(vehicle_id)
-                self._close_dialog()
-                self.load_data()
+                if callback:
+                    callback(vehicles)
                 self.show_snackbar(get_text("vehicle_deleted_successfully"), is_error=False)
             except Exception as err:
                 self.show_snackbar(f"{get_text('error')}: {err}", is_error=True)
         
-        dialog = show_detail_dialog(customer, vehicles, self.brands_list, self.primary_color, on_add_vehicle, on_delete_vehicle, self._close_dialog)
+        def on_save_complete():
+            self.load_data()
+            self._close_dialog()
+        
+        def on_cancel():
+            self._close_dialog()
+        
+        dialog = show_edit_dialog(
+            customer, vehicles, self.brands_list, self.primary_color,
+            on_save_customer, on_add_vehicle, on_edit_vehicle, on_delete_vehicle,
+            on_save_complete, on_cancel
+        )
         self._open_dialog(dialog)
     
     def show_delete_dialog(self, customer_id, customer_name):

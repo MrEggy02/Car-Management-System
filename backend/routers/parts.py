@@ -11,9 +11,11 @@ def get_parts(user: dict = Depends(authenticate_user)):
     db = get_db()
     cursor = db.cursor(dictionary=True)
     cursor.execute("""
-        SELECT p.*, s.name as supplier_name 
+        SELECT p.*, s.name as supplier_name, u.name as unit_name, c.name as category_name
         FROM Parts p
         LEFT JOIN Suppliers s ON p.supplier_id = s.id
+        LEFT JOIN Units u ON p.unit_id = u.id
+        LEFT JOIN Part_Categories c ON p.category_id = c.id
         ORDER BY p.id DESC
     """)
     parts = cursor.fetchall()
@@ -28,7 +30,8 @@ def add_part(
     sell_price: float = Form(0),
     stock_qty: int = Form(0),
     min_stock: int = Form(5),
-    unit: str = Form("ຊິ້ນ"),
+    unit_id: Optional[int] = Form(None),  # เปลี่ยนจาก unit string เป็น unit_id
+    category_id: Optional[int] = Form(None),  # เพิ่ม category_id
     supplier_id: Optional[int] = Form(None),
     user: dict = Depends(authenticate_user)
 ):
@@ -38,9 +41,9 @@ def add_part(
     
     try:
         cursor.execute("""
-            INSERT INTO Parts (name, cost_price, sell_price, stock_qty, min_stock, unit, supplier_id)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-        """, (name, cost_price, sell_price, stock_qty, min_stock, unit, supplier_id))
+            INSERT INTO Parts (name, cost_price, sell_price, stock_qty, min_stock, unit_id, category_id, supplier_id)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """, (name, cost_price, sell_price, stock_qty, min_stock, unit_id, category_id, supplier_id))
         db.commit()
         part_id = cursor.lastrowid
         return {"message": "ເພີ່ມອາໄຫຼ່ສຳເລັດ", "id": part_id}
@@ -59,7 +62,8 @@ def update_part(
     sell_price: float = Form(0),
     stock_qty: int = Form(0),
     min_stock: int = Form(5),
-    unit: str = Form("ຊິ້ນ"),
+    unit_id: Optional[int] = Form(None),  # เปลี่ยนจาก unit string เป็น unit_id
+    category_id: Optional[int] = Form(None),  # เพิ่ม category_id
     supplier_id: Optional[int] = Form(None),
     user: dict = Depends(authenticate_user)
 ):
@@ -80,10 +84,11 @@ def update_part(
                 sell_price=%s, 
                 stock_qty=%s, 
                 min_stock=%s, 
-                unit=%s, 
+                unit_id=%s, 
+                category_id=%s, 
                 supplier_id=%s
             WHERE id=%s
-        """, (name, cost_price, sell_price, stock_qty, min_stock, unit, supplier_id, part_id))
+        """, (name, cost_price, sell_price, stock_qty, min_stock, unit_id, category_id, supplier_id, part_id))
         db.commit()
         return {"message": "ແກ້ໄຂອາໄຫຼ່ສຳເລັດ"}
     except Exception as e:
@@ -99,7 +104,6 @@ def delete_part(part_id: int, user: dict = Depends(authenticate_user)):
     db = get_db()
     cursor = db.cursor()
     
-    # Check if part exists
     cursor.execute("SELECT id FROM Parts WHERE id = %s", (part_id,))
     if not cursor.fetchone():
         raise HTTPException(status_code=404, detail="ບໍ່ພົບອາໄຫຼ່")
@@ -121,9 +125,11 @@ def get_low_stock_parts(user: dict = Depends(authenticate_user)):
     db = get_db()
     cursor = db.cursor(dictionary=True)
     cursor.execute("""
-        SELECT p.*, s.name as supplier_name 
+        SELECT p.*, s.name as supplier_name, u.name as unit_name, c.name as category_name
         FROM Parts p
         LEFT JOIN Suppliers s ON p.supplier_id = s.id
+        LEFT JOIN Units u ON p.unit_id = u.id
+        LEFT JOIN Part_Categories c ON p.category_id = c.id
         WHERE p.stock_qty <= p.min_stock
         ORDER BY (p.stock_qty / p.min_stock) ASC
     """)
@@ -140,18 +146,22 @@ def search_parts(keyword: str = "", user: dict = Depends(authenticate_user)):
     
     if keyword:
         cursor.execute("""
-            SELECT p.*, s.name as supplier_name 
+            SELECT p.*, s.name as supplier_name, u.name as unit_name, c.name as category_name
             FROM Parts p
             LEFT JOIN Suppliers s ON p.supplier_id = s.id
+            LEFT JOIN Units u ON p.unit_id = u.id
+            LEFT JOIN Part_Categories c ON p.category_id = c.id
             WHERE p.name LIKE %s OR p.id LIKE %s
             ORDER BY p.name
             LIMIT 20
         """, (f"%{keyword}%", f"%{keyword}%"))
     else:
         cursor.execute("""
-            SELECT p.*, s.name as supplier_name 
+            SELECT p.*, s.name as supplier_name, u.name as unit_name, c.name as category_name
             FROM Parts p
             LEFT JOIN Suppliers s ON p.supplier_id = s.id
+            LEFT JOIN Units u ON p.unit_id = u.id
+            LEFT JOIN Part_Categories c ON p.category_id = c.id
             ORDER BY p.name
             LIMIT 20
         """)

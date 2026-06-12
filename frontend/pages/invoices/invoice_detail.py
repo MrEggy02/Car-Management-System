@@ -2,6 +2,7 @@
 import flet as ft
 from flet import Alignment
 from typing import Dict, Callable
+from datetime import datetime
 
 from i18n import get_text
 
@@ -16,7 +17,8 @@ class InvoiceDetailContent:
         self.invoice_data = None
         self.primary_color = "#1565C0"
         self.primary_dark = "#0D47A1"
-    
+        self.success_color = "#10B981"
+        
     def build(self):
         header = self._build_header()
         
@@ -50,8 +52,8 @@ class InvoiceDetailContent:
         content_area = ft.Container(
             content=scrollable_content,
             expand=True,
-            padding=ft.padding.all(32),
-            bgcolor="#F5F7FA",
+            padding=ft.padding.all(24),
+            bgcolor="#F0F2F5",
         )
         
         main_content = ft.Container(
@@ -68,55 +70,50 @@ class InvoiceDetailContent:
                 [
                     ft.IconButton(
                         icon=ft.Icons.ARROW_BACK,
-                        icon_size=24,
+                        icon_size=20,
                         icon_color=ft.Colors.WHITE,
                         on_click=lambda e: self.navigate("invoice_list"),
                         tooltip=get_text("back"),
                         style=ft.ButtonStyle(
                             bgcolor=ft.Colors.with_opacity(0.2, ft.Colors.WHITE),
-                            shape=ft.RoundedRectangleBorder(radius=10),
+                            shape=ft.RoundedRectangleBorder(radius=8),
                         ),
                     ),
                     ft.Column(
                         [
                             ft.Text(
                                 get_text("invoice_detail"),
-                                size=18,
+                                size=20,
                                 weight=ft.FontWeight.BOLD,
                                 color=ft.Colors.WHITE,
                             ),
-                            
+                            ft.Text(
+                                get_text("invoice_detail_subtitle"),
+                                size=12,
+                                color=ft.Colors.with_opacity(0.85, ft.Colors.WHITE),
+                            ),
                         ],
                         spacing=2,
                     ),
                     ft.Container(expand=True),
-                    ft.Container(
-                        content=ft.Icon(ft.Icons.RECEIPT, size=28, color=ft.Colors.WHITE),
-                        bgcolor=ft.Colors.with_opacity(0.2, ft.Colors.WHITE),
-                        border_radius=15,
-                        padding=ft.padding.all(8),
-                    ),
                 ],
-                spacing=16,
+                spacing=12,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(vertical=14, horizontal=26),
+            padding=ft.padding.symmetric(vertical=14, horizontal=24),
             gradient=ft.LinearGradient(
                 begin=ft.Alignment(-1, -1),
                 end=ft.Alignment(1, 1),
                 colors=[self.primary_color, self.primary_dark],
             ),
             border_radius=ft.BorderRadius.only(bottom_left=20, bottom_right=20),
-            shadow=ft.BoxShadow(
-                blur_radius=15,
-                color=ft.Colors.with_opacity(0.2, ft.Colors.BLACK),
-            ),
         )
     
     def load_invoice_data(self):
         try:
             if self.invoice_id:
                 self.invoice_data = self.client.get_invoice(self.invoice_id)
+                print(f"DEBUG: Loaded invoice data for {self.invoice_id}")
                 self.page.update()
         except Exception as ex:
             print(f"Error loading invoice detail: {ex}")
@@ -166,21 +163,21 @@ class InvoiceDetailContent:
         
         # Status Badge
         status_badge = ft.Container(
-            content=ft.Text(status_texts.get(payment_status, payment_status), size=14, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500),
+            content=ft.Text(status_texts.get(payment_status, payment_status), size=13, color=ft.Colors.WHITE, weight=ft.FontWeight.W_600),
             bgcolor=status_colors.get(payment_status, "#607D8B"),
-            border_radius=12,
-            padding=ft.padding.symmetric(horizontal=20, vertical=8),
+            border_radius=20,
+            padding=ft.padding.symmetric(horizontal=16, vertical=6),
         )
         
-        # Invoice Info Card
+        # ========== INVOICE INFO CARD ==========
         invoice_info_card = ft.Card(
             content=ft.Container(
                 content=ft.Column([
                     ft.Row(
                         [
                             ft.Container(
-                                content=ft.Icon(ft.Icons.INFO, size=20, color=self.primary_color),
-                                bgcolor="#E3F2FD",
+                                content=ft.Icon(ft.Icons.RECEIPT, size=20, color=self.primary_color),
+                                bgcolor=ft.Colors.with_opacity(0.1, self.primary_color),
                                 border_radius=10,
                                 padding=ft.padding.all(8),
                             ),
@@ -193,41 +190,41 @@ class InvoiceDetailContent:
                     ft.Container(height=12),
                     ft.Row([
                         ft.Column([
-                            ft.Text(get_text("invoice_no"), size=12, color="#64748B"),
-                            ft.Text(invoice_no, size=14, weight=ft.FontWeight.W_500),
-                        ], spacing=2, expand=True),
+                            ft.Text(get_text("invoice_no"), size=11, color="#64748B"),
+                            ft.Text(invoice_no, size=15, weight=ft.FontWeight.W_700, color=self.primary_color),
+                        ], spacing=4, expand=True),
                         ft.Column([
-                            ft.Text(get_text("status"), size=12, color="#64748B"),
+                            ft.Text(get_text("status"), size=11, color="#64748B"),
                             status_badge,
-                        ], spacing=2, expand=True),
+                        ], spacing=4, expand=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
                         ft.Column([
-                            ft.Text(get_text("payment_method"), size=12, color="#64748B"),
-                            ft.Text(method_texts.get(payment_method, payment_method), size=14, weight=ft.FontWeight.W_500),
-                        ], spacing=2, expand=True),
+                            ft.Text(get_text("payment_method"), size=11, color="#64748B"),
+                            ft.Text(method_texts.get(payment_method, payment_method), size=14, weight=ft.FontWeight.W_600, color="#1E293B"),
+                        ], spacing=4, expand=True),
                     ]),
                     ft.Container(height=8),
                     ft.Row([
                         ft.Column([
-                            ft.Text(get_text("paid_date"), size=12, color="#64748B"),
-                            ft.Text(paid_date, size=14),
-                        ], spacing=2, expand=True),
+                            ft.Text(get_text("paid_date"), size=11, color="#64748B"),
+                            ft.Text(paid_date, size=13, color="#1E293B"),
+                        ], spacing=4, expand=True),
                         ft.Column([
-                            ft.Text(get_text("received_amount"), size=12, color="#64748B"),
-                            ft.Text(f"{int(received_amount):,} KIP", size=14, weight=ft.FontWeight.W_500, color=ft.Colors.GREEN_700),
-                        ], spacing=2, expand=True),
+                            ft.Text(get_text("received_amount"), size=11, color="#64748B"),
+                            ft.Text(f"{int(received_amount):,} KIP", size=13, weight=ft.FontWeight.W_600, color=self.success_color),
+                        ], spacing=4, expand=True),
                         ft.Column([
-                            ft.Text(get_text("change_amount"), size=12, color="#64748B"),
-                            ft.Text(f"{int(change_amount):,} KIP", size=14, weight=ft.FontWeight.W_500, color=ft.Colors.BLUE_700),
-                        ], spacing=2, expand=True),
+                            ft.Text(get_text("change_amount"), size=11, color="#64748B"),
+                            ft.Text(f"{int(change_amount):,} KIP", size=13, weight=ft.FontWeight.W_600, color="#1E293B"),
+                        ], spacing=4, expand=True),
                     ]),
                 ]),
                 padding=ft.padding.all(20),
             ),
             elevation=2,
-            margin=ft.margin.only(bottom=20),
+            margin=ft.margin.only(bottom=16),
         )
         
-        # Job Order Info Card
+        # ========== JOB ORDER INFO CARD ==========
         job_info_card = ft.Card(
             content=ft.Container(
                 content=ft.Column([
@@ -235,7 +232,7 @@ class InvoiceDetailContent:
                         [
                             ft.Container(
                                 content=ft.Icon(ft.Icons.RECEIPT, size=20, color=self.primary_color),
-                                bgcolor="#E3F2FD",
+                                bgcolor=ft.Colors.with_opacity(0.1, self.primary_color),
                                 border_radius=10,
                                 padding=ft.padding.all(8),
                             ),
@@ -248,45 +245,45 @@ class InvoiceDetailContent:
                     ft.Container(height=12),
                     ft.Row([
                         ft.Column([
-                            ft.Text(get_text("job_number"), size=12, color="#64748B"),
-                            ft.Text(job_no, size=14, weight=ft.FontWeight.W_500),
-                        ], spacing=2, expand=True),
+                            ft.Text(get_text("job_number"), size=11, color="#64748B"),
+                            ft.Text(job_no, size=14, weight=ft.FontWeight.W_600, color="#1E293B"),
+                        ], spacing=4, expand=True),
                         ft.Column([
-                            ft.Text(get_text("customer_name"), size=12, color="#64748B"),
-                            ft.Text(customer_name, size=14, weight=ft.FontWeight.W_500),
-                        ], spacing=2, expand=True),
+                            ft.Text(get_text("customer_name"), size=11, color="#64748B"),
+                            ft.Text(customer_name, size=14, weight=ft.FontWeight.W_600, color="#1E293B"),
+                        ], spacing=4, expand=True),
                         ft.Column([
-                            ft.Text(get_text("customer_phone"), size=12, color="#64748B"),
-                            ft.Text(customer_phone, size=14),
-                        ], spacing=2, expand=True),
+                            ft.Text(get_text("customer_phone"), size=11, color="#64748B"),
+                            ft.Text(customer_phone, size=13, color="#1E293B"),
+                        ], spacing=4, expand=True),
                     ]),
                     ft.Container(height=8),
                     ft.Row([
                         ft.Column([
-                            ft.Text(get_text("plate_number"), size=12, color="#64748B"),
-                            ft.Text(plate_number, size=14, weight=ft.FontWeight.W_500),
-                        ], spacing=2, expand=True),
+                            ft.Text(get_text("plate_number"), size=11, color="#64748B"),
+                            ft.Text(plate_number, size=14, weight=ft.FontWeight.W_700, color=self.primary_color),
+                        ], spacing=4, expand=True),
                         ft.Column([
-                            ft.Text(get_text("car_brand_model"), size=12, color="#64748B"),
-                            ft.Text(f"{brand} {model}", size=14),
-                        ], spacing=2, expand=True),
+                            ft.Text(get_text("car_brand_model"), size=11, color="#64748B"),
+                            ft.Text(f"{brand} {model}", size=13, color="#1E293B"),
+                        ], spacing=4, expand=True),
                     ]),
                 ]),
                 padding=ft.padding.all(20),
             ),
             elevation=2,
-            margin=ft.margin.only(bottom=20),
+            margin=ft.margin.only(bottom=16),
         )
         
-        # Amount Card
+        # ========== PAYMENT SUMMARY CARD ==========
         amount_card = ft.Card(
             content=ft.Container(
                 content=ft.Column([
                     ft.Row(
                         [
                             ft.Container(
-                                content=ft.Icon(ft.Icons.CALCULATE, size=20, color=self.primary_color),
-                                bgcolor="#E3F2FD",
+                                content=ft.Icon(ft.Icons.PAYMENT, size=20, color=self.primary_color),
+                                bgcolor=ft.Colors.with_opacity(0.1, self.primary_color),
                                 border_radius=10,
                                 padding=ft.padding.all(8),
                             ),
@@ -298,70 +295,57 @@ class InvoiceDetailContent:
                     ft.Divider(height=1, color=ft.Colors.GREY_100),
                     ft.Container(height=12),
                     ft.Row([
-                        ft.Text(get_text("total_amount"), size=14),
+                        ft.Text(get_text("total_amount"), size=13, color="#64748B"),
                         ft.Container(expand=True),
-                        ft.Text(f"{int(total_amount):,} KIP", size=14, weight=ft.FontWeight.W_500),
+                        ft.Text(f"{int(total_amount):,} KIP", size=14, weight=ft.FontWeight.W_600, color="#1E293B"),
                     ]),
                     ft.Row([
-                        ft.Text(get_text("discount"), size=14),
+                        ft.Text(get_text("discount"), size=13, color="#64748B"),
                         ft.Container(expand=True),
-                        ft.Text(f"- {int(total_discount):,} KIP", size=14, weight=ft.FontWeight.W_500, color=ft.Colors.RED_600),
+                        ft.Text(f"- {int(total_discount):,} KIP", size=14, weight=ft.FontWeight.W_600, color=ft.Colors.RED_600),
                     ]),
-                    ft.Divider(height=1, color=ft.Colors.GREY_100),
+                    ft.Divider(height=1, color=ft.Colors.GREY_200),
                     ft.Row([
-                        ft.Text(get_text("final_total"), size=16, weight=ft.FontWeight.BOLD),
+                        ft.Text(get_text("final_total"), size=16, weight=ft.FontWeight.BOLD, color="#1E293B"),
                         ft.Container(expand=True),
-                        ft.Text(f"{int(final_total):,} KIP", size=20, weight=ft.FontWeight.BOLD, color=self.primary_color),
+                        ft.Text(f"{int(final_total):,} KIP", size=20, weight=ft.FontWeight.BOLD, color=self.success_color),
                     ]),
                 ]),
                 padding=ft.padding.all(20),
             ),
             elevation=2,
-            margin=ft.margin.only(bottom=20),
+            margin=ft.margin.only(bottom=16),
         )
         
-        # Action Buttons
-        print_btn = ft.ElevatedButton(
-            content=ft.Row([
-                ft.Icon(ft.Icons.PRINT, size=18, color=ft.Colors.WHITE),
-                ft.Text(get_text("print_invoice"), size=14, color=ft.Colors.WHITE),
-            ], spacing=6),
-            on_click=lambda e: self.print_invoice(),
-            style=ft.ButtonStyle(
-                bgcolor=self.primary_color,
-                shape=ft.RoundedRectangleBorder(radius=8),
-            ),
-        )
-        
+        # ========== ACTION BUTTONS ==========
         back_btn = ft.OutlinedButton(
             content=ft.Row([
                 ft.Icon(ft.Icons.ARROW_BACK, size=18, color=self.primary_color),
-                ft.Text(get_text("back_to_list"), size=14, color=self.primary_color),
+                ft.Text(get_text("back_to_list"), size=14, color=self.primary_color, weight=ft.FontWeight.W_500),
             ], spacing=6),
             on_click=lambda e: self.navigate("invoice_list"),
             style=ft.ButtonStyle(
-                shape=ft.RoundedRectangleBorder(radius=8),
+                shape=ft.RoundedRectangleBorder(radius=10),
                 side=ft.BorderSide(1, self.primary_color),
+                padding=ft.padding.symmetric(horizontal=24, vertical=12),
             ),
         )
         
-        action_row = ft.Row([back_btn, print_btn], spacing=12, alignment=ft.MainAxisAlignment.END)
+        action_row = ft.Row([back_btn], spacing=12, alignment=ft.MainAxisAlignment.CENTER)
         
         return ft.Column([
             invoice_info_card,
             job_info_card,
             amount_card,
+            ft.Container(height=20),
             action_row,
-        ], spacing=20)
-    
-    def print_invoice(self):
-        """Print invoice - open print dialog"""
-        self.show_snack_bar(get_text("print_coming_soon"), is_error=False)
+        ], spacing=0)
     
     def show_snack_bar(self, message: str, is_error: bool = False):
         self.page.snack_bar = ft.SnackBar(
-            content=ft.Text(message),
+            content=ft.Text(message, size=13),
             bgcolor=ft.Colors.RED_600 if is_error else ft.Colors.GREEN_600,
             open=True,
+            duration=3000,
         )
         self.page.update()

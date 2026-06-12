@@ -1,3 +1,4 @@
+# backend/routers/invoices.py
 from fastapi import APIRouter, HTTPException, Depends, Form
 from database import get_db
 from auth import authenticate_user
@@ -162,7 +163,54 @@ def get_invoice_info_by_job_order(
                 }
             }
         
-        # Return basic info without quotation items
+        # Get parts usage from repair_orders (actual parts used)
+        parts_list = []
+        try:
+            cursor.execute("""
+                SELECT pu.part_id, pu.qty, pu.cost_price, p.name as part_name
+                FROM parts_usage pu
+                LEFT JOIN parts p ON pu.part_id = p.id
+                LEFT JOIN repair_orders ro ON pu.repair_id = ro.id
+                WHERE ro.job_order_id = %s
+            """, (job_order_id,))
+            parts = cursor.fetchall()
+            
+            for part in parts:
+                parts_list.append({
+                    'name': part.get('part_name', '-'),
+                    'qty': part.get('qty', 0),
+                    'unit_price': part.get('cost_price', 0),
+                    'total': (part.get('qty', 0) * part.get('cost_price', 0)),
+                    'discount_amount': 0
+                })
+        except Exception as e:
+            print(f"Error getting parts usage: {e}")
+        
+        # Get services from quotation (labor charges)
+        services_list = []
+        try:
+            cursor.execute("""
+                SELECT qi.name, qi.qty, qi.unit_price, qi.total
+                FROM quotation_items qi
+                LEFT JOIN quotations q ON qi.quotation_id = q.id
+                WHERE q.job_order_id = %s AND qi.item_type = 'service'
+            """, (job_order_id,))
+            services = cursor.fetchall()
+            
+            for service in services:
+                services_list.append({
+                    'name': service.get('name', '-'),
+                    'qty': service.get('qty', 1),
+                    'unit_price': service.get('unit_price', 0),
+                    'total': service.get('total', 0),
+                    'discount_amount': 0
+                })
+        except Exception as e:
+            print(f"Error getting services: {e}")
+        
+        # Calculate totals
+        total_amount = sum(p['total'] for p in parts_list) + sum(s['total'] for s in services_list)
+        
         return {
             "job_order": {
                 "id": job_info['id'],
@@ -177,8 +225,8 @@ def get_invoice_info_by_job_order(
                 "fuel_level": job_info.get('fuel_level', ''),
                 "problem_description": job_info.get('problem_description', '')
             },
-            "parts": [],
-            "services": [
+            "parts": parts_list,
+            "services": services_list if services_list else [
                 {
                     "id": 1,
                     "name": "ຄ່າແຮງງານຊ່າງ",
@@ -189,9 +237,9 @@ def get_invoice_info_by_job_order(
                 }
             ],
             "summary": {
-                "total_amount": 100000,
+                "total_amount": total_amount,
                 "total_discount": 0,
-                "final_total": 100000
+                "final_total": total_amount
             }
         }
         
@@ -199,7 +247,6 @@ def get_invoice_info_by_job_order(
         print(f"Error getting invoice info: {e}")
         import traceback
         traceback.print_exc()
-        # Return default data
         return {
             "job_order": {
                 "id": job_order_id,
@@ -247,7 +294,7 @@ def create_invoice(
     change_amount: float = Form(0),
     user: dict = Depends(authenticate_user)
 ):
-    """Create a new invoice"""
+    """Create a new invoice and close job order if paid"""
     db = get_db()
     cursor = db.cursor()
     try:
@@ -263,16 +310,27 @@ def create_invoice(
             }
         
         # Create new invoice
+        paid_date = datetime.now() if payment_status == 'paid' else None
         cursor.execute("""
             INSERT INTO invoices 
             (job_order_id, total_amount, total_discount, final_total, 
-             payment_method, payment_status, received_amount, change_amount)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+             payment_method, payment_status, received_amount, change_amount, paid_date)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         """, (job_order_id, total_amount, total_discount, final_total, 
-              payment_method, payment_status, received_amount, change_amount))
+              payment_method, payment_status, received_amount, change_amount, paid_date))
         
         db.commit()
         invoice_id = cursor.lastrowid
+        
+        # If paid, close the job order (D10 - ສົ່ງມອບລົດຄືນລູກຄ້າ)
+        if payment_status == 'paid':
+            cursor.execute("""
+                UPDATE job_orders 
+                SET status = 'closed', closed_at = %s, closed_by = %s
+                WHERE id = %s
+            """, (datetime.now(), user.get('id'), job_order_id))
+            db.commit()
+            print(f"DEBUG: Closed job order {job_order_id} after payment")
         
         return {
             "id": invoice_id,
@@ -282,6 +340,8 @@ def create_invoice(
     except Exception as e:
         db.rollback()
         print(f"Error creating invoice: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         cursor.close()
@@ -296,10 +356,16 @@ def record_payment(
     change_amount: float = Form(...),
     user: dict = Depends(authenticate_user)
 ):
-    """Record payment for an invoice"""
+    """Record payment for an invoice and close job order"""
     db = get_db()
     cursor = db.cursor()
     try:
+        # Get job_order_id from invoice
+        cursor.execute("SELECT job_order_id FROM invoices WHERE id = %s", (invoice_id,))
+        result = cursor.fetchone()
+        job_order_id = result[0] if result else None
+        
+        # Update invoice payment
         cursor.execute("""
             UPDATE invoices 
             SET payment_method = %s, 
@@ -311,7 +377,17 @@ def record_payment(
         """, (payment_method, received_amount, change_amount, datetime.now(), invoice_id))
         db.commit()
         
-        return {"message": "Payment recorded successfully"}
+        # Close the job order (D10 - ສົ່ງມອບລົດຄືນລູກຄ້າ)
+        if job_order_id:
+            cursor.execute("""
+                UPDATE job_orders 
+                SET status = 'closed', closed_at = %s, closed_by = %s
+                WHERE id = %s
+            """, (datetime.now(), user.get('id'), job_order_id))
+            db.commit()
+            print(f"DEBUG: Closed job order {job_order_id} after payment")
+        
+        return {"message": "Payment recorded successfully, job order closed"}
     except Exception as e:
         db.rollback()
         print(f"Error recording payment: {e}")
@@ -331,9 +407,30 @@ def update_invoice_status(
     db = get_db()
     cursor = db.cursor()
     try:
-        cursor.execute("""
-            UPDATE invoices SET payment_status = %s WHERE id = %s
-        """, (payment_status, invoice_id))
+        # If status is being changed to paid, also update paid_date
+        if payment_status == 'paid':
+            cursor.execute("""
+                UPDATE invoices 
+                SET payment_status = %s, paid_date = %s
+                WHERE id = %s
+            """, (payment_status, datetime.now(), invoice_id))
+            
+            # Also get job_order_id and close it
+            cursor.execute("SELECT job_order_id FROM invoices WHERE id = %s", (invoice_id,))
+            result = cursor.fetchone()
+            job_order_id = result[0] if result else None
+            
+            if job_order_id:
+                cursor.execute("""
+                    UPDATE job_orders 
+                    SET status = 'closed', closed_at = %s, closed_by = %s
+                    WHERE id = %s
+                """, (datetime.now(), user.get('id'), job_order_id))
+        else:
+            cursor.execute("""
+                UPDATE invoices SET payment_status = %s WHERE id = %s
+            """, (payment_status, invoice_id))
+        
         db.commit()
         
         return {"message": f"Invoice status updated to {payment_status}"}
