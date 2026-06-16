@@ -72,7 +72,6 @@ class PartsUsageReportContent:
                                 weight=ft.FontWeight.BOLD,
                                 color=ft.Colors.WHITE,
                             ),
-                            
                         ],
                         spacing=2,
                     ),
@@ -163,7 +162,7 @@ class PartsUsageReportContent:
             padding=ft.padding.all(20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
-            margin=ft.margin.symmetric(horizontal=24, vertical=10),
+            margin=ft.margin.only(left=24, right=24, top=10, bottom=10),
             shadow=ft.BoxShadow(
                 blur_radius=10,
                 color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
@@ -262,26 +261,36 @@ class PartsUsageReportContent:
         
         total_value = stock_value.get('total_stock_value', 0)
         total_parts = stock_value.get('total_parts', 0)
+        total_qty = stock_value.get('total_stock_quantity', 0)
         
         return ft.Container(
             content=ft.Row([
-                self._build_info_card(
+                self._build_stat_card(
                     title=get_text("total_stock_value"),
                     value=self._format_currency(total_value),
                     icon=ft.Icons.INVENTORY,
                     color="#10B981",
+                    subtitle=get_text("value"),
                 ),
-                self._build_info_card(
-                    title=get_text("total_parts"),
+                self._build_stat_card(
+                    title=get_text("total_part_types"),
                     value=str(total_parts),
                     icon=ft.Icons.CATEGORY,
                     color="#3B82F6",
+                    subtitle=get_text("types"),
                 ),
-            ], spacing=20, expand=True),
+                self._build_stat_card(
+                    title=get_text("total_stock_quantity"),
+                    value=str(total_qty),
+                    icon=ft.Icons.STACKED_BAR_CHART,
+                    color="#8B5CF6",
+                    subtitle=get_text("units"),
+                ),
+            ], spacing=16, expand=True),
             padding=ft.padding.all(20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
-            margin=ft.margin.symmetric(horizontal=24),
+            margin=ft.margin.only(left=24, right=24),
             shadow=ft.BoxShadow(
                 blur_radius=10,
                 color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
@@ -289,23 +298,25 @@ class PartsUsageReportContent:
             ),
         )
     
-    def _build_info_card(self, title, value, icon, color):
+    def _build_stat_card(self, title, value, icon, color, subtitle=""):
         return ft.Container(
             content=ft.Row([
                 ft.Container(
-                    content=ft.Icon(icon, size=24, color=ft.Colors.WHITE),
+                    content=ft.Icon(icon, size=20, color=ft.Colors.WHITE),
                     bgcolor=color,
-                    border_radius=12,
-                    padding=ft.padding.all(12),
+                    border_radius=10,
+                    padding=ft.padding.all(8),
                 ),
                 ft.Column([
-                    ft.Text(value, size=20, weight=ft.FontWeight.BOLD, color="#1E293B"),
+                    ft.Text(value, size=18, weight=ft.FontWeight.BOLD, color="#1E293B"),
                     ft.Text(title, size=12, color="#64748B"),
+                    ft.Text(subtitle, size=10, color="#94A3B8") if subtitle else ft.Container(),
                 ], spacing=2, expand=True),
-            ], spacing=16, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-            padding=ft.padding.all(16),
-            bgcolor=ft.Colors.GREY_50,
+            ], spacing=12, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+            padding=ft.padding.all(12),
+            bgcolor=ft.Colors.WHITE,
             border_radius=12,
+            border=ft.border.all(1, ft.Colors.GREY_100),
             expand=True,
         )
     
@@ -313,13 +324,33 @@ class PartsUsageReportContent:
         top_parts = self.report_data.get('top_parts', [])
         
         if not top_parts:
-            return ft.Container()
+            return ft.Container(
+                content=ft.Column([
+                    ft.Text(get_text("top_parts_usage"), size=16, weight=ft.FontWeight.BOLD, color="#1E293B"),
+                    ft.Container(height=12),
+                    ft.Container(
+                        content=ft.Text(get_text("no_data"), size=14, color="#64748B"),
+                        padding=ft.padding.all(40),
+                        bgcolor=ft.Colors.GREY_50,
+                        border_radius=12,
+                        alignment=ft.Alignment(0, 0),
+                    ),
+                ]),
+                padding=ft.padding.all(20),
+                bgcolor=ft.Colors.WHITE,
+                border_radius=16,
+                margin=ft.margin.only(left=24, right=24),
+                shadow=ft.BoxShadow(
+                    blur_radius=10,
+                    color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
+                    offset=ft.Offset(0, 2),
+                ),
+            )
         
-        # Table header
         header = ft.Container(
             content=ft.Row([
                 ft.Text(get_text("part_name"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", expand=True),
-                ft.Text(get_text("brand"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=100),
+                ft.Text(get_text("category"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=120),
                 ft.Text(get_text("quantity_used"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=100),
                 ft.Text(get_text("total_cost"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=120),
                 ft.Text(get_text("current_stock"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=100),
@@ -335,19 +366,18 @@ class PartsUsageReportContent:
             bg = ft.Colors.GREY_50 if i % 2 == 0 else ft.Colors.WHITE
             
             name = part.get('part_name', '-')
-            brand = part.get('brand', '-')
-            total_used = part.get('total_used', 0)
+            category = part.get('category_name', '-')
+            total_used = part.get('total_quantity_used', 0)
             total_cost = part.get('total_cost', 0)
             current_stock = part.get('current_stock', 0)
             
-            # Stock level indicator
             stock_color = "#10B981" if current_stock > 10 else "#F59E0B" if current_stock > 0 else "#EF4444"
             
             table_body.controls.append(
                 ft.Container(
                     content=ft.Row([
                         ft.Text(name, size=13, weight=ft.FontWeight.W_500, color="#1E293B", expand=True),
-                        ft.Text(brand, size=12, color="#64748B", width=100),
+                        ft.Text(category, size=12, color="#64748B", width=120),
                         ft.Text(str(total_used), size=13, color="#1E293B", width=100),
                         ft.Text(self._format_currency(total_cost), size=13, color="#1E293B", width=120),
                         ft.Text(str(current_stock), size=13, color=stock_color, width=100),
@@ -367,7 +397,7 @@ class PartsUsageReportContent:
             padding=ft.padding.all(20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
-            margin=ft.margin.symmetric(horizontal=24),
+            margin=ft.margin.only(left=24, right=24),
             shadow=ft.BoxShadow(
                 blur_radius=10,
                 color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
@@ -396,7 +426,7 @@ class PartsUsageReportContent:
                 padding=ft.padding.all(20),
                 bgcolor=ft.Colors.WHITE,
                 border_radius=16,
-                margin=ft.margin.symmetric(horizontal=24),
+                margin=ft.margin.only(left=24, right=24),
                 shadow=ft.BoxShadow(
                     blur_radius=10,
                     color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
@@ -404,7 +434,6 @@ class PartsUsageReportContent:
                 ),
             )
         
-        # Table header
         header = ft.Container(
             content=ft.Row([
                 ft.Text(get_text("part_name"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", expand=True),
@@ -443,8 +472,8 @@ class PartsUsageReportContent:
                         ft.Text(str(stock_qty), size=13, color="#EF4444", width=100),
                         ft.Text(str(min_stock), size=13, color="#64748B", width=80),
                         ft.Container(
-                            content=ft.Text(status, size=11, color=status_color),
-                            bgcolor=ft.Colors.with_opacity(0.1, status_color),
+                            content=ft.Text(status, size=11, color=ft.Colors.WHITE),
+                            bgcolor=status_color,
                             border_radius=12,
                             padding=ft.padding.symmetric(horizontal=8, vertical=4),
                             width=100,
@@ -465,7 +494,7 @@ class PartsUsageReportContent:
             padding=ft.padding.all(20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
-            margin=ft.margin.symmetric(horizontal=24),
+            margin=ft.margin.only(left=24, right=24),
             shadow=ft.BoxShadow(
                 blur_radius=10,
                 color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
@@ -479,11 +508,11 @@ class PartsUsageReportContent:
         if not stock_movements:
             return ft.Container()
         
-        movement_row = ft.Row(spacing=20, expand=True)
+        movement_row = ft.Row(spacing=16, expand=True)
         
         for movement in stock_movements:
             movement_type = movement.get('type', '')
-            total_qty = movement.get('total_qty', 0)
+            total_qty = movement.get('total_quantity', 0)
             count = movement.get('movement_count', 0)
             
             if movement_type == 'IN':
@@ -497,21 +526,19 @@ class PartsUsageReportContent:
             
             movement_row.controls.append(
                 ft.Container(
-                    content=ft.Column([
-                        ft.Row([
-                            ft.Container(
-                                content=ft.Icon(icon, size=20, color=ft.Colors.WHITE),
-                                bgcolor=color,
-                                border_radius=10,
-                                padding=ft.padding.all(8),
-                            ),
-                            ft.Container(expand=True),
+                    content=ft.Row([
+                        ft.Container(
+                            content=ft.Icon(icon, size=20, color=ft.Colors.WHITE),
+                            bgcolor=color,
+                            border_radius=10,
+                            padding=ft.padding.all(8),
+                        ),
+                        ft.Column([
                             ft.Text(str(total_qty), size=20, weight=ft.FontWeight.BOLD, color=color),
-                        ], spacing=12),
-                        ft.Container(height=4),
-                        ft.Text(title, size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
-                        ft.Text(f"{count} {get_text('movements')}", size=11, color="#64748B"),
-                    ]),
+                            ft.Text(title, size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
+                            ft.Text(f"{count} {get_text('movements')}", size=11, color="#64748B"),
+                        ], spacing=2, expand=True),
+                    ], spacing=12, vertical_alignment=ft.CrossAxisAlignment.CENTER),
                     padding=ft.padding.all(16),
                     bgcolor=ft.Colors.WHITE,
                     border_radius=12,
@@ -529,7 +556,7 @@ class PartsUsageReportContent:
             padding=ft.padding.all(20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
-            margin=ft.margin.symmetric(horizontal=24, bottom=24),
+            margin=ft.margin.only(left=24, right=24, bottom=24),
             shadow=ft.BoxShadow(
                 blur_radius=10,
                 color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
@@ -544,27 +571,19 @@ class PartsUsageReportContent:
             return "0 KIP"
     
     def print_report(self, e):
-        """Print report using browser print dialog"""
         try:
-            # Show loading indicator
             self._show_snack_bar(get_text("preparing_print"), is_error=False)
             
-            # Generate HTML for printing in a separate thread
             def generate_and_print():
                 html_content = self._generate_print_html()
                 
-                # Create temporary HTML file
                 with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False, encoding='utf-8') as f:
                     f.write(html_content)
                     temp_path = f.name
                 
-                # Small delay to ensure file is written
                 time.sleep(0.5)
-                
-                # Open in browser
                 webbrowser.open(f'file://{temp_path}')
                 
-                # Schedule cleanup after a delay (30 seconds)
                 def cleanup():
                     time.sleep(30)
                     try:
@@ -575,7 +594,6 @@ class PartsUsageReportContent:
                 
                 threading.Thread(target=cleanup, daemon=True).start()
             
-            # Run in background thread to not block UI
             threading.Thread(target=generate_and_print, daemon=True).start()
             
         except Exception as ex:
@@ -583,13 +601,11 @@ class PartsUsageReportContent:
             self._show_snack_bar(f"{get_text('error')}: {str(ex)}", is_error=True)
     
     def _generate_print_html(self):
-        """Generate HTML for printing with Lao/English text"""
         stock_value = self.report_data.get('stock_value', {})
         top_parts = self.report_data.get('top_parts', [])
         low_stock_parts = self.report_data.get('low_stock_parts', [])
         stock_movements = self.report_data.get('stock_movements', [])
         
-        # Get shop info
         shop_info = {}
         try:
             shop_info = self.client.get_shop()
@@ -600,7 +616,6 @@ class PartsUsageReportContent:
         shop_address = shop_info.get('address', '')
         shop_phone = shop_info.get('phone', '')
         
-        # Get current language
         current_lang = 'lo'
         try:
             from i18n import get_current_language
@@ -608,7 +623,6 @@ class PartsUsageReportContent:
         except:
             pass
         
-        # Set titles based on language
         if current_lang == 'lo':
             report_title = "ລາຍງານການໃຊ້ອາໄຫຼ່"
             summary_title = "ສະຫຼຸບມູນຄ່າສະຕ໋ອກ"
@@ -616,7 +630,7 @@ class PartsUsageReportContent:
             low_stock_title = "ອາໄຫຼ່ສະຕ໋ອກໃກ້ໝົດ"
             movement_title = "ສະຫຼຸບການເຄື່ອນໄຫວສະຕ໋ອກ"
             part_name_text = "ຊື່ອາໄຫຼ່"
-            brand_text = "ຍີ່ຫໍ້"
+            category_text = "ປະເພດ"
             quantity_used_text = "ຈຳນວນທີ່ໃຊ້"
             total_cost_text = "ມູນຄ່າທັງໝົດ"
             current_stock_text = "ສະຕ໋ອກປະຈຸບັນ"
@@ -628,7 +642,7 @@ class PartsUsageReportContent:
             stock_in_text = "ເຂົ້າ"
             stock_out_text = "ອອກ"
             total_stock_value_text = "ມູນຄ່າສະຕ໋ອກທັງໝົດ"
-            total_parts_text = "ຈຳນວນອາໄຫຼ່ທັງໝົດ"
+            total_parts_text = "ຈຳນວນປະເພດອາໄຫຼ່"
             out_of_stock_text = "ໝົດສະຕ໋ອກ"
             critical_text = "ວິກິດ"
             low_text = "ໃກ້ໝົດ"
@@ -643,7 +657,7 @@ class PartsUsageReportContent:
             low_stock_title = "Low Stock Alert"
             movement_title = "Stock Movement Summary"
             part_name_text = "Part Name"
-            brand_text = "Brand"
+            category_text = "Category"
             quantity_used_text = "Quantity Used"
             total_cost_text = "Total Cost"
             current_stock_text = "Current Stock"
@@ -655,7 +669,7 @@ class PartsUsageReportContent:
             stock_in_text = "Stock In"
             stock_out_text = "Stock Out"
             total_stock_value_text = "Total Stock Value"
-            total_parts_text = "Total Parts"
+            total_parts_text = "Total Part Types"
             out_of_stock_text = "Out of Stock"
             critical_text = "Critical"
             low_text = "Low"
@@ -664,26 +678,18 @@ class PartsUsageReportContent:
             printed_text = "Printed on"
             phone_text = "Tel"
         
-        # Build top parts table HTML
         top_parts_html = ""
         for part in top_parts[:20]:
-            name = part.get('part_name', '-')
-            brand = part.get('brand', '-')
-            total_used = part.get('total_used', 0)
-            total_cost = part.get('total_cost', 0)
-            current_stock = part.get('current_stock', 0)
-            stock_class = "stock-positive" if current_stock > 10 else "stock-warning" if current_stock > 0 else "stock-danger"
             top_parts_html += f"""
             <tr>
-                <td>{name}</td>
-                <td>{brand}</td>
-                <td class="text-right">{total_used}</td>
-                <td class="text-right">{self._format_currency(total_cost)}</td>
-                <td class="text-right {stock_class}">{current_stock}</td>
+                <td>{part.get('part_name', '-')}</td>
+                <td>{part.get('category_name', '-')}</td>
+                <td class="text-right">{part.get('total_quantity_used', 0)}</td>
+                <td class="text-right">{self._format_currency(part.get('total_cost', 0))}</td>
+                <td class="text-right">{part.get('current_stock', 0)}</td>
             </tr>
             """
         
-        # Build low stock table HTML
         low_stock_html = ""
         for part in low_stock_parts:
             name = part.get('name', '-')
@@ -692,28 +698,24 @@ class PartsUsageReportContent:
             
             if stock_qty <= 0:
                 status = out_of_stock_text
-                status_class = "badge-out"
             elif stock_qty <= min_stock / 2:
                 status = critical_text
-                status_class = "badge-critical"
             else:
                 status = low_text
-                status_class = "badge-low"
             
             low_stock_html += f"""
             <tr>
                 <td>{name}</td>
                 <td class="text-right">{stock_qty}</td>
                 <td class="text-right">{min_stock}</td>
-                <td><span class="badge {status_class}">{status}</span></td>
+                <td class="text-right">{status}</td>
             </tr>
             """
         
-        # Build stock movement HTML
         movement_html = ""
         for movement in stock_movements:
             movement_type = movement.get('type', '')
-            total_qty = movement.get('total_qty', 0)
+            total_qty = movement.get('total_quantity', 0)
             count = movement.get('movement_count', 0)
             type_display = stock_in_text if movement_type == 'IN' else stock_out_text
             movement_html += f"""
@@ -724,146 +726,59 @@ class PartsUsageReportContent:
             </tr>
             """
         
+        total_value = stock_value.get('total_stock_value', 0)
+        total_parts_count = stock_value.get('total_part_types', 0)
+        
         html_content = f"""<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <title>{report_title}</title>
     <style>
-        @media print {{
-            body {{ margin: 0; padding: 15px; }}
-        }}
-        * {{
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }}
+        @media print {{ body {{ margin: 0; padding: 15px; }} }}
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
         body {{
             font-family: 'Noto Sans', 'DejaVu Sans', 'Segoe UI', Arial, sans-serif;
-            font-size: 12px;
-            padding: 20px;
-            color: #333;
-            background: white;
+            font-size: 12px; padding: 20px; color: #333; background: white;
         }}
-        .print-container {{
-            max-width: 1200px;
-            margin: 0 auto;
-        }}
+        .print-container {{ max-width: 1200px; margin: 0 auto; }}
         .header {{
-            text-align: center;
-            margin-bottom: 25px;
-            border-bottom: 2px solid #1565C0;
-            padding-bottom: 15px;
+            text-align: center; margin-bottom: 25px;
+            border-bottom: 2px solid #1565C0; padding-bottom: 15px;
         }}
-        .shop-name {{
-            font-size: 22px;
-            font-weight: bold;
-            color: #1565C0;
-            margin-bottom: 5px;
-        }}
-        .shop-address {{
-            font-size: 11px;
-            color: #666;
-        }}
-        .shop-phone {{
-            font-size: 11px;
-            color: #666;
-        }}
-        .report-title {{
-            font-size: 18px;
-            font-weight: bold;
-            margin-top: 12px;
-            color: #1E293B;
-        }}
-        .period {{
-            font-size: 11px;
-            color: #64748B;
-            margin-top: 5px;
-        }}
-        .print-date {{
-            font-size: 10px;
-            color: #94A3B8;
-            margin-top: 3px;
-        }}
-        .section {{
-            margin-bottom: 25px;
-        }}
+        .shop-name {{ font-size: 22px; font-weight: bold; color: #1565C0; }}
+        .shop-address {{ font-size: 11px; color: #666; }}
+        .shop-phone {{ font-size: 11px; color: #666; }}
+        .report-title {{ font-size: 18px; font-weight: bold; margin-top: 12px; color: #1E293B; }}
+        .period {{ font-size: 11px; color: #64748B; margin-top: 5px; }}
+        .print-date {{ font-size: 10px; color: #94A3B8; margin-top: 3px; }}
+        .section {{ margin-bottom: 25px; }}
         .section-title {{
-            font-size: 14px;
-            font-weight: bold;
-            background-color: #F1F5F9;
-            padding: 8px 12px;
-            margin-bottom: 12px;
-            border-left: 4px solid #1565C0;
+            font-size: 14px; font-weight: bold;
+            background-color: #F1F5F9; padding: 8px 12px;
+            margin-bottom: 12px; border-left: 4px solid #1565C0;
         }}
-        .cards-grid {{
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            margin-bottom: 15px;
-        }}
+        .cards-grid {{ display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; }}
         .card {{
-            flex: 1;
-            min-width: 200px;
-            background-color: #F8FAFC;
-            border: 1px solid #E2E8F0;
-            border-radius: 8px;
-            padding: 12px;
-            text-align: center;
+            flex: 1; min-width: 180px; background-color: #F8FAFC;
+            border: 1px solid #E2E8F0; border-radius: 8px;
+            padding: 12px; text-align: center;
         }}
-        .card-value {{
-            font-size: 18px;
-            font-weight: bold;
-            color: #1565C0;
-        }}
-        .card-label {{
-            font-size: 11px;
-            color: #64748B;
-            margin-top: 4px;
-        }}
-        table {{
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 15px;
-        }}
+        .card-value {{ font-size: 18px; font-weight: bold; color: #1565C0; }}
+        .card-label {{ font-size: 11px; color: #64748B; margin-top: 4px; }}
+        table {{ width: 100%; border-collapse: collapse; margin-bottom: 12px; }}
         th {{
-            background-color: #F8FAFC;
-            border: 1px solid #E2E8F0;
-            padding: 8px 10px;
-            text-align: left;
-            font-weight: bold;
-            font-size: 11px;
+            background-color: #F8FAFC; border: 1px solid #E2E8F0;
+            padding: 6px 8px; text-align: left; font-weight: bold; font-size: 10px;
         }}
         td {{
-            border: 1px solid #E2E8F0;
-            padding: 6px 10px;
-            font-size: 11px;
+            border: 1px solid #E2E8F0; padding: 5px 8px; font-size: 10px;
         }}
-        .text-right {{
-            text-align: right;
-        }}
-        .text-center {{
-            text-align: center;
-        }}
-        .badge {{
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 10px;
-        }}
-        .badge-critical {{ background-color: #FEE2E2; color: #DC2626; }}
-        .badge-low {{ background-color: #FEF3C7; color: #D97706; }}
-        .badge-out {{ background-color: #FEE2E2; color: #DC2626; }}
-        .stock-positive {{ color: #10B981; font-weight: bold; }}
-        .stock-warning {{ color: #F59E0B; font-weight: bold; }}
-        .stock-danger {{ color: #EF4444; font-weight: bold; }}
+        .text-right {{ text-align: right; }}
+        .text-center {{ text-align: center; }}
         .footer {{
-            margin-top: 25px;
-            text-align: center;
-            font-size: 9px;
-            color: #94A3B8;
-            border-top: 1px solid #E2E8F0;
-            padding-top: 12px;
+            margin-top: 25px; text-align: center; font-size: 9px;
+            color: #94A3B8; border-top: 1px solid #E2E8F0; padding-top: 12px;
         }}
     </style>
 </head>
@@ -882,11 +797,11 @@ class PartsUsageReportContent:
             <div class="section-title">{summary_title}</div>
             <div class="cards-grid">
                 <div class="card">
-                    <div class="card-value">{self._format_currency(stock_value.get('total_stock_value', 0))}</div>
+                    <div class="card-value">{self._format_currency(total_value)}</div>
                     <div class="card-label">{total_stock_value_text}</div>
                 </div>
                 <div class="card">
-                    <div class="card-value">{stock_value.get('total_parts', 0)}</div>
+                    <div class="card-value">{total_parts_count}</div>
                     <div class="card-label">{total_parts_text}</div>
                 </div>
             </div>
@@ -895,58 +810,28 @@ class PartsUsageReportContent:
         <div class="section">
             <div class="section-title">{top_parts_title}</div>
             <table>
-                <thead>
-                    <tr>
-                        <th>{part_name_text}</th>
-                        <th>{brand_text}</th>
-                        <th class="text-right">{quantity_used_text}</th>
-                        <th class="text-right">{total_cost_text}</th>
-                        <th class="text-right">{current_stock_text}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {top_parts_html if top_parts_html else '<tr><td colspan="5" class="text-center">-</td></tr>'}
-                </tbody>
-            能有
+                <thead><tr><th>{part_name_text}</th><th>{category_text}</th><th class="text-right">{quantity_used_text}</th><th class="text-right">{total_cost_text}</th><th class="text-right">{current_stock_text}</th></tr></thead>
+                <tbody>{top_parts_html if top_parts_html else '<tr><td colspan="5" class="text-center">-</td></tr>'}</tbody>
+            </table>
         </div>
         
         <div class="section">
             <div class="section-title">{low_stock_title}</div>
             <table>
-                <thead>
-                    <tr>
-                        <th>{part_name_text}</th>
-                        <th class="text-right">{current_stock_text}</th>
-                        <th class="text-right">{min_stock_text}</th>
-                        <th>{status_text}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {low_stock_html if low_stock_html else '<tr><td colspan="4" class="text-center">-</td></tr>'}
-                </tbody>
-            能有
+                <thead><tr><th>{part_name_text}</th><th class="text-right">{current_stock_text}</th><th class="text-right">{min_stock_text}</th><th class="text-right">{status_text}</th></tr></thead>
+                <tbody>{low_stock_html if low_stock_html else '<tr><td colspan="4" class="text-center">-</td></tr>'}</tbody>
+            </table>
         </div>
         
         <div class="section">
             <div class="section-title">{movement_title}</div>
             <table>
-                <thead>
-                    <tr>
-                        <th>{type_text}</th>
-                        <th class="text-right">{total_qty_text}</th>
-                        <th class="text-right">{count_text}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {movement_html if movement_html else '<tr><td colspan="3" class="text-center">-</td></tr>'}
-                </tbody>
-            能有
+                <thead><tr><th>{type_text}</th><th class="text-right">{total_qty_text}</th><th class="text-right">{count_text}</th></tr></thead>
+                <tbody>{movement_html if movement_html else '<tr><td colspan="3" class="text-center">-</td></tr>'}</tbody>
+            </table>
         </div>
         
-        <div class="footer">
-            {shop_name}<br>
-            {shop_address} | {phone_text}: {shop_phone}
-        </div>
+        <div class="footer">{shop_name}<br>{shop_address} | {phone_text}: {shop_phone}</div>
     </div>
     
     <script>
@@ -963,7 +848,7 @@ class PartsUsageReportContent:
     
     def _show_snack_bar(self, message, is_error=False):
         self.page.snack_bar = ft.SnackBar(
-            content=ft.Text(message),
+            content=ft.Text(message, size=13),
             bgcolor=ft.Colors.RED_600 if is_error else ft.Colors.GREEN_600,
             open=True,
             duration=2000,

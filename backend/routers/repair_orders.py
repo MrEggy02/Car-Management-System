@@ -23,9 +23,11 @@ def get_repair_orders(
                    jo.job_no,
                    c.name as customer_name,
                    c.phone as customer_phone,
-                   v.plate_number, b.name as brand, v.model,
+                   v.plate_number, 
+                   b.name as brand, 
+                   v.model,
                    e.name as mechanic_name,
-                   q.total_price as quotation_total
+                   q.net_total as quotation_total
             FROM repair_orders ro
             LEFT JOIN job_orders jo ON ro.job_order_id = jo.id
             LEFT JOIN customers c ON jo.customer_id = c.id
@@ -56,6 +58,9 @@ def get_repair_orders(
                 order['end_date'] = str(order['end_date'])
             if order.get('brand') is None:
                 order['brand'] = "-"
+            # Convert Decimal to float for JSON
+            if order.get('quotation_total'):
+                order['quotation_total'] = float(order['quotation_total'])
         
         return repair_orders
     except Exception as e:
@@ -105,7 +110,14 @@ def get_repair_order(repair_id: int, user: dict = Depends(authenticate_user)):
                 LEFT JOIN parts p ON pu.part_id = p.id
                 WHERE pu.repair_id = %s
             """, (repair_id,))
-            repair_order['parts_usage'] = cursor.fetchall()
+            parts_usage = cursor.fetchall()
+            # Convert Decimal to float
+            for part in parts_usage:
+                if part.get('cost_price'):
+                    part['cost_price'] = float(part['cost_price'])
+                if part.get('qty'):
+                    part['qty'] = int(part['qty'])
+            repair_order['parts_usage'] = parts_usage
         
         return repair_order
     except Exception as e:

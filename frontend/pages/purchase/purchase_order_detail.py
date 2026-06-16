@@ -100,15 +100,11 @@ class PurchaseOrderDetailContent:
                         [
                             ft.Text(
                                 get_text("purchase_order_detail"),
-                                size=20,
+                                size=18,
                                 weight=ft.FontWeight.BOLD,
                                 color=ft.Colors.WHITE,
                             ),
-                            ft.Text(
-                                get_text("purchase_order_detail_subtitle"),
-                                size=12,
-                                color=ft.Colors.with_opacity(0.85, ft.Colors.WHITE),
-                            ),
+                            
                         ],
                         spacing=2,
                     ),
@@ -117,7 +113,7 @@ class PurchaseOrderDetailContent:
                 spacing=12,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(vertical=14, horizontal=24),
+            padding=ft.padding.symmetric(vertical=12, horizontal=24),
             gradient=ft.LinearGradient(
                 begin=ft.Alignment(-1, -1),
                 end=ft.Alignment(1, 1),

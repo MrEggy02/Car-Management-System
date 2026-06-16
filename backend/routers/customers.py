@@ -6,6 +6,7 @@ from typing import Optional
 
 router = APIRouter()
 
+
 @router.get("/customers")
 def get_customers(user: dict = Depends(authenticate_user)):
     """Get all customers"""
@@ -17,6 +18,38 @@ def get_customers(user: dict = Depends(authenticate_user)):
         return customers
     except Exception as e:
         print(f"Error in get_customers: {e}")
+        return []
+    finally:
+        cursor.close()
+        db.close()
+
+
+@router.get("/customers-with-vehicles")
+def get_customers_with_vehicles(user: dict = Depends(authenticate_user)):
+    """Get all customers with vehicle count in one query (FASTER)"""
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+    try:
+        cursor.execute("""
+            SELECT 
+                c.id,
+                c.name,
+                c.phone,
+                c.address,
+                c.created_at,
+                COUNT(v.id) as vehicle_count
+            FROM customers c
+            LEFT JOIN vehicles v ON c.id = v.customer_id
+            GROUP BY c.id
+            ORDER BY c.id DESC
+        """)
+        customers = cursor.fetchall()
+        for customer in customers:
+            if customer.get('created_at'):
+                customer['created_at'] = str(customer['created_at'])
+        return customers
+    except Exception as e:
+        print(f"Error in get_customers_with_vehicles: {e}")
         return []
     finally:
         cursor.close()
@@ -106,7 +139,6 @@ def delete_customer(customer_id: int, user: dict = Depends(authenticate_user)):
     db = get_db()
     cursor = db.cursor()
     try:
-        # This will also delete vehicles if ON DELETE CASCADE is set
         cursor.execute("DELETE FROM customers WHERE id = %s", (customer_id,))
         db.commit()
         
@@ -129,7 +161,7 @@ def register_customer(
     phone: str = Form(...),
     address: str = Form(""),
     plate_number: str = Form(...),
-    brand_id: int = Form(None),  # Changed from brand to brand_id
+    brand_id: int = Form(None),
     model: str = Form(""),
     year: int = Form(0),
     color: str = Form(""),
@@ -139,7 +171,6 @@ def register_customer(
     db = get_db()
     cursor = db.cursor()
     try:
-        # Insert customer
         cursor.execute("""
             INSERT INTO customers (name, phone, address)
             VALUES (%s, %s, %s)
@@ -147,7 +178,6 @@ def register_customer(
         
         customer_id = cursor.lastrowid
         
-        # Insert vehicle with brand_id (not brand string)
         cursor.execute("""
             INSERT INTO vehicles (customer_id, plate_number, brand_id, model, year, color)
             VALUES (%s, %s, %s, %s, %s, %s)

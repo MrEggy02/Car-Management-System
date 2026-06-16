@@ -423,7 +423,15 @@ class APIClient:
 
     # ========== Process 2: Customers & Vehicles ==========
     def get_customers(self) -> List[Dict]:
+        """Get all customers"""
         return self._request("GET", "/customers")
+
+    def get_customers_with_vehicles(self) -> List[Dict]:
+        """Get all customers with vehicle count in one query (FASTER)"""
+        try:
+            return self._request("GET", "/customers-with-vehicles")
+        except:
+            return []
 
     def add_customer(self, name: str, phone: str = "", address: str = "") -> Dict:
         return self._request(
@@ -527,6 +535,10 @@ class APIClient:
 
     def get_quotation(self, quotation_id: int) -> Dict:
         return self._request("GET", f"/quotations/{quotation_id}")
+
+    def get_quotation_items(self, quotation_id: int) -> List[Dict]:
+        """Get all items for a quotation"""
+        return self._request("GET", f"/quotations/{quotation_id}/items")
 
     def create_quotation(self, job_order_id: int, valid_until: str = None, notes: str = "") -> Dict:
         data = {"job_order_id": job_order_id, "notes": notes}
@@ -692,6 +704,121 @@ class APIClient:
             params["limit"] = limit
         return self._request("GET", "/stock-movements", params=params)
 
+    # ========== Units ==========
+    def get_units(self) -> List[Dict]:
+        """Get all units"""
+        return self._request("GET", "/units")
+
+    def add_unit(self, name: str, status: str = "active") -> Dict:
+        """Add new unit"""
+        return self._request("POST", "/units", data={"name": name, "status": status})
+
+    def update_unit(self, unit_id: int, name: str, status: str) -> Dict:
+        """Update unit"""
+        return self._request("PUT", f"/units/{unit_id}", data={"name": name, "status": status})
+
+    def delete_unit(self, unit_id: int) -> Dict:
+        """Delete unit"""
+        return self._request("DELETE", f"/units/{unit_id}")
+
+    def get_active_units(self) -> List[Dict]:
+        """Get active units only"""
+        return self._request("GET", "/units/active")
+
+    # ========== Part Categories ==========
+    def get_part_categories(self) -> List[Dict]:
+        """Get all part categories"""
+        return self._request("GET", "/part-categories")
+
+    def add_part_category(self, name: str, status: str = "active") -> Dict:
+        """Add new part category"""
+        return self._request("POST", "/part-categories", data={"name": name, "status": status})
+
+    def update_part_category(self, category_id: int, name: str, status: str) -> Dict:
+        """Update part category"""
+        return self._request("PUT", f"/part-categories/{category_id}", data={"name": name, "status": status})
+
+    def delete_part_category(self, category_id: int) -> Dict:
+        """Delete part category"""
+        return self._request("DELETE", f"/part-categories/{category_id}")
+
+    def get_active_part_categories(self) -> List[Dict]:
+        """Get active part categories only"""
+        return self._request("GET", "/part-categories/active")
+    
+    # ========== Promotion Parts ==========
+    def get_promotion_parts(self, promotion_id: int) -> List[Dict]:
+        """Get parts in promotion"""
+        return self._request("GET", f"/promotions/{promotion_id}/parts")
+
+    def add_promotion_part(self, promotion_id: int, part_id: int, qty: int = 1) -> Dict:
+        """Add part to promotion"""
+        return self._request("POST", f"/promotions/{promotion_id}/parts", data={
+            "part_id": part_id,
+            "qty": qty
+        })
+
+    def delete_promotion_part(self, promotion_id: int, item_id: int) -> Dict:
+        """Remove part from promotion"""
+        return self._request("DELETE", f"/promotions/{promotion_id}/parts/{item_id}")
+
+    def clear_promotion_parts(self, promotion_id: int) -> Dict:
+        """Clear all parts from promotion"""
+        return self._request("DELETE", f"/promotions/{promotion_id}/parts")
+
+    # ========== Promotion Services ==========
+    def get_promotion_services(self, promotion_id: int) -> List[Dict]:
+        """Get services in promotion"""
+        return self._request("GET", f"/promotions/{promotion_id}/services")
+
+    def add_promotion_service(self, promotion_id: int, service_id: int, qty: int = 1) -> Dict:
+        """Add service to promotion"""
+        return self._request("POST", f"/promotions/{promotion_id}/services", data={
+            "service_id": service_id,
+            "qty": qty
+        })
+
+    def delete_promotion_service(self, promotion_id: int, item_id: int) -> Dict:
+        """Remove service from promotion"""
+        return self._request("DELETE", f"/promotions/{promotion_id}/services/{item_id}")
+
+    def clear_promotion_services(self, promotion_id: int) -> Dict:
+        """Clear all services from promotion"""
+        return self._request("DELETE", f"/promotions/{promotion_id}/services")
+
+    # ========== Job Order Parts & Services (Deprecated - for backward compatibility) ==========
+    def add_job_order_part(self, job_order_id: int, part_id: int, quantity: int = 1, unit_price: float = 0) -> Dict:
+        """Add part to job order (Deprecated - use quotation items instead)"""
+        return self._request("POST", f"/job-orders/{job_order_id}/parts", data={
+            "part_id": part_id,
+            "quantity": quantity,
+            "unit_price": unit_price
+        })
+
+    def add_job_order_service(self, job_order_id: int, service_id: int, quantity: int = 1, unit_price: float = 0) -> Dict:
+        """Add service to job order (Deprecated - use quotation items instead)"""
+        return self._request("POST", f"/job-orders/{job_order_id}/services", data={
+            "service_id": service_id,
+            "quantity": quantity,
+            "unit_price": unit_price
+        })
+
+    def get_job_order_parts(self, job_order_id: int) -> List[Dict]:
+        """Get all parts for a job order (Deprecated)"""
+        return self._request("GET", f"/job-orders/{job_order_id}/parts")
+
+    def get_job_order_services(self, job_order_id: int) -> List[Dict]:
+        """Get all services for a job order (Deprecated)"""
+        return self._request("GET", f"/job-orders/{job_order_id}/services")
+    
+    def delete_job_order_part(self, job_order_id: int, item_id: int) -> Dict:
+        """Delete part from job order (Deprecated)"""
+        return self._request("DELETE", f"/job-orders/{job_order_id}/parts/{item_id}")
+
+    def delete_job_order_service(self, job_order_id: int, item_id: int) -> Dict:
+        """Delete service from job order (Deprecated)"""
+        return self._request("DELETE", f"/job-orders/{job_order_id}/services/{item_id}")
+
     # ========== Legacy/Backward Compatibility ==========
     def register_customer_with_car(self, customer_data: Dict, car_data: Dict) -> Dict:
         return self.register_customer_with_vehicle(customer_data, car_data)
@@ -763,122 +890,7 @@ class APIClient:
             params["end_date"] = end_date
         return self._request("GET", "/reports/service-items", params=params)
     
-    # Add these methods to APIClient class
-
-# ========== Units ==========
-    def get_units(self) -> List[Dict]:
-        """Get all units"""
-        return self._request("GET", "/units")
-
-    def add_unit(self, name: str, status: str = "active") -> Dict:
-        """Add new unit"""
-        return self._request("POST", "/units", data={"name": name, "status": status})
-
-    def update_unit(self, unit_id: int, name: str, status: str) -> Dict:
-        """Update unit"""
-        return self._request("PUT", f"/units/{unit_id}", data={"name": name, "status": status})
-
-    def delete_unit(self, unit_id: int) -> Dict:
-        """Delete unit"""
-        return self._request("DELETE", f"/units/{unit_id}")
-
-    def get_active_units(self) -> List[Dict]:
-        """Get active units only"""
-        return self._request("GET", "/units/active")
-
-# ========== Part Categories ==========
-    def get_part_categories(self) -> List[Dict]:
-        """Get all part categories"""
-        return self._request("GET", "/part-categories")
-
-    def add_part_category(self, name: str, status: str = "active") -> Dict:
-        """Add new part category"""
-        return self._request("POST", "/part-categories", data={"name": name, "status": status})
-
-    def update_part_category(self, category_id: int, name: str, status: str) -> Dict:
-        """Update part category"""
-        return self._request("PUT", f"/part-categories/{category_id}", data={"name": name, "status": status})
-
-    def delete_part_category(self, category_id: int) -> Dict:
-        """Delete part category"""
-        return self._request("DELETE", f"/part-categories/{category_id}")
-
-    def get_active_part_categories(self) -> List[Dict]:
-        """Get active part categories only"""
-        return self._request("GET", "/part-categories/active")
-    
-    # ========== Promotion Parts ==========
-    def get_promotion_parts(self, promotion_id: int) -> List[Dict]:
-        """Get parts in promotion"""
-        return self._request("GET", f"/promotions/{promotion_id}/parts")
-
-    def add_promotion_part(self, promotion_id: int, part_id: int, qty: int = 1) -> Dict:
-        """Add part to promotion"""
-        return self._request("POST", f"/promotions/{promotion_id}/parts", data={
-            "part_id": part_id,
-            "qty": qty
-        })
-
-    def delete_promotion_part(self, promotion_id: int, item_id: int) -> Dict:
-        """Remove part from promotion"""
-        return self._request("DELETE", f"/promotions/{promotion_id}/parts/{item_id}")
-
-    def clear_promotion_parts(self, promotion_id: int) -> Dict:
-        """Clear all parts from promotion"""
-        return self._request("DELETE", f"/promotions/{promotion_id}/parts")
-
-# ========== Promotion Services ==========
-    def get_promotion_services(self, promotion_id: int) -> List[Dict]:
-        """Get services in promotion"""
-        return self._request("GET", f"/promotions/{promotion_id}/services")
-
-    def add_promotion_service(self, promotion_id: int, service_id: int, qty: int = 1) -> Dict:
-        """Add service to promotion"""
-        return self._request("POST", f"/promotions/{promotion_id}/services", data={
-            "service_id": service_id,
-            "qty": qty
-        })
-
-    def delete_promotion_service(self, promotion_id: int, item_id: int) -> Dict:
-        """Remove service from promotion"""
-        return self._request("DELETE", f"/promotions/{promotion_id}/services/{item_id}")
-
-    def clear_promotion_services(self, promotion_id: int) -> Dict:
-        """Clear all services from promotion"""
-        return self._request("DELETE", f"/promotions/{promotion_id}/services")
-    
-    def add_job_order_part(self, job_order_id: int, part_id: int, quantity: int = 1, unit_price: float = 0) -> Dict:
-        """Add part to job order"""
-        return self._request("POST", f"/job-orders/{job_order_id}/parts", data={
-            "part_id": part_id,
-            "quantity": quantity,
-            "unit_price": unit_price
-        })
-
-    def add_job_order_service(self, job_order_id: int, service_id: int, quantity: int = 1, unit_price: float = 0) -> Dict:
-        """Add service to job order"""
-        return self._request("POST", f"/job-orders/{job_order_id}/services", data={
-            "service_id": service_id,
-            "quantity": quantity,
-            "unit_price": unit_price
-        })
-
-    def get_job_order_parts(self, job_order_id: int) -> List[Dict]:
-        """Get all parts for a job order"""
-        return self._request("GET", f"/job-orders/{job_order_id}/parts")
-
-    def get_job_order_services(self, job_order_id: int) -> List[Dict]:
-        """Get all services for a job order"""
-        return self._request("GET", f"/job-orders/{job_order_id}/services")
-    
-    def delete_job_order_part(self, job_order_id: int, item_id: int) -> Dict:
-        """Delete part from job order"""
-        return self._request("DELETE", f"/job-orders/{job_order_id}/parts/{item_id}")
-
-    def delete_job_order_service(self, job_order_id: int, item_id: int) -> Dict:
-        """Delete service from job order"""
-        return self._request("DELETE", f"/job-orders/{job_order_id}/services/{item_id}")
-    
-    def get_quotation_items(self, quotation_id: int) -> List[Dict]:
-        """Get all items for a quotation"""
-        return self._request("GET", f"/quotations/{quotation_id}/items")
+    def get_job_orders_with_details(self, status: str = None) -> List[Dict]:
+        """Get all job orders with customer and vehicle details in ONE query"""
+        params = {"status": status} if status else None
+        return self._request("GET", "/job-orders-with-details", params=params)

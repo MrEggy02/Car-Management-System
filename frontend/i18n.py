@@ -534,6 +534,8 @@ LO: Dict[str, str] = {
     "view_repair_detail": "ເບິ່ງລາຍລະອຽດ",
     "update_status": "ອັບເດດສະຖານະ",
     "parts_used": "ອາໄຫຼ່ທີ່ໃຊ້",
+     "more_part": "ອາໄຫຼ່ເສີມ",
+    
     "total_parts_cost": "ລາຄາອາໄຫຼ່ລວມ",
     # Repair Detail Page
     "repair_detail": "ລາຍລະອຽດການສ້ອມແປງ",
@@ -1212,12 +1214,13 @@ LO: Dict[str, str] = {
 "and_more": "ແລະອີກ",
 "no_low_stock_parts": "ບໍ່ມີອາໄຫຼ່ໃກ້ໝົດ",
 "collapse": "ຍຸບ",
+"job_no": "ລາຍການວຽກ",
 }
 
 EN: Dict[str, str] = {
-    # เพิ่มใน i18n.py (ส่วนของ EN - ອັງກິດ)
+   
 
-# Purchase Management Section
+"job_no": "Job No.",
 "purchase_order_create_title": "Create Purchase Order",
 "purchase_order_create_subtitle": "Select supplier and add parts to order",
 "purchase_order_list_title": "Purchase Orders",

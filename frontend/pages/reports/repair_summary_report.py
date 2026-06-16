@@ -29,29 +29,25 @@ class RepairSummaryReportContent:
         # UI Components
         self.start_date_picker = None
         self.end_date_picker = None
+        self.content_container = None
         
     def build(self):
         header = self._build_header()
         filter_section = self._build_filter_section()
         
-        self.content_area = ft.Column(
+        # Main content container
+        self.content_container = ft.Column(
             [
                 filter_section,
                 ft.Container(height=20),
-                self._build_status_summary(),
-                ft.Container(height=20),
-                self._build_repair_stats(),
-                ft.Container(height=20),
-                self._build_vehicle_stats(),
-                ft.Container(height=20),
-                self._build_mechanic_stats(),
+                self._build_loading(),
             ],
             scroll=ft.ScrollMode.AUTO,
             expand=True,
         )
         
         main_content = ft.Container(
-            content=ft.Column([header, self.content_area]),
+            content=ft.Column([header, self.content_container]),
             expand=True,
             bgcolor="#F5F7FA",
         )
@@ -72,7 +68,6 @@ class RepairSummaryReportContent:
                                 weight=ft.FontWeight.BOLD,
                                 color=ft.Colors.WHITE,
                             ),
-                            
                         ],
                         spacing=2,
                     ),
@@ -163,7 +158,7 @@ class RepairSummaryReportContent:
             padding=ft.padding.all(20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
-            margin=ft.margin.symmetric(horizontal=24, vertical=10),
+            margin=ft.margin.only(left=24, right=24, top=10, bottom=10),
             shadow=ft.BoxShadow(
                 blur_radius=10,
                 color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
@@ -201,45 +196,6 @@ class RepairSummaryReportContent:
         date_picker.open = True
         self.page.update()
     
-    def load_report(self, e=None):
-        try:
-            self.content_area.controls = [self._build_loading()]
-            self.page.update()
-            
-            self.report_data = self.client.get_repair_summary_report(
-                start_date=self.start_date,
-                end_date=self.end_date
-            )
-            
-            # Debug output
-            print("=" * 50)
-            print("REPAIR SUMMARY REPORT DATA:")
-            print(f"report_data: {self.report_data}")
-            if self.report_data:
-                print(f"status_summary: {self.report_data.get('status_summary', [])}")
-                print(f"repair_stats: {self.report_data.get('repair_stats', {})}")
-                print(f"vehicle_stats: {self.report_data.get('vehicle_stats', [])}")
-                print(f"mechanic_stats: {self.report_data.get('mechanic_stats', [])}")
-            print("=" * 50)
-            
-            self.content_area.controls = [
-                self._build_filter_section(),
-                ft.Container(height=20),
-                self._build_status_summary(),
-                ft.Container(height=20),
-                self._build_repair_stats(),
-                ft.Container(height=20),
-                self._build_vehicle_stats(),
-                ft.Container(height=20),
-                self._build_mechanic_stats(),
-            ]
-            self.page.update()
-        except Exception as ex:
-            print(f"Error loading repair summary: {ex}")
-            import traceback
-            traceback.print_exc()
-            self._show_error(str(ex))
-    
     def _build_loading(self):
         return ft.Container(
             content=ft.Column([
@@ -251,9 +207,70 @@ class RepairSummaryReportContent:
             height=400,
         )
     
-    def _show_error(self, message):
-        self.content_area.controls = [
+    def load_report(self, e=None):
+        try:
+            self.content_container.controls = [
+                self._build_filter_section(),
+                ft.Container(height=20),
+                self._build_loading(),
+            ]
+            self.page.update()
+            
+            self.report_data = self.client.get_repair_summary_report(
+                start_date=self.start_date,
+                end_date=self.end_date
+            )
+            
+            print("=" * 50)
+            print("REPAIR SUMMARY DATA RECEIVED:")
+            print(f"status_summary: {self.report_data.get('status_summary', [])}")
+            print(f"repair_stats: {self.report_data.get('repair_stats', {})}")
+            print(f"vehicle_stats: {self.report_data.get('vehicle_stats', [])}")
+            print(f"mechanic_stats: {self.report_data.get('mechanic_stats', [])}")
+            print("=" * 50)
+            
+            # Build the report UI
+            self._build_report_ui()
+            
+        except Exception as ex:
+            print(f"Error loading repair summary: {ex}")
+            import traceback
+            traceback.print_exc()
+            self._show_error(str(ex))
+    
+    def _build_report_ui(self):
+        """Build the complete report UI"""
+        content_list = [
             self._build_filter_section(),
+            ft.Container(height=20),
+        ]
+        
+        # 1. Status Summary Cards
+        content_list.append(self._build_status_summary_cards())
+        content_list.append(ft.Container(height=20))
+        
+        # 2. Repair Statistics
+        content_list.append(self._build_repair_stats_card())
+        content_list.append(ft.Container(height=20))
+        
+        # 3. Vehicle Stats Table
+        content_list.append(self._build_vehicle_table())
+        content_list.append(ft.Container(height=20))
+        
+        # 4. Mechanic Stats Table
+        content_list.append(self._build_mechanic_table())
+        content_list.append(ft.Container(height=20))
+        
+        # 5. Daily Repairs Table
+        content_list.append(self._build_daily_table())
+        
+        self.content_container.controls = content_list
+        self.page.update()
+    
+    def _show_error(self, message):
+        self.content_container.controls = [
+            self._build_filter_section(),
+            ft.Container(height=20),
             ft.Container(
                 content=ft.Column([
                     ft.Icon(ft.Icons.ERROR_OUTLINE, size=48, color=ft.Colors.RED_400),
@@ -271,67 +288,53 @@ class RepairSummaryReportContent:
         ]
         self.page.update()
     
-    def _build_status_summary(self):
+    def _build_status_summary_cards(self):
+        """Build status summary cards"""
         status_summary = self.report_data.get('status_summary', [])
-        
-        # If no data from API, show message
-        if not status_summary:
-            return ft.Container(
-                content=ft.Column([
-                    ft.Text(get_text("repair_status_summary"), size=16, weight=ft.FontWeight.BOLD, color="#1E293B"),
-                    ft.Container(height=12),
-                    ft.Container(
-                        content=ft.Text(get_text("no_data"), size=14, color="#64748B"),
-                        padding=ft.padding.all(40),
-                        bgcolor=ft.Colors.GREY_50,
-                        border_radius=12,
-                        alignment=ft.Alignment(0, 0),
-                    ),
-                ]),
-                padding=ft.padding.all(20),
-                bgcolor=ft.Colors.WHITE,
-                border_radius=16,
-                margin=ft.margin.symmetric(horizontal=24, vertical=0),
-                shadow=ft.BoxShadow(
-                    blur_radius=10,
-                    color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
-                    offset=ft.Offset(0, 2),
-                ),
-            )
         
         status_colors = {
             'pending': "#FF9800",
             'working': "#2196F3",
             'paused': "#9C27B0",
             'completed': "#4CAF50",
-            'cancelled': "#F44336"
+            'cancelled': "#F44336",
+            'waiting': "#FF9800"
         }
-        
         status_texts = {
             'pending': get_text("pending"),
             'working': get_text("working"),
             'paused': get_text("paused"),
             'completed': get_text("completed"),
-            'cancelled': get_text("cancelled")
+            'cancelled': get_text("cancelled"),
+            'waiting': "ລໍຖ້າ"
         }
         
-        cards = ft.Row(spacing=20, expand=True, wrap=True)
+        if not status_summary:
+            status_summary = [
+                {"status": "pending", "count": 0, "percentage": 0},
+                {"status": "working", "count": 0, "percentage": 0},
+                {"status": "completed", "count": 0, "percentage": 0}
+            ]
+        
+        cards_row = ft.Row(spacing=16, expand=True, wrap=True)
         
         for status in status_summary:
             status_name = status.get('status', '')
             count = status.get('count', 0)
+            percentage = status.get('percentage', 0)
             color = status_colors.get(status_name, "#64748B")
             
-            cards.controls.append(
+            cards_row.controls.append(
                 ft.Container(
                     content=ft.Column([
                         ft.Text(str(count), size=28, weight=ft.FontWeight.BOLD, color=color),
-                        ft.Text(status_texts.get(status_name, status_name), size=12, color="#64748B"),
-                    ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=4),
-                    padding=ft.padding.all(16),
+                        ft.Text(status_texts.get(status_name, status_name), size=13, color="#64748B"),
+                        ft.Text(f"{percentage:.1f}%", size=11, color="#94A3B8"),
+                    ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=2),
+                    padding=ft.padding.symmetric(vertical=14, horizontal=20),
                     bgcolor=ft.Colors.WHITE,
                     border_radius=12,
-                    border=ft.border.all(1, ft.Colors.GREY_100),
+                    border=ft.border.all(1, ft.Colors.GREY_200),
                     expand=True,
                 )
             )
@@ -340,12 +343,12 @@ class RepairSummaryReportContent:
             content=ft.Column([
                 ft.Text(get_text("repair_status_summary"), size=16, weight=ft.FontWeight.BOLD, color="#1E293B"),
                 ft.Container(height=12),
-                cards,
+                cards_row,
             ]),
             padding=ft.padding.all(20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
-            margin=ft.margin.symmetric(horizontal=24, vertical=0),
+            margin=ft.margin.only(left=24, right=24, top=0, bottom=0),
             shadow=ft.BoxShadow(
                 blur_radius=10,
                 color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
@@ -353,59 +356,77 @@ class RepairSummaryReportContent:
             ),
         )
     
-    def _build_repair_stats(self):
+    def _build_repair_stats_card(self):
+        """Build repair statistics card"""
         repair_stats = self.report_data.get('repair_stats', {})
         
         total = repair_stats.get('total_repairs', 0)
         completed = repair_stats.get('completed_repairs', 0)
-        completion_rate = (completed / total * 100) if total > 0 else 0
+        working = repair_stats.get('working_repairs', 0)
+        waiting = repair_stats.get('waiting_repairs', 0)
+        paused = repair_stats.get('paused_repairs', 0)
+        completion_rate = repair_stats.get('completion_rate', 0)
         avg_hours = repair_stats.get('avg_repair_hours', 0)
         
-        stats_row = ft.Row([
-            self._build_stat_card(
-                title=get_text("total_repairs"),
-                value=str(total),
-                icon=ft.Icons.CONSTRUCTION,
-                color="#3B82F6",
-            ),
-            self._build_stat_card(
-                title=get_text("completed_repairs"),
-                value=str(completed),
-                icon=ft.Icons.CHECK_CIRCLE,
-                color="#10B981",
-            ),
-            self._build_stat_card(
-                title=get_text("completion_rate"),
-                value=f"{completion_rate:.1f}%",
-                icon=ft.Icons.TRENDING_UP,
-                color="#8B5CF6",
-            ),
-            self._build_stat_card(
-                title=get_text("avg_repair_hours"),
-                value=f"{avg_hours:.1f}",
-                icon=ft.Icons.SCHEDULE,
-                color="#F59E0B",
-            ),
-        ], spacing=20, expand=True)
+        # Stats row
+        stats_row = ft.Row(spacing=16, expand=True, wrap=True)
         
-        # Progress bar for completion rate
-        progress = ft.Container(
+        stat_items = [
+            (get_text("total_repairs"), str(total), ft.Icons.CONSTRUCTION, "#3B82F6"),
+            (get_text("completed_repairs"), str(completed), ft.Icons.CHECK_CIRCLE, "#10B981"),
+            (get_text("completion_rate"), f"{completion_rate:.1f}%", ft.Icons.TRENDING_UP, "#8B5CF6"),
+            (get_text("avg_repair_hours"), f"{avg_hours:.1f}h", ft.Icons.SCHEDULE, "#F59E0B"),
+        ]
+        
+        for label, value, icon, color in stat_items:
+            stats_row.controls.append(
+                ft.Container(
+                    content=ft.Row([
+                        ft.Container(
+                            content=ft.Icon(icon, size=20, color=ft.Colors.WHITE),
+                            bgcolor=color,
+                            border_radius=10,
+                            padding=ft.padding.all(8),
+                        ),
+                        ft.Column([
+                            ft.Text(value, size=18, weight=ft.FontWeight.BOLD, color="#1E293B"),
+                            ft.Text(label, size=12, color="#64748B"),
+                        ], spacing=2, expand=True),
+                    ], spacing=12, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                    padding=ft.padding.symmetric(vertical=10, horizontal=14),
+                    bgcolor=ft.Colors.WHITE,
+                    border_radius=12,
+                    border=ft.border.all(1, ft.Colors.GREY_100),
+                    expand=True,
+                )
+            )
+        
+        # Progress bar
+        progress_value = (completed / total * 100) if total > 0 else 0
+        progress_bar = ft.Container(
             content=ft.Column([
                 ft.Row([
                     ft.Text(get_text("progress"), size=12, color="#64748B"),
-                    ft.Text(f"{completion_rate:.1f}%", size=12, weight=ft.FontWeight.BOLD, color="#10B981"),
+                    ft.Text(f"{progress_value:.1f}%", size=12, weight=ft.FontWeight.BOLD, color="#10B981"),
                 ]),
+                ft.Container(height=4),
                 ft.ProgressBar(
-                    value=completion_rate / 100 if completion_rate > 0 else 0,
+                    value=progress_value / 100,
                     color="#10B981",
                     bgcolor=ft.Colors.GREY_200,
-                    height=8,
-                    border_radius=4,
+                    height=6,
+                    border_radius=3,
                 ),
+                ft.Row([
+                    ft.Text(f"{get_text('working')}: {working}", size=11, color="#64748B"),
+                    ft.Text(f"{get_text('waiting')}: {waiting}", size=11, color="#64748B"),
+                    ft.Text(f"{get_text('paused')}: {paused}", size=11, color="#64748B"),
+                ], spacing=16),
             ]),
-            padding=ft.padding.all(16),
+            padding=ft.padding.all(14),
             bgcolor=ft.Colors.GREY_50,
-            border_radius=12,
+            border_radius=10,
+            margin=ft.margin.only(top=10),
         )
         
         return ft.Container(
@@ -414,12 +435,12 @@ class RepairSummaryReportContent:
                 ft.Container(height=12),
                 stats_row,
                 ft.Container(height=16),
-                progress,
+                progress_bar,
             ]),
             padding=ft.padding.all(20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
-            margin=ft.margin.symmetric(horizontal=24, vertical=0),
+            margin=ft.margin.only(left=24, right=24, top=0, bottom=0),
             shadow=ft.BoxShadow(
                 blur_radius=10,
                 color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
@@ -427,36 +448,14 @@ class RepairSummaryReportContent:
             ),
         )
     
-    def _build_stat_card(self, title, value, icon, color):
-        return ft.Container(
-            content=ft.Column([
-                ft.Row([
-                    ft.Container(
-                        content=ft.Icon(icon, size=20, color=ft.Colors.WHITE),
-                        bgcolor=color,
-                        border_radius=10,
-                        padding=ft.padding.all(8),
-                    ),
-                    ft.Container(expand=True),
-                    ft.Text(value, size=18, weight=ft.FontWeight.BOLD, color="#1E293B"),
-                ], spacing=12),
-                ft.Container(height=4),
-                ft.Text(title, size=12, color="#64748B"),
-            ]),
-            padding=ft.padding.all(16),
-            bgcolor=ft.Colors.WHITE,
-            border_radius=12,
-            border=ft.border.all(1, ft.Colors.GREY_100),
-            expand=True,
-        )
-    
-    def _build_vehicle_stats(self):
+    def _build_vehicle_table(self):
+        """Build vehicle statistics table"""
         vehicle_stats = self.report_data.get('vehicle_stats', [])
         
         if not vehicle_stats:
             return ft.Container(
                 content=ft.Column([
-                    ft.Text(get_text("top_vehicles"), size=16, weight=ft.FontWeight.BOLD, color="#1E293B"),
+                    ft.Text(get_text("top_vehicles_by_brand"), size=16, weight=ft.FontWeight.BOLD, color="#1E293B"),
                     ft.Container(height=12),
                     ft.Container(
                         content=ft.Text(get_text("no_data"), size=14, color="#64748B"),
@@ -469,7 +468,7 @@ class RepairSummaryReportContent:
                 padding=ft.padding.all(20),
                 bgcolor=ft.Colors.WHITE,
                 border_radius=16,
-                margin=ft.margin.symmetric(horizontal=24, vertical=0),
+                margin=ft.margin.only(left=24, right=24, top=0, bottom=0),
                 shadow=ft.BoxShadow(
                     blur_radius=10,
                     color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
@@ -480,10 +479,10 @@ class RepairSummaryReportContent:
         # Table header
         header = ft.Container(
             content=ft.Row([
-                ft.Text(get_text("vehicle"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", expand=True),
-                ft.Text(get_text("brand_model"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=150),
-                ft.Text(get_text("repair_count"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=120),
+                ft.Text(get_text("brand"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", expand=True),
+                ft.Text(get_text("repair_count"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=100),
                 ft.Text(get_text("completed"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=100),
+                ft.Text(get_text("avg_hours"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=100),
             ]),
             padding=ft.padding.symmetric(vertical=12, horizontal=16),
             bgcolor=ft.Colors.GREY_100,
@@ -495,19 +494,13 @@ class RepairSummaryReportContent:
         for i, vehicle in enumerate(vehicle_stats):
             bg = ft.Colors.GREY_50 if i % 2 == 0 else ft.Colors.WHITE
             
-            license_plate = vehicle.get('license_plate', '-')
-            model = vehicle.get('model', '-')
-            brand = vehicle.get('brand', '-')
-            repair_count = vehicle.get('repair_count', 0)
-            completed_count = vehicle.get('completed_count', 0)
-            
             table_body.controls.append(
                 ft.Container(
                     content=ft.Row([
-                        ft.Text(license_plate, size=13, weight=ft.FontWeight.W_500, color="#1E293B", expand=True),
-                        ft.Text(f"{brand} {model}", size=12, color="#64748B", width=150),
-                        ft.Text(str(repair_count), size=13, color="#1E293B", width=120),
-                        ft.Text(str(completed_count), size=13, color="#10B981", width=100),
+                        ft.Text(vehicle.get('brand', '-'), size=13, weight=ft.FontWeight.W_500, color="#1E293B", expand=True),
+                        ft.Text(str(vehicle.get('repair_count', 0)), size=13, color="#3B82F6", width=100),
+                        ft.Text(str(vehicle.get('completed_count', 0)), size=13, color="#10B981", width=100),
+                        ft.Text(f"{vehicle.get('avg_hours', 0):.1f}h", size=13, color="#64748B", width=100),
                     ]),
                     padding=ft.padding.symmetric(vertical=12, horizontal=16),
                     bgcolor=bg,
@@ -516,7 +509,7 @@ class RepairSummaryReportContent:
         
         return ft.Container(
             content=ft.Column([
-                ft.Text(get_text("top_vehicles"), size=16, weight=ft.FontWeight.BOLD, color="#1E293B"),
+                ft.Text(get_text("top_vehicles_by_brand"), size=16, weight=ft.FontWeight.BOLD, color="#1E293B"),
                 ft.Container(height=12),
                 header,
                 table_body,
@@ -524,7 +517,7 @@ class RepairSummaryReportContent:
             padding=ft.padding.all(20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
-            margin=ft.margin.symmetric(horizontal=24, vertical=0),
+            margin=ft.margin.only(left=24, right=24, top=0, bottom=0),
             shadow=ft.BoxShadow(
                 blur_radius=10,
                 color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
@@ -532,7 +525,8 @@ class RepairSummaryReportContent:
             ),
         )
     
-    def _build_mechanic_stats(self):
+    def _build_mechanic_table(self):
+        """Build mechanic performance table"""
         mechanic_stats = self.report_data.get('mechanic_stats', [])
         
         if not mechanic_stats:
@@ -551,7 +545,7 @@ class RepairSummaryReportContent:
                 padding=ft.padding.all(20),
                 bgcolor=ft.Colors.WHITE,
                 border_radius=16,
-                margin=ft.margin.symmetric(horizontal=24, vertical=0),
+                margin=ft.margin.only(left=24, right=24, top=0, bottom=0),
                 shadow=ft.BoxShadow(
                     blur_radius=10,
                     color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
@@ -563,9 +557,9 @@ class RepairSummaryReportContent:
         header = ft.Container(
             content=ft.Row([
                 ft.Text(get_text("mechanic"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", expand=True),
-                ft.Text(get_text("repair_count"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=120),
+                ft.Text(get_text("repair_count"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=100),
                 ft.Text(get_text("completed"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=100),
-                ft.Text(get_text("completion_rate"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=100),
+                ft.Text(get_text("avg_hours_per_repair"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=120),
             ]),
             padding=ft.padding.symmetric(vertical=12, horizontal=16),
             bgcolor=ft.Colors.GREY_100,
@@ -580,15 +574,16 @@ class RepairSummaryReportContent:
             name = mechanic.get('mechanic_name', '-')
             repair_count = mechanic.get('repair_count', 0)
             completed_count = mechanic.get('completed_count', 0)
+            avg_hours = mechanic.get('avg_hours_per_repair', 0)
             completion_rate = (completed_count / repair_count * 100) if repair_count > 0 else 0
             
             table_body.controls.append(
                 ft.Container(
                     content=ft.Row([
                         ft.Text(name, size=13, weight=ft.FontWeight.W_500, color="#1E293B", expand=True),
-                        ft.Text(str(repair_count), size=13, color="#1E293B", width=120),
+                        ft.Text(str(repair_count), size=13, color="#3B82F6", width=100),
                         ft.Text(str(completed_count), size=13, color="#10B981", width=100),
-                        ft.Text(f"{completion_rate:.0f}%", size=13, color="#3B82F6", width=100),
+                        ft.Text(f"{avg_hours:.1f}h ({completion_rate:.0f}%)", size=13, color="#64748B", width=120),
                     ]),
                     padding=ft.padding.symmetric(vertical=12, horizontal=16),
                     bgcolor=bg,
@@ -605,7 +600,71 @@ class RepairSummaryReportContent:
             padding=ft.padding.all(20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
-            margin=ft.margin.symmetric(horizontal=24, vertical=0),
+            margin=ft.margin.only(left=24, right=24, top=0, bottom=0),
+            shadow=ft.BoxShadow(
+                blur_radius=10,
+                color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
+                offset=ft.Offset(0, 2),
+            ),
+        )
+    
+    def _build_daily_table(self):
+        """Build daily repairs table"""
+        daily_repairs = self.report_data.get('daily_repairs', [])
+        
+        if not daily_repairs:
+            return ft.Container()
+        
+        # Table header
+        header = ft.Container(
+            content=ft.Row([
+                ft.Text(get_text("date"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=120),
+                ft.Text(get_text("daily_repairs"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=100),
+                ft.Text(get_text("completed"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=100),
+                ft.Text(get_text("in_progress"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=100),
+            ]),
+            padding=ft.padding.symmetric(vertical=12, horizontal=16),
+            bgcolor=ft.Colors.GREY_100,
+            border_radius=ft.BorderRadius.only(top_left=12, top_right=12),
+        )
+        
+        table_body = ft.Column(spacing=0)
+        
+        for i, day in enumerate(daily_repairs):
+            bg = ft.Colors.GREY_50 if i % 2 == 0 else ft.Colors.WHITE
+            
+            date = day.get('date', '-')
+            daily_repair = day.get('daily_repairs', 0)
+            daily_completed = day.get('daily_completed', 0)
+            daily_in_progress = day.get('daily_in_progress', 0)
+            
+            completed_color = "#10B981" if daily_completed > 0 else "#94A3B8"
+            progress_color = "#3B82F6" if daily_in_progress > 0 else "#94A3B8"
+            
+            table_body.controls.append(
+                ft.Container(
+                    content=ft.Row([
+                        ft.Text(date, size=13, color="#1E293B", width=120),
+                        ft.Text(str(daily_repair), size=13, color="#1E293B", width=100),
+                        ft.Text(str(daily_completed), size=13, color=completed_color, width=100),
+                        ft.Text(str(daily_in_progress), size=13, color=progress_color, width=100),
+                    ]),
+                    padding=ft.padding.symmetric(vertical=12, horizontal=16),
+                    bgcolor=bg,
+                )
+            )
+        
+        return ft.Container(
+            content=ft.Column([
+                ft.Text(get_text("daily_repair_trend"), size=16, weight=ft.FontWeight.BOLD, color="#1E293B"),
+                ft.Container(height=12),
+                header,
+                table_body,
+            ]),
+            padding=ft.padding.all(20),
+            bgcolor=ft.Colors.WHITE,
+            border_radius=16,
+            margin=ft.margin.only(left=24, right=24, top=0, bottom=24),
             shadow=ft.BoxShadow(
                 blur_radius=10,
                 color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
@@ -616,25 +675,18 @@ class RepairSummaryReportContent:
     def print_report(self, e):
         """Print report using browser print dialog"""
         try:
-            # Show loading indicator
             self._show_snack_bar(get_text("preparing_print"), is_error=False)
             
-            # Generate HTML for printing in a separate thread
             def generate_and_print():
                 html_content = self._generate_print_html()
                 
-                # Create temporary HTML file
                 with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False, encoding='utf-8') as f:
                     f.write(html_content)
                     temp_path = f.name
                 
-                # Small delay to ensure file is written
                 time.sleep(0.5)
-                
-                # Open in browser
                 webbrowser.open(f'file://{temp_path}')
                 
-                # Schedule cleanup after a delay (30 seconds)
                 def cleanup():
                     time.sleep(30)
                     try:
@@ -645,7 +697,6 @@ class RepairSummaryReportContent:
                 
                 threading.Thread(target=cleanup, daemon=True).start()
             
-            # Run in background thread to not block UI
             threading.Thread(target=generate_and_print, daemon=True).start()
             
         except Exception as ex:
@@ -653,13 +704,13 @@ class RepairSummaryReportContent:
             self._show_snack_bar(f"{get_text('error')}: {str(ex)}", is_error=True)
     
     def _generate_print_html(self):
-        """Generate HTML for printing with Lao/English text"""
+        """Generate HTML for printing"""
         status_summary = self.report_data.get('status_summary', [])
         repair_stats = self.report_data.get('repair_stats', {})
         vehicle_stats = self.report_data.get('vehicle_stats', [])
         mechanic_stats = self.report_data.get('mechanic_stats', [])
+        daily_repairs = self.report_data.get('daily_repairs', [])
         
-        # Get shop info
         shop_info = {}
         try:
             shop_info = self.client.get_shop()
@@ -670,7 +721,6 @@ class RepairSummaryReportContent:
         shop_address = shop_info.get('address', '')
         shop_phone = shop_info.get('phone', '')
         
-        # Get current language
         current_lang = 'lo'
         try:
             from i18n import get_current_language
@@ -678,27 +728,25 @@ class RepairSummaryReportContent:
         except:
             pass
         
-        # Set titles based on language
         if current_lang == 'lo':
             report_title = "ລາຍງານສະຫຼຸບການສ້ອມແປງ"
             status_title = "ສະຫຼຸບສະຖານະການສ້ອມແປງ"
             stats_title = "ສະຖິຕິການສ້ອມແປງ"
             vehicles_title = "ລົດທີ່ມາສ້ອມແປງຫຼາຍທີ່ສຸດ"
             mechanics_title = "ຜົນງານຊ່າງຈັກ"
-            total_repairs_text = "ຈຳນວນການສ້ອມແປງທັງໝົດ"
-            completed_repairs_text = "ສ້ອມແປງສຳເລັດ"
-            completion_rate_text = "ອັດຕາສຳເລັດ"
-            avg_hours_text = "ເວລາສະເລ່ຍ (ຊົ່ວໂມງ)"
-            progress_text = "ຄວາມຄືບໜ້າ"
-            vehicle_text = "ທະບຽນລົດ"
-            brand_model_text = "ຍີ່ຫໍ້/ລຸ້ນ"
-            repair_count_text = "ຈຳນວນຄັ້ງ"
-            completed_text = "ສຳເລັດ"
-            mechanic_text = "ຊ່າງຈັກ"
+            daily_title = "ສະຖິຕິການສ້ອມແປງລາຍວັນ"
             period_text = "ວັນທີ"
             to_text = "ຫາ"
             printed_text = "ພິມເມື່ອ"
             phone_text = "ໂທ"
+            brand_text = "ຍີ່ຫໍ້"
+            repair_count_text = "ຈຳນວນຄັ້ງ"
+            completed_text = "ສຳເລັດ"
+            avg_hours_text = "ເວລາສະເລ່ຍ"
+            mechanic_text = "ຊ່າງຈັກ"
+            date_text = "ວັນທີ"
+            daily_repairs_text = "ຈຳນວນການສ້ອມແປງ"
+            in_progress_text = "ກຳລັງສ້ອມແປງ"
             
             status_texts = {
                 'pending': "ລໍຖ້າ",
@@ -711,22 +759,21 @@ class RepairSummaryReportContent:
             report_title = "Repair Summary Report"
             status_title = "Repair Status Summary"
             stats_title = "Repair Statistics"
-            vehicles_title = "Top Vehicles by Repair Count"
+            vehicles_title = "Top Vehicles by Brand"
             mechanics_title = "Mechanic Performance"
-            total_repairs_text = "Total Repairs"
-            completed_repairs_text = "Completed Repairs"
-            completion_rate_text = "Completion Rate"
-            avg_hours_text = "Avg Repair Hours"
-            progress_text = "Progress"
-            vehicle_text = "License Plate"
-            brand_model_text = "Brand/Model"
-            repair_count_text = "Repair Count"
-            completed_text = "Completed"
-            mechanic_text = "Mechanic"
+            daily_title = "Daily Repair Statistics"
             period_text = "Period"
             to_text = "to"
             printed_text = "Printed on"
             phone_text = "Tel"
+            brand_text = "Brand"
+            repair_count_text = "Repair Count"
+            completed_text = "Completed"
+            avg_hours_text = "Avg Hours"
+            mechanic_text = "Mechanic"
+            date_text = "Date"
+            daily_repairs_text = "Daily Repairs"
+            in_progress_text = "In Progress"
             
             status_texts = {
                 'pending': "Pending",
@@ -736,26 +783,13 @@ class RepairSummaryReportContent:
                 'cancelled': "Cancelled"
             }
         
-        # Build status summary cards HTML
+        # Build status cards
         status_cards_html = ""
         for status in status_summary:
             status_name = status.get('status', '')
             count = status.get('count', 0)
             status_display = status_texts.get(status_name, status_name)
-            
-            if status_name == 'pending':
-                color = "#FF9800"
-            elif status_name == 'working':
-                color = "#2196F3"
-            elif status_name == 'paused':
-                color = "#9C27B0"
-            elif status_name == 'completed':
-                color = "#4CAF50"
-            elif status_name == 'cancelled':
-                color = "#F44336"
-            else:
-                color = "#64748B"
-            
+            color = "#4CAF50" if status_name == "completed" else "#FF9800" if status_name == "pending" else "#2196F3"
             status_cards_html += f"""
             <div class="status-card">
                 <div class="status-count" style="color: {color}">{count}</div>
@@ -763,42 +797,50 @@ class RepairSummaryReportContent:
             </div>
             """
         
-        # Build vehicle stats table HTML
+        # Build vehicle table
         vehicle_html = ""
         for vehicle in vehicle_stats:
-            license_plate = vehicle.get('license_plate', '-')
-            model = vehicle.get('model', '-')
-            brand = vehicle.get('brand', '-')
-            repair_count = vehicle.get('repair_count', 0)
-            completed_count = vehicle.get('completed_count', 0)
             vehicle_html += f"""
             <tr>
-                <td>{license_plate}</td>
-                <td>{brand} {model}</td>
-                <td class="text-right">{repair_count}</td>
-                <td class="text-right">{completed_count}</td>
+                <td>{vehicle.get('brand', '-')}</td>
+                <td class="text-right">{vehicle.get('repair_count', 0)}</td>
+                <td class="text-right">{vehicle.get('completed_count', 0)}</td>
+                <td class="text-right">{vehicle.get('avg_hours', 0):.1f}h</td>
             </tr>
             """
         
-        # Build mechanic stats table HTML
+        # Build mechanic table
         mechanic_html = ""
         for mechanic in mechanic_stats:
             name = mechanic.get('mechanic_name', '-')
             repair_count = mechanic.get('repair_count', 0)
             completed_count = mechanic.get('completed_count', 0)
+            avg_hours = mechanic.get('avg_hours_per_repair', 0)
             completion_rate = (completed_count / repair_count * 100) if repair_count > 0 else 0
             mechanic_html += f"""
             <tr>
                 <td>{name}</td>
                 <td class="text-right">{repair_count}</td>
                 <td class="text-right">{completed_count}</td>
-                <td class="text-right">{completion_rate:.0f}%</td>
+                <td class="text-right">{avg_hours:.1f}h ({completion_rate:.0f}%)</td>
+            </tr>
+            """
+        
+        # Build daily table
+        daily_html = ""
+        for day in daily_repairs:
+            daily_html += f"""
+            <tr>
+                <td>{day.get('date', '-')}</td>
+                <td class="text-right">{day.get('daily_repairs', 0)}</td>
+                <td class="text-right">{day.get('daily_completed', 0)}</td>
+                <td class="text-right">{day.get('daily_in_progress', 0)}</td>
             </tr>
             """
         
         total = repair_stats.get('total_repairs', 0)
         completed = repair_stats.get('completed_repairs', 0)
-        completion_rate = (completed / total * 100) if total > 0 else 0
+        completion_rate = repair_stats.get('completion_rate', 0)
         avg_hours = repair_stats.get('avg_repair_hours', 0)
         
         html_content = f"""<!DOCTYPE html>
@@ -807,171 +849,66 @@ class RepairSummaryReportContent:
     <meta charset="UTF-8">
     <title>{report_title}</title>
     <style>
-        @media print {{
-            body {{ margin: 0; padding: 15px; }}
-        }}
-        * {{
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }}
+        @media print {{ body {{ margin: 0; padding: 15px; }} }}
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
         body {{
             font-family: 'Noto Sans', 'DejaVu Sans', 'Segoe UI', Arial, sans-serif;
-            font-size: 12px;
-            padding: 20px;
-            color: #333;
-            background: white;
+            font-size: 12px; padding: 20px; color: #333; background: white;
         }}
-        .print-container {{
-            max-width: 1200px;
-            margin: 0 auto;
-        }}
+        .print-container {{ max-width: 1200px; margin: 0 auto; }}
         .header {{
-            text-align: center;
-            margin-bottom: 25px;
-            border-bottom: 2px solid #1565C0;
-            padding-bottom: 15px;
+            text-align: center; margin-bottom: 25px;
+            border-bottom: 2px solid #1565C0; padding-bottom: 15px;
         }}
-        .shop-name {{
-            font-size: 22px;
-            font-weight: bold;
-            color: #1565C0;
-            margin-bottom: 5px;
-        }}
-        .shop-address {{
-            font-size: 11px;
-            color: #666;
-        }}
-        .shop-phone {{
-            font-size: 11px;
-            color: #666;
-        }}
-        .report-title {{
-            font-size: 18px;
-            font-weight: bold;
-            margin-top: 12px;
-            color: #1E293B;
-        }}
-        .period {{
-            font-size: 11px;
-            color: #64748B;
-            margin-top: 5px;
-        }}
-        .print-date {{
-            font-size: 10px;
-            color: #94A3B8;
-            margin-top: 3px;
-        }}
-        .section {{
-            margin-bottom: 25px;
-        }}
+        .shop-name {{ font-size: 22px; font-weight: bold; color: #1565C0; }}
+        .shop-address {{ font-size: 11px; color: #666; }}
+        .shop-phone {{ font-size: 11px; color: #666; }}
+        .report-title {{ font-size: 18px; font-weight: bold; margin-top: 12px; color: #1E293B; }}
+        .period {{ font-size: 11px; color: #64748B; margin-top: 5px; }}
+        .print-date {{ font-size: 10px; color: #94A3B8; margin-top: 3px; }}
+        .section {{ margin-bottom: 25px; }}
         .section-title {{
-            font-size: 14px;
-            font-weight: bold;
-            background-color: #F1F5F9;
-            padding: 8px 12px;
-            margin-bottom: 12px;
-            border-left: 4px solid #1565C0;
+            font-size: 14px; font-weight: bold;
+            background-color: #F1F5F9; padding: 8px 12px;
+            margin-bottom: 12px; border-left: 4px solid #1565C0;
         }}
-        .status-cards {{
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            margin-bottom: 15px;
-        }}
+        .status-cards {{ display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; }}
         .status-card {{
-            flex: 1;
-            min-width: 100px;
-            background-color: #F8FAFC;
-            border: 1px solid #E2E8F0;
-            border-radius: 8px;
-            padding: 12px;
-            text-align: center;
+            flex: 1; min-width: 80px; background-color: #F8FAFC;
+            border: 1px solid #E2E8F0; border-radius: 8px;
+            padding: 12px; text-align: center;
         }}
-        .status-count {{
-            font-size: 28px;
-            font-weight: bold;
-        }}
-        .status-label {{
-            font-size: 11px;
-            color: #64748B;
-            margin-top: 4px;
-        }}
-        .stats-cards {{
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            margin-bottom: 15px;
-        }}
+        .status-count {{ font-size: 28px; font-weight: bold; }}
+        .status-label {{ font-size: 11px; color: #64748B; margin-top: 4px; }}
+        .stats-cards {{ display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; }}
         .stat-card {{
-            flex: 1;
-            min-width: 150px;
-            background-color: #F8FAFC;
-            border: 1px solid #E2E8F0;
-            border-radius: 8px;
-            padding: 12px;
-            text-align: center;
+            flex: 1; min-width: 120px; background-color: #F8FAFC;
+            border: 1px solid #E2E8F0; border-radius: 8px;
+            padding: 12px; text-align: center;
         }}
-        .stat-value {{
-            font-size: 18px;
-            font-weight: bold;
-            color: #1565C0;
-        }}
-        .stat-label {{
-            font-size: 11px;
-            color: #64748B;
-            margin-top: 4px;
-        }}
-        .progress-container {{
-            margin-top: 15px;
-            padding: 12px;
-            background-color: #F8FAFC;
-            border-radius: 8px;
-        }}
+        .stat-value {{ font-size: 18px; font-weight: bold; color: #1565C0; }}
+        .stat-label {{ font-size: 11px; color: #64748B; margin-top: 4px; }}
         .progress-bar {{
-            height: 8px;
-            background-color: #E2E8F0;
-            border-radius: 4px;
-            margin-top: 8px;
+            height: 6px; background-color: #E2E8F0; border-radius: 3px; margin-top: 6px;
             overflow: hidden;
         }}
         .progress-fill {{
-            height: 100%;
-            background-color: #10B981;
-            border-radius: 4px;
+            height: 100%; background-color: #10B981; border-radius: 3px;
             width: {completion_rate}%;
         }}
-        table {{
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 15px;
-        }}
+        table {{ width: 100%; border-collapse: collapse; margin-bottom: 12px; }}
         th {{
-            background-color: #F8FAFC;
-            border: 1px solid #E2E8F0;
-            padding: 8px 10px;
-            text-align: left;
-            font-weight: bold;
-            font-size: 11px;
+            background-color: #F8FAFC; border: 1px solid #E2E8F0;
+            padding: 6px 8px; text-align: left; font-weight: bold; font-size: 10px;
         }}
         td {{
-            border: 1px solid #E2E8F0;
-            padding: 6px 10px;
-            font-size: 11px;
+            border: 1px solid #E2E8F0; padding: 5px 8px; font-size: 10px;
         }}
-        .text-right {{
-            text-align: right;
-        }}
-        .text-center {{
-            text-align: center;
-        }}
+        .text-right {{ text-align: right; }}
+        .text-center {{ text-align: center; }}
         .footer {{
-            margin-top: 25px;
-            text-align: center;
-            font-size: 9px;
-            color: #94A3B8;
-            border-top: 1px solid #E2E8F0;
-            padding-top: 12px;
+            margin-top: 25px; text-align: center; font-size: 9px;
+            color: #94A3B8; border-top: 1px solid #E2E8F0; padding-top: 12px;
         }}
     </style>
 </head>
@@ -988,80 +925,45 @@ class RepairSummaryReportContent:
         
         <div class="section">
             <div class="section-title">{status_title}</div>
-            <div class="status-cards">
-                {status_cards_html if status_cards_html else '<div class="text-center">-</div>'}
-            </div>
+            <div class="status-cards">{status_cards_html if status_cards_html else '<div class="text-center">-</div>'}</div>
         </div>
         
         <div class="section">
             <div class="section-title">{stats_title}</div>
             <div class="stats-cards">
-                <div class="stat-card">
-                    <div class="stat-value">{total}</div>
-                    <div class="stat-label">{total_repairs_text}</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value">{completed}</div>
-                    <div class="stat-label">{completed_repairs_text}</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value">{completion_rate:.1f}%</div>
-                    <div class="stat-label">{completion_rate_text}</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value">{avg_hours:.1f}</div>
-                    <div class="stat-label">{avg_hours_text}</div>
-                </div>
+                <div class="stat-card"><div class="stat-value">{total}</div><div class="stat-label">{get_text('total_repairs')}</div></div>
+                <div class="stat-card"><div class="stat-value">{completed}</div><div class="stat-label">{get_text('completed_repairs')}</div></div>
+                <div class="stat-card"><div class="stat-value">{completion_rate:.1f}%</div><div class="stat-label">{get_text('completion_rate')}</div></div>
+                <div class="stat-card"><div class="stat-value">{avg_hours:.1f}</div><div class="stat-label">{get_text('avg_repair_hours')}</div></div>
             </div>
-            <div class="progress-container">
-                <div style="display: flex; justify-content: space-between;">
-                    <span>{progress_text}</span>
-                    <span>{completion_rate:.1f}%</span>
-                </div>
-                <div class="progress-bar">
-                    <div class="progress-fill"></div>
-                </div>
-            </div>
+            <div class="progress-bar"><div class="progress-fill"></div></div>
         </div>
         
         <div class="section">
             <div class="section-title">{vehicles_title}</div>
             <table>
-                <thead>
-                    <tr>
-                        <th>{vehicle_text}</th>
-                        <th>{brand_model_text}</th>
-                        <th class="text-right">{repair_count_text}</th>
-                        <th class="text-right">{completed_text}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {vehicle_html if vehicle_html else '<tr><td colspan="4" class="text-center">-</td></tr>'}
-                </tbody>
+                <thead><tr><th>{brand_text}</th><th class="text-right">{repair_count_text}</th><th class="text-right">{completed_text}</th><th class="text-right">{avg_hours_text}</th></tr></thead>
+                <tbody>{vehicle_html if vehicle_html else '<tr><td colspan="4" class="text-center">-</td></tr>'}</tbody>
             </table>
         </div>
         
         <div class="section">
             <div class="section-title">{mechanics_title}</div>
             <table>
-                <thead>
-                    <tr>
-                        <th>{mechanic_text}</th>
-                        <th class="text-right">{repair_count_text}</th>
-                        <th class="text-right">{completed_text}</th>
-                        <th class="text-right">{completion_rate_text}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {mechanic_html if mechanic_html else '<tr><td colspan="4" class="text-center">-</td></tr>'}
-                </tbody>
+                <thead><tr><th>{mechanic_text}</th><th class="text-right">{repair_count_text}</th><th class="text-right">{completed_text}</th><th class="text-right">{avg_hours_text}</th></tr></thead>
+                <tbody>{mechanic_html if mechanic_html else '<tr><td colspan="4" class="text-center">-</td></tr>'}</tbody>
             </table>
         </div>
         
-        <div class="footer">
-            {shop_name}<br>
-            {shop_address} | {phone_text}: {shop_phone}
+        <div class="section">
+            <div class="section-title">{daily_title}</div>
+            <table>
+                <thead><tr><th>{date_text}</th><th class="text-right">{daily_repairs_text}</th><th class="text-right">{completed_text}</th><th class="text-right">{in_progress_text}</th></tr></thead>
+                <tbody>{daily_html if daily_html else '<tr><td colspan="4" class="text-center">-</td></tr>'}</tbody>
+            </table>
         </div>
+        
+        <div class="footer">{shop_name}<br>{shop_address} | {phone_text}: {shop_phone}</div>
     </div>
     
     <script>
@@ -1078,7 +980,7 @@ class RepairSummaryReportContent:
     
     def _show_snack_bar(self, message, is_error=False):
         self.page.snack_bar = ft.SnackBar(
-            content=ft.Text(message),
+            content=ft.Text(message, size=13),
             bgcolor=ft.Colors.RED_600 if is_error else ft.Colors.GREEN_600,
             open=True,
             duration=2000,

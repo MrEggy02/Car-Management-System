@@ -98,14 +98,24 @@ def show_create_quotation_dialog(primary_color, parts_list, services_list, pendi
     def display_items():
         items_list.controls.clear()
         for item in temp_items:
+            # Convert values safely
+            try:
+                unit_price = float(item.get("unit_price", 0))
+            except (TypeError, ValueError):
+                unit_price = 0
+            try:
+                total = float(item.get("total", 0))
+            except (TypeError, ValueError):
+                total = 0
+            
             item_row = ft.Container(
                 content=ft.Row([
                     ft.Text(f"{item.get('qty')}x", size=12, weight=ft.FontWeight.W_500, color=primary_color, width=40),
                     ft.Column([
                         ft.Text(item.get("name", "-"), size=12, weight=ft.FontWeight.W_500),
-                        ft.Text(f"{int(item.get('unit_price', 0)):,} KIP", size=10, color="#64748B"),
+                        ft.Text(f"{int(unit_price):,} KIP", size=10, color="#64748B"),
                     ], spacing=1, expand=True),
-                    ft.Text(f"{int(item.get('total', 0)):,} KIP", size=12, weight=ft.FontWeight.W_500, color="#1E293B", width=100),
+                    ft.Text(f"{int(total):,} KIP", size=12, weight=ft.FontWeight.W_500, color="#1E293B", width=100),
                     ft.IconButton(
                         icon=ft.Icons.DELETE_OUTLINE,
                         icon_size=16,
@@ -130,7 +140,12 @@ def show_create_quotation_dialog(primary_color, parts_list, services_list, pendi
     def add_item(item_type, ref_id, name, price):
         nonlocal temp_id_counter
         temp_id_counter += 1
-        qty = int(qty_field.value) if qty_field.value else 1
+        qty = int(qty_field.value) if qty_field.value and qty_field.value.isdigit() else 1
+        try:
+            price = float(price)
+        except (TypeError, ValueError):
+            price = 0
+        total = qty * price
         temp_items.append({
             "temp_id": temp_id_counter,
             "item_type": item_type,
@@ -138,7 +153,7 @@ def show_create_quotation_dialog(primary_color, parts_list, services_list, pendi
             "name": name,
             "qty": qty,
             "unit_price": price,
-            "total": qty * price
+            "total": total
         })
         display_items()
         if dialog_ref:
@@ -172,18 +187,23 @@ def show_create_quotation_dialog(primary_color, parts_list, services_list, pendi
                 results = [p for p in results if keyword.lower() in p.get("name", "").lower()]
             
             for part in results[:15]:
+                try:
+                    sell_price = float(part.get('sell_price', 0))
+                except (TypeError, ValueError):
+                    sell_price = 0
+                    
                 item = ft.Container(
                     content=ft.Row([
                         ft.Column([
                             ft.Text(part.get("name", "-"), size=12, weight=ft.FontWeight.W_500),
                             ft.Text(f"Stock: {part.get('stock_qty', 0)}", size=10, color="#64748B"),
                         ], expand=True),
-                        ft.Text(f"{int(part.get('sell_price', 0)):,} KIP", size=12, weight=ft.FontWeight.W_500, color=primary_color),
+                        ft.Text(f"{int(sell_price):,} KIP", size=12, weight=ft.FontWeight.W_500, color=primary_color),
                         ft.IconButton(
                             icon=ft.Icons.ADD_CIRCLE,
                             icon_size=20,
                             icon_color=primary_color,
-                            on_click=lambda e, pid=part.get('id'), pname=part.get('name'), pprice=part.get('sell_price'): add_item("part", pid, pname, pprice),
+                            on_click=lambda e, pid=part.get('id'), pname=part.get('name'), pprice=sell_price: add_item("part", pid, pname, pprice),
                         ),
                     ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
                     padding=ft.padding.symmetric(vertical=6, horizontal=10),
@@ -197,18 +217,23 @@ def show_create_quotation_dialog(primary_color, parts_list, services_list, pendi
                 results = [s for s in results if keyword.lower() in s.get("name", "").lower()]
             
             for service in results[:15]:
+                try:
+                    price = float(service.get('price', 0))
+                except (TypeError, ValueError):
+                    price = 0
+                    
                 item = ft.Container(
                     content=ft.Row([
                         ft.Column([
                             ft.Text(service.get("name", "-"), size=12, weight=ft.FontWeight.W_500),
                             ft.Text(service.get("description", "-")[:30], size=10, color="#64748B"),
                         ], expand=True),
-                        ft.Text(f"{int(service.get('price', 0)):,} KIP", size=12, weight=ft.FontWeight.W_500, color=primary_color),
+                        ft.Text(f"{int(price):,} KIP", size=12, weight=ft.FontWeight.W_500, color=primary_color),
                         ft.IconButton(
                             icon=ft.Icons.ADD_CIRCLE,
                             icon_size=20,
                             icon_color=primary_color,
-                            on_click=lambda e, sid=service.get('id'), sname=service.get('name'), sprice=service.get('price'): add_item("service", sid, sname, sprice),
+                            on_click=lambda e, sid=service.get('id'), sname=service.get('name'), sprice=price: add_item("service", sid, sname, sprice),
                         ),
                     ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
                     padding=ft.padding.symmetric(vertical=6, horizontal=10),
@@ -370,6 +395,17 @@ def show_quotation_detail_dialog(quotation, primary_color, on_print, on_close):
             discount = item.get("discount_amount", 0)
             item_total = item.get("total", 0)
             
+            # Convert to float/int safely
+            try:
+                unit_price = float(unit_price)
+            except (TypeError, ValueError):
+                unit_price = 0
+            
+            try:
+                item_total = float(item_total)
+            except (TypeError, ValueError):
+                item_total = 0
+            
             item_row = ft.Container(
                 content=ft.Row([
                     ft.Container(
@@ -391,6 +427,13 @@ def show_quotation_detail_dialog(quotation, primary_color, on_print, on_close):
                 border_radius=8,
             )
             items_column.controls.append(item_row)
+    
+    # Get total amount from net_total or sub_total (Final Version 2)
+    total_amount = quotation.get('net_total', quotation.get('sub_total', 0))
+    try:
+        total_amount = float(total_amount)
+    except (TypeError, ValueError):
+        total_amount = 0
     
     scrollable_content = ft.Column(
         [
@@ -441,7 +484,7 @@ def show_quotation_detail_dialog(quotation, primary_color, on_print, on_close):
             ft.Row([
                 ft.Text(get_text("total"), size=15, weight=ft.FontWeight.BOLD, color="#1E293B"),
                 ft.Container(expand=True),
-                ft.Text(f"{int(quotation.get('total_price', 0)):,} KIP", size=18, weight=ft.FontWeight.BOLD, color=primary_color),
+                ft.Text(f"{int(total_amount):,} KIP", size=18, weight=ft.FontWeight.BOLD, color=primary_color),
             ]),
         ],
         spacing=8,

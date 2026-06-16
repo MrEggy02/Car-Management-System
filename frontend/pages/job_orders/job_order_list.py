@@ -1,3 +1,4 @@
+# pages/job_orders/job_order_list.py
 import flet as ft
 from flet import Alignment
 from typing import Dict, Callable
@@ -10,7 +11,6 @@ import time
 
 from i18n import get_text, get_current_language
 from pages.job_orders.job_order_dialogs import (
-    show_create_job_order_dialog,
     show_job_order_detail_dialog,
     show_status_update_dialog
 )
@@ -28,9 +28,7 @@ class JobOrderListContent:
         self.filtered_orders = []
         self.current_dialog = None
         self.search_field = None
-        self.status_filter = None
-        self.customers = []
-        self.vehicles_by_customer = {}
+        self.current_status_filter = "all"  # Changed from status_filter dropdown
         self.current_page = 1
         self.items_per_page = 10
         self.total_pages = 1
@@ -54,8 +52,18 @@ class JobOrderListContent:
             "cancelled": ft.Icons.CANCEL
         }
         
+        self.status_texts = {
+            "pending": get_text("pending"),
+            "quoting": get_text("quoting"),
+            "repairing": get_text("repairing"),
+            "finished": get_text("finished"),
+            "closed": get_text("closed"),
+            "cancelled": get_text("cancelled")
+        }
+        
         self.table_rows = ft.Column(spacing=0, scroll=ft.ScrollMode.AUTO, expand=True)
         self.pagination_container = ft.Container()
+        self.status_chips = None  # Will hold the chip row
 
     def build(self):
         header = ft.Container(
@@ -78,7 +86,7 @@ class JobOrderListContent:
                             ft.Icon(ft.Icons.ADD, size=18, color=ft.Colors.WHITE),
                             ft.Text(get_text("new_job_order"), size=14, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500),
                         ], spacing=6),
-                        on_click=lambda e: self.show_create_dialog(),
+                        on_click=lambda e: self.navigate("job_order_create"),
                         style=ft.ButtonStyle(
                             bgcolor=ft.Colors.with_opacity(0.2, ft.Colors.WHITE),
                             shape=ft.RoundedRectangleBorder(radius=10),
@@ -99,23 +107,7 @@ class JobOrderListContent:
             border_radius=ft.BorderRadius.only(bottom_left=20, bottom_right=20),
         )
         
-        self.status_filter = ft.Dropdown(
-            hint_text=get_text("filter_by_status"),
-            border_radius=12,
-            bgcolor=ft.Colors.WHITE,
-            filled=True,
-            options=[
-                ft.dropdown.Option("all", get_text("all_status")),
-                ft.dropdown.Option("pending", get_text("pending")),
-                ft.dropdown.Option("quoting", get_text("quoting")),
-                ft.dropdown.Option("repairing", get_text("repairing")),
-                ft.dropdown.Option("finished", get_text("finished")),
-                ft.dropdown.Option("cancelled", get_text("cancelled")),
-            ],
-            value="all",
-            expand=True,
-        )
-        
+        # Search Bar
         self.search_field = ft.TextField(
             hint_text=get_text("search_job_order"),
             border_radius=12,
@@ -124,12 +116,10 @@ class JobOrderListContent:
             prefix_icon=ft.Icons.SEARCH,
             content_padding=ft.padding.symmetric(horizontal=16, vertical=14),
             expand=True,
+            on_change=self.apply_filters_from_event,
             border_color=ft.Colors.GREY_200,
             focused_border_color=self.primary_color,
         )
-        
-        self.status_filter.on_change = self.apply_filters_from_event
-        self.search_field.on_change = self.apply_filters_from_event
         
         refresh_button = ft.IconButton(
             icon=ft.Icons.REFRESH,
@@ -142,18 +132,35 @@ class JobOrderListContent:
             ),
         )
         
-        filter_row = ft.Container(
-            content=ft.Row([self.status_filter, self.search_field, refresh_button], spacing=10),
-            margin=ft.margin.only(bottom=16),
+        # Status Chips (like parts page)
+        self.status_chips = ft.Row(spacing=8, scroll=ft.ScrollMode.AUTO)
+        self._load_status_chips()
+        
+        # Control bar with search and chips
+        control_bar = ft.Container(
+            content=ft.Column([
+                ft.Row([self.search_field, refresh_button], spacing=10),
+                ft.Container(height=12),
+                self.status_chips,
+            ], spacing=0),
+            padding=ft.padding.all(20),
+            bgcolor="#F5F7FA",
         )
         
         table_header = self._create_table_header()
+        
+        table_scroll_container = ft.Container(
+            content=self.table_rows,
+            expand=True,
+            border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_200)),
+            bgcolor=ft.Colors.WHITE,
+        )
         
         table_container = ft.Container(
             content=ft.Column([
                 table_header,
                 ft.Divider(height=1, color=ft.Colors.GREY_300),
-                self.table_rows,
+                table_scroll_container,
             ], spacing=0),
             margin=ft.margin.only(left=20, right=20),
             bgcolor=ft.Colors.WHITE,
@@ -182,7 +189,7 @@ class JobOrderListContent:
                 ft.Container(height=20),
                 ft.ElevatedButton(
                     content=ft.Text(get_text("new_job_order"), color=ft.Colors.WHITE, size=14),
-                    on_click=lambda e: self.show_create_dialog(),
+                    on_click=lambda e: self.navigate("job_order_create"),
                     style=ft.ButtonStyle(
                         bgcolor=self.primary_color,
                         shape=ft.RoundedRectangleBorder(radius=10),
@@ -196,14 +203,14 @@ class JobOrderListContent:
         
         content_area = ft.Container(
             content=ft.Column([
-                filter_row,
+                control_bar,
                 table_container,
                 self.pagination_container,
                 self.loading_indicator,
                 self.empty_state,
             ], expand=True),
             expand=True,
-            padding=ft.padding.all(24),
+            padding=ft.padding.only(bottom=24, left=24, right=24),
             bgcolor="#F5F7FA",
         )
         
@@ -213,11 +220,50 @@ class JobOrderListContent:
             bgcolor="#F5F7FA",
         )
         
-        # Load customers and vehicles first, then load orders
-        self.load_customers_and_vehicles()
+        # Load orders using new fast API
         self.load_orders()
         
         return main_content
+    
+    def _load_status_chips(self):
+        """Load status filter chips"""
+        self.status_chips.controls.clear()
+        
+        # Status list
+        status_list = [
+            {"id": "all", "name": get_text("all_status"), "icon": ft.Icons.VIEW_LIST},
+            {"id": "pending", "name": get_text("pending"), "icon": ft.Icons.HOURGLASS_EMPTY},
+            {"id": "quoting", "name": get_text("quoting"), "icon": ft.Icons.CALCULATE},
+            {"id": "repairing", "name": get_text("repairing"), "icon": ft.Icons.BUILD},
+            {"id": "finished", "name": get_text("finished"), "icon": ft.Icons.CHECK_CIRCLE},
+            {"id": "closed", "name": get_text("closed"), "icon": ft.Icons.LOCK},
+            {"id": "cancelled", "name": get_text("cancelled"), "icon": ft.Icons.CANCEL},
+        ]
+        
+        for status in status_list:
+            is_active = self.current_status_filter == status["id"]
+            chip = ft.Container(
+                content=ft.Row([
+                    ft.Icon(status["icon"], size=14, color=ft.Colors.WHITE if is_active else "#64748B"),
+                    ft.Text(status["name"], size=12, weight=ft.FontWeight.W_500,
+                           color=ft.Colors.WHITE if is_active else "#64748B"),
+                ], spacing=6),
+                bgcolor=self.primary_color if is_active else ft.Colors.GREY_200,
+                border_radius=20,
+                padding=ft.padding.symmetric(horizontal=12, vertical=6),
+                ink=True,
+                on_click=lambda e, sid=status["id"]: self.filter_by_status(sid),
+            )
+            self.status_chips.controls.append(chip)
+        
+        self.page.update()
+    
+    def filter_by_status(self, status_id):
+        """Filter by status chip click"""
+        self.current_status_filter = status_id
+        self.current_page = 1
+        self._load_status_chips()  # Refresh chips to show active state
+        self.apply_filters()
     
     def _create_table_header(self):
         return ft.Container(
@@ -226,6 +272,7 @@ class JobOrderListContent:
                 ft.Container(content=ft.Text(get_text("customer_name"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=200, alignment=ft.Alignment(-1, 0), padding=ft.padding.only(left=10)),
                 ft.Container(content=ft.Text(get_text("plate_number"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=130, alignment=ft.Alignment(-1, 0), padding=ft.padding.only(left=10)),
                 ft.Container(content=ft.Text(get_text("receive_date"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=120, alignment=ft.Alignment(0, 0)),
+                ft.Container(content=ft.Text(get_text("status"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=100, alignment=ft.Alignment(0, 0)),
                 ft.Container(content=ft.Text(get_text("actions"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=200, alignment=ft.Alignment(0, 0)),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
             padding=ft.padding.symmetric(vertical=14, horizontal=10),
@@ -239,6 +286,7 @@ class JobOrderListContent:
         customer_name = order.get("customer_name", "-")
         plate_number = order.get("plate_number", "-")
         receive_date = order.get("receive_date", "")
+        status = order.get("status", "pending")
         
         if receive_date:
             try:
@@ -249,6 +297,20 @@ class JobOrderListContent:
             receive_date = "-"
         
         row_bg = ft.Colors.GREY_50 if index % 2 == 0 else ft.Colors.WHITE
+        
+        # Status badge
+        status_color = self.status_colors.get(status, "#607D8B")
+        status_text = self.status_texts.get(status, status)
+        
+        status_badge = ft.Container(
+            content=ft.Row([
+                ft.Icon(self.status_icons.get(status, ft.Icons.CIRCLE), size=12, color=ft.Colors.WHITE),
+                ft.Text(status_text, size=11, color=ft.Colors.WHITE),
+            ], spacing=4),
+            bgcolor=status_color,
+            border_radius=12,
+            padding=ft.padding.symmetric(horizontal=8, vertical=4),
+        )
         
         view_btn = ft.Container(
             content=ft.Row([ft.Icon(ft.Icons.VISIBILITY_OUTLINED, size=16, color=self.primary_color), ft.Text(get_text("view"), size=12, color=self.primary_color)], spacing=4),
@@ -284,6 +346,7 @@ class JobOrderListContent:
                 ft.Container(content=ft.Text(customer_name, size=13, color="#1E293B", max_lines=1), width=200, alignment=ft.Alignment(-1, 0), padding=ft.padding.only(left=10)),
                 ft.Container(content=ft.Text(plate_number, size=12, color="#64748B", max_lines=1), width=130, alignment=ft.Alignment(-1, 0), padding=ft.padding.only(left=10)),
                 ft.Container(content=ft.Text(receive_date, size=12, color="#64748B"), width=120, alignment=ft.Alignment(0, 0)),
+                ft.Container(content=status_badge, width=100, alignment=ft.Alignment(0, 0)),
                 ft.Container(content=ft.Row([view_btn, print_btn, status_btn, invoice_btn], spacing=4), width=200, alignment=ft.Alignment(0, 0)),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
             padding=ft.padding.symmetric(vertical=12, horizontal=10),
@@ -292,75 +355,17 @@ class JobOrderListContent:
         
         return ft.Column([row, ft.Divider(height=1, color=ft.Colors.GREY_200)], spacing=0)
     
-    def load_customers_and_vehicles(self):
-        """Load all customers and their vehicles for dialog with brand and model info"""
-        try:
-            print("DEBUG: Loading customers...")
-            self.customers = self.client.get_customers() or []
-            print(f"DEBUG: Found {len(self.customers)} customers")
-            
-            # Load brands for mapping (fallback)
-            brands = {}
-            try:
-                brands_list = self.client.get_brands() or []
-                for b in brands_list:
-                    brands[b.get('id')] = b.get('name', '')
-                print(f"DEBUG: Loaded {len(brands)} brands")
-            except Exception as e:
-                print(f"DEBUG: Error loading brands: {e}")
-            
-            for customer in self.customers:
-                customer_id = customer.get("id")
-                try:
-                    vehicles = self.client.get_vehicles(customer_id=customer_id) or []
-                    print(f"DEBUG: Customer {customer_id} has {len(vehicles)} vehicles")
-                    
-                    vehicles_with_info = []
-                    for v in vehicles:
-                        # IMPORTANT: Get brand_name directly from API response
-                        brand_name = v.get("brand_name", "")
-                        brand_id = v.get("brand_id", 0)
-                        
-                        # If brand_name is empty, try fallback
-                        if not brand_name and brand_id and brand_id in brands:
-                            brand_name = brands.get(brand_id, "")
-                        
-                        model_name = v.get("model", "")
-                        if not model_name:
-                            model_name = "-"
-                        
-                        plate = v.get("plate_number", "-")
-                        
-                        vehicles_with_info.append({
-                            "id": v.get("id"),
-                            "plate_number": plate,
-                            "brand": brand_name if brand_name else "",
-                            "model": model_name,
-                        })
-                        print(f"DEBUG: Vehicle - Plate: {plate}, Brand: {brand_name}, Model: {model_name}")
-                    
-                    self.vehicles_by_customer[customer_id] = vehicles_with_info
-                except Exception as e:
-                    print(f"DEBUG: Error loading vehicles for customer {customer_id}: {e}")
-                    self.vehicles_by_customer[customer_id] = []
-            
-            # DEBUG: Print vehicles_by_customer for customer 44
-            print(f"DEBUG: vehicles_by_customer for customer 44 = {self.vehicles_by_customer.get(44, [])}")
-            
-        except Exception as ex:
-            print(f"Error loading customers: {ex}")
-            import traceback
-            traceback.print_exc()
-    
     def load_orders(self):
+        """Load orders using fast API that returns all data in one call"""
         self.loading_indicator.visible = True
         self.empty_state.visible = False
         self.table_rows.controls.clear()
         self.page.update()
         
         try:
-            orders = self.client.get_job_orders()
-            print(f"DEBUG: Loaded orders from API: {len(orders) if orders else 0}")
+            # Use new fast API that returns everything in one query
+            orders = self.client.get_job_orders_with_details()
+            print(f"DEBUG: Loaded {len(orders) if orders else 0} orders from fast API")
             
             if orders:
                 self.job_orders = orders
@@ -368,21 +373,29 @@ class JobOrderListContent:
                 self.job_orders = []
             
             self.filtered_orders = self.job_orders.copy()
-            self.display_orders()
+            self.apply_filters()
             
         except Exception as ex:
-            print(f"Error loading orders: {ex}")
-            self.loading_indicator.visible = False
-            self.table_rows.controls.append(
-                ft.Container(
-                    content=ft.Column([
-                        ft.Icon(ft.Icons.ERROR_OUTLINE, size=48, color=ft.Colors.RED_400),
-                        ft.Text(f"Error: {str(ex)}", size=14, color=ft.Colors.RED_600),
-                    ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-                    padding=ft.padding.all(40),
+            print(f"Error loading orders via fast API: {ex}")
+            # Fallback to old method
+            try:
+                orders = self.client.get_job_orders()
+                self.job_orders = orders or []
+                self.filtered_orders = self.job_orders.copy()
+                self.apply_filters()
+            except Exception as ex2:
+                print(f"Error loading orders via fallback: {ex2}")
+                self.loading_indicator.visible = False
+                self.table_rows.controls.append(
+                    ft.Container(
+                        content=ft.Column([
+                            ft.Icon(ft.Icons.ERROR_OUTLINE, size=48, color=ft.Colors.RED_400),
+                            ft.Text(f"Error: {str(ex)}", size=14, color=ft.Colors.RED_600),
+                        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                        padding=ft.padding.all(40),
+                    )
                 )
-            )
-            self.page.update()
+                self.page.update()
     
     def display_orders(self):
         self.table_rows.controls.clear()
@@ -415,8 +428,8 @@ class JobOrderListContent:
         prev_disabled = self.current_page <= 1
         next_disabled = self.current_page >= self.total_pages
         
-        self.pagination_container.content = ft.Row(
-            [
+        self.pagination_container.content = ft.Container(
+            content=ft.Row([
                 ft.Text(
                     f"{get_text('showing')} {len(self.filtered_orders)} {get_text('of')} {len(self.job_orders)} {get_text('results')}",
                     size=12,
@@ -448,8 +461,9 @@ class JobOrderListContent:
                     border_radius=10,
                     padding=ft.padding.symmetric(horizontal=8, vertical=4),
                 ),
-            ],
-            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
+            padding=ft.padding.symmetric(vertical=16, horizontal=20),
+            bgcolor="#F5F7FA",
         )
         self.page.update()
     
@@ -468,7 +482,7 @@ class JobOrderListContent:
         self.page.update()
     
     def apply_filters(self):
-        selected_status = self.status_filter.value if self.status_filter else "all"
+        selected_status = self.current_status_filter if self.current_status_filter else "all"
         keyword = self.search_field.value.lower() if self.search_field and self.search_field.value else ""
         
         filtered = self.job_orders.copy()
@@ -487,10 +501,6 @@ class JobOrderListContent:
         self.filtered_orders = filtered
         self.current_page = 1
         self.display_orders()
-    
-    def show_create_dialog(self):
-        """Navigate to create job order page"""
-        self.navigate("job_order_create")
     
     def show_detail_dialog(self, order_id):
         order = next((o for o in self.job_orders if o.get("id") == order_id), None)
@@ -913,74 +923,6 @@ class JobOrderListContent:
 </html>"""
         
         return html_content
-    
-    def show_success_popup(self, job_no):
-        def go_to_list(e):
-            popup.open = False
-            self._close_dialog()
-        
-        def print_now(e):
-            popup.open = False
-            order = next((o for o in self.job_orders if o.get("job_no") == job_no), None)
-            if order:
-                self.print_job_order(order.get("id"))
-            self._close_dialog()
-        
-        popup = ft.AlertDialog(
-            modal=True,
-            shape=ft.RoundedRectangleBorder(radius=20),
-            bgcolor=ft.Colors.WHITE,
-            content=ft.Container(
-                content=ft.Column(
-                    [
-                        ft.Container(
-                            content=ft.Icon(ft.Icons.CHECK_CIRCLE, size=64, color=ft.Colors.GREEN_600),
-                            alignment=Alignment.CENTER,
-                        ),
-                        ft.Container(height=16),
-                        ft.Text(
-                            get_text("job_order_created"),
-                            size=22,
-                            weight=ft.FontWeight.BOLD,
-                            color="#1E293B",
-                            text_align=ft.TextAlign.CENTER,
-                        ),
-                        ft.Container(height=8),
-                        ft.Text(
-                            f"{get_text('job_number')}: {job_no}",
-                            size=16,
-                            weight=ft.FontWeight.BOLD,
-                            color=self.primary_color,
-                            text_align=ft.TextAlign.CENTER,
-                        ),
-                        ft.Container(height=8),
-                        ft.Text(
-                            get_text("print_receipt_question"),
-                            size=13,
-                            color="#64748B",
-                            text_align=ft.TextAlign.CENTER,
-                        ),
-                    ],
-                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                    spacing=0,
-                ),
-                width=400,
-                padding=ft.padding.all(24),
-            ),
-            actions=[
-                ft.TextButton(get_text("later"), on_click=go_to_list),
-                ft.ElevatedButton(
-                    get_text("print_now"),
-                    on_click=print_now,
-                    style=ft.ButtonStyle(bgcolor=self.primary_color, color=ft.Colors.WHITE),
-                ),
-            ],
-            actions_alignment=ft.MainAxisAlignment.END,
-        )
-        
-        self.page.overlay.append(popup)
-        popup.open = True
-        self.page.update()
     
     def _open_dialog(self, dialog):
         try:

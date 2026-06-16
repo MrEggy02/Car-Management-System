@@ -88,7 +88,7 @@ class InvoiceCreateContent:
                                 color=ft.Colors.WHITE,
                             ),
                             ft.Text(
-                                "ສ້າງໃບຮັບເງິນ / Create Invoice",
+                                get_text("create_invoice_subtitle"),
                                 size=12,
                                 color=ft.Colors.with_opacity(0.85, ft.Colors.WHITE),
                             ),
@@ -133,12 +133,10 @@ class InvoiceCreateContent:
         return main_content
     
     async def _load_data(self):
-        """Load pending jobs"""
         await asyncio.sleep(0.2)
         self.load_pending_jobs()
     
     def load_pending_jobs(self):
-        """Load job orders that are ready for invoicing"""
         try:
             all_orders = self.client.get_job_orders() or []
             
@@ -168,8 +166,6 @@ class InvoiceCreateContent:
             self._show_error(str(ex))
     
     def _build_search_ui(self):
-        """Build search UI for finding job orders"""
-        
         # Search field
         self.job_search_field = ft.TextField(
             label=get_text("search_job_order"),
@@ -184,7 +180,6 @@ class InvoiceCreateContent:
             border_color=ft.Colors.GREY_200,
         )
         
-        # Clear button
         self.job_clear_button = ft.IconButton(
             icon=ft.Icons.CLEAR,
             icon_size=18,
@@ -195,7 +190,6 @@ class InvoiceCreateContent:
         
         search_row = ft.Row([self.job_search_field, self.job_clear_button], spacing=8)
         
-        # Search results container
         self.job_results_list = ft.Column(spacing=6, scroll=ft.ScrollMode.AUTO, height=200)
         self.job_results_container = ft.Container(
             content=self.job_results_list,
@@ -206,45 +200,41 @@ class InvoiceCreateContent:
             visible=False,
         )
         
-        # Selected job card
         self.selected_job_label = ft.Text("", size=13, weight=ft.FontWeight.W_500, color="#1E293B")
         
         self.selected_job_card = ft.Container(
-            content=ft.Card(
-                content=ft.Container(
-                    content=ft.Row([
-                        ft.Icon(ft.Icons.CHECK_CIRCLE, size=18, color=self.success_color),
-                        ft.Column([
-                            ft.Text(get_text("selected_job"), size=11, color="#64748B"),
-                            self.selected_job_label,
-                        ], spacing=2, expand=True),
-                        ft.IconButton(
-                            icon=ft.Icons.CLOSE,
-                            icon_size=16,
-                            icon_color="#64748B",
-                            on_click=lambda e: self.clear_selected_job(),
-                            tooltip=get_text("clear_selection"),
-                        ),
-                    ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                    padding=ft.padding.symmetric(horizontal=12, vertical=8),
-                ),
-                elevation=0,
+            content=ft.Container(
+                content=ft.Row([
+                    ft.Icon(ft.Icons.CHECK_CIRCLE, size=18, color=self.success_color),
+                    ft.Column([
+                        ft.Text(get_text("selected_job"), size=11, color="#64748B"),
+                        self.selected_job_label,
+                    ], spacing=2, expand=True),
+                    ft.IconButton(
+                        icon=ft.Icons.CLOSE,
+                        icon_size=16,
+                        icon_color="#64748B",
+                        on_click=lambda e: self.clear_selected_job(),
+                        tooltip=get_text("clear_selection"),
+                    ),
+                ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                padding=ft.padding.symmetric(horizontal=12, vertical=8),
             ),
+            bgcolor=ft.Colors.WHITE,
+            border_radius=12,
             margin=ft.margin.only(top=8),
             visible=False,
         )
         
-        # No jobs message
-        no_jobs_card = ft.Card(
-            content=ft.Container(
-                content=ft.Column([
-                    ft.Icon(ft.Icons.INFO_OUTLINE, size=48, color=ft.Colors.GREY_400),
-                    ft.Text("ບໍ່ມີໃບຮັບລົດທີ່ພ້ອມອອກໃບຮັບເງິນ", size=16, color="#64748B", text_align=ft.TextAlign.CENTER),
-                    ft.Text("ກະລຸນາສໍາເລັດການສ້ອມແປງກ່ອນ", size=12, color="#94A3B8", text_align=ft.TextAlign.CENTER),
-                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=12),
-                padding=ft.padding.all(40),
-            ),
-            elevation=2,
+        no_jobs_card = ft.Container(
+            content=ft.Column([
+                ft.Icon(ft.Icons.INFO_OUTLINE, size=48, color=ft.Colors.GREY_400),
+                ft.Text(get_text("no_jobs_ready_for_invoice"), size=16, color="#64748B", text_align=ft.TextAlign.CENTER),
+                ft.Text(get_text("complete_repair_first"), size=12, color="#94A3B8", text_align=ft.TextAlign.CENTER),
+            ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=12),
+            padding=ft.padding.all(40),
+            bgcolor=ft.Colors.WHITE,
+            border_radius=12,
         )
         
         if not self.pending_jobs:
@@ -252,27 +242,27 @@ class InvoiceCreateContent:
             self.page.update()
             return
         
-        # Selection card
-        selection_card = ft.Card(
-            content=ft.Container(
-                content=ft.Column([
-                    ft.Row(
-                        [
-                            ft.Icon(ft.Icons.RECEIPT, size=18, color=self.primary_color),
-                            ft.Text(get_text("select_job_order"), size=15, weight=ft.FontWeight.BOLD, color="#1E293B"),
-                        ],
-                        spacing=8,
-                    ),
-                    ft.Divider(height=1, color=ft.Colors.GREY_200),
-                    ft.Container(height=12),
-                    search_row,
-                    ft.Container(height=8),
-                    self.job_results_container,
-                    self.selected_job_card,
-                ]),
-                padding=ft.padding.all(20),
-            ),
-            elevation=2,
+        selection_card = ft.Container(
+            content=ft.Column([
+                ft.Row(
+                    [
+                        ft.Icon(ft.Icons.RECEIPT, size=18, color=self.primary_color),
+                        ft.Text(get_text("select_job_order"), size=15, weight=ft.FontWeight.W_600, color="#1E293B"),
+                    ],
+                    spacing=10,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                ),
+                ft.Divider(height=1, color=ft.Colors.GREY_100),
+                ft.Container(height=8),
+                search_row,
+                ft.Container(height=8),
+                self.job_results_container,
+                self.selected_job_card,
+            ]),
+            padding=ft.padding.all(16),
+            bgcolor=ft.Colors.WHITE,
+            border_radius=12,
+            shadow=ft.BoxShadow(blur_radius=4, color=ft.Colors.with_opacity(0.05, ft.Colors.BLACK)),
         )
         
         self.content_area.content = selection_card
@@ -369,11 +359,9 @@ class InvoiceCreateContent:
             self.load_invoice_info()
     
     def load_invoice_info(self):
-        """Load invoice information for the selected job order"""
         if not self.selected_job_id:
             return
         
-        # Show loading
         self.content_area.content = ft.Container(
             content=ft.Column([
                 ft.ProgressRing(width=50, height=50),
@@ -403,81 +391,60 @@ class InvoiceCreateContent:
             self._show_error(str(ex))
     
     def _show_error(self, message):
-        error_content = ft.Card(
-            content=ft.Container(
-                content=ft.Column([
-                    ft.Icon(ft.Icons.ERROR_OUTLINE, size=48, color=ft.Colors.RED_400),
-                    ft.Text(f"{get_text('error')}: {message}", size=14, color=ft.Colors.RED_600),
-                    ft.Container(height=16),
-                    ft.ElevatedButton(
-                        content=ft.Text(get_text("retry")),
-                        on_click=lambda e: self.load_invoice_info(),
-                        style=ft.ButtonStyle(bgcolor=self.primary_color, color=ft.Colors.WHITE),
-                    ),
-                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=8),
-                padding=ft.padding.all(40),
-            ),
-            elevation=2,
+        error_content = ft.Container(
+            content=ft.Column([
+                ft.Icon(ft.Icons.ERROR_OUTLINE, size=48, color=ft.Colors.RED_400),
+                ft.Text(f"{get_text('error')}: {message}", size=14, color=ft.Colors.RED_600),
+                ft.Container(height=16),
+                ft.ElevatedButton(
+                    content=ft.Text(get_text("retry")),
+                    on_click=lambda e: self.load_invoice_info(),
+                    style=ft.ButtonStyle(bgcolor=self.primary_color, color=ft.Colors.WHITE),
+                ),
+            ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=8),
+            padding=ft.padding.all(40),
+            bgcolor=ft.Colors.WHITE,
+            border_radius=12,
         )
         self.content_area.content = error_content
         self.page.update()
     
+    def _create_info_row(self, label, value):
+        return ft.Container(
+            content=ft.Row([
+                ft.Text(label, size=12, color="#64748B", width=110),
+                ft.Text(value, size=13, color="#1E293B", weight=ft.FontWeight.W_500, expand=True),
+            ], spacing=12),
+            padding=ft.padding.symmetric(vertical=5),
+            border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_50)),
+        )
+    
     def _build_invoice_form(self):
-        """Build the invoice form with loaded data"""
-        
-        # Job Info Card
-        job_card = ft.Card(
-            content=ft.Container(
-                content=ft.Column([
-                    ft.Row(
-                        [
-                            ft.Container(
-                                content=ft.Icon(ft.Icons.RECEIPT, size=18, color=self.primary_color),
-                                bgcolor=ft.Colors.with_opacity(0.1, self.primary_color),
-                                border_radius=10,
-                                padding=ft.padding.all(8),
-                            ),
-                            ft.Text(get_text("job_order_info"), size=15, weight=ft.FontWeight.BOLD, color="#1E293B"),
-                        ],
-                        spacing=10,
-                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                    ),
-                    ft.Divider(height=1, color=ft.Colors.GREY_200),
-                    ft.Container(height=12),
-                    ft.Row([
-                        ft.Column([
-                            ft.Text(get_text("job_number"), size=11, color="#64748B"),
-                            ft.Text(self.selected_job_data.get('job_no', '-'), size=14, weight=ft.FontWeight.W_600, color="#1E293B"),
-                        ], spacing=3, expand=True),
-                        ft.Column([
-                            ft.Text(get_text("customer_name"), size=11, color="#64748B"),
-                            ft.Text(self.selected_job_data.get('customer_name', '-'), size=14, weight=ft.FontWeight.W_600, color="#1E293B"),
-                        ], spacing=3, expand=True),
-                        ft.Column([
-                            ft.Text(get_text("customer_phone"), size=11, color="#64748B"),
-                            ft.Text(self.selected_job_data.get('customer_phone', '-'), size=13, color="#1E293B"),
-                        ], spacing=3, expand=True),
-                    ]),
-                    ft.Container(height=8),
-                    ft.Row([
-                        ft.Column([
-                            ft.Text(get_text("plate_number"), size=11, color="#64748B"),
-                            ft.Text(self.selected_job_data.get('plate_number', '-'), size=14, weight=ft.FontWeight.W_700, color=self.primary_color),
-                        ], spacing=3, expand=True),
-                        ft.Column([
-                            ft.Text(get_text("car_brand_model"), size=11, color="#64748B"),
-                            ft.Text(f"{self.selected_job_data.get('brand', '')} {self.selected_job_data.get('model', '')}", size=13, color="#1E293B"),
-                        ], spacing=3, expand=True),
-                    ]),
-                ]),
-                padding=ft.padding.all(20),
-            ),
-            elevation=2,
+        # Job Info Card (Clean Card)
+        job_card = ft.Container(
+            content=ft.Column([
+                ft.Row([
+                    ft.Icon(ft.Icons.RECEIPT, size=18, color=self.primary_color),
+                    ft.Text(get_text("job_order_info"), size=15, weight=ft.FontWeight.W_600, color="#1E293B"),
+                ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                ft.Divider(height=1, color=ft.Colors.GREY_100),
+                ft.Container(height=4),
+                self._create_info_row(get_text("job_number"), self.selected_job_data.get('job_no', '-')),
+                self._create_info_row(get_text("customer_name"), self.selected_job_data.get('customer_name', '-')),
+                self._create_info_row(get_text("customer_phone"), self.selected_job_data.get('customer_phone', '-')),
+                self._create_info_row(get_text("plate_number"), self.selected_job_data.get('plate_number', '-')),
+                self._create_info_row(get_text("car_brand_model"), f"{self.selected_job_data.get('brand', '')} {self.selected_job_data.get('model', '')}"),
+            ], spacing=0),
+            padding=ft.padding.all(16),
+            bgcolor=ft.Colors.WHITE,
+            border_radius=12,
+            shadow=ft.BoxShadow(blur_radius=4, color=ft.Colors.with_opacity(0.05, ft.Colors.BLACK)),
             margin=ft.margin.only(bottom=16),
         )
         
-        # Items List
-        items_list = ft.Column(spacing=6)
+        # Items List (Clean Card)
+        items_list = ft.Column(spacing=0)
+        total_amount = 0
         
         # Add services
         for idx, service in enumerate(self.services):
@@ -485,22 +452,20 @@ class InvoiceCreateContent:
             qty = service.get('qty', 1)
             unit_price = service.get('unit_price', 0)
             total = service.get('total', qty * unit_price)
-            bg_color = ft.Colors.GREY_50 if idx % 2 == 0 else ft.Colors.WHITE
+            total_amount += total
+            
+            border_bottom = ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_50)) if idx < len(self.services) - 1 else None
             
             item_row = ft.Container(
                 content=ft.Row([
-                    ft.Container(
-                        content=ft.Icon(ft.Icons.BUILD, size=16, color=self.primary_color),
-                        width=30,
-                    ),
-                    ft.Text(name, size=13, expand=True, max_lines=2),
+                    ft.Icon(ft.Icons.BUILD, size=14, color=self.primary_color, width=25),
+                    ft.Text(name, size=13, color="#1E293B", expand=True, max_lines=2),
                     ft.Text(f"x{qty}", size=12, color="#64748B", width=50, text_align=ft.TextAlign.CENTER),
                     ft.Text(self._format_currency(unit_price), size=12, color="#64748B", width=100, text_align=ft.TextAlign.RIGHT),
                     ft.Text(self._format_currency(total), size=13, weight=ft.FontWeight.W_600, color=self.primary_color, width=120, text_align=ft.TextAlign.RIGHT),
-                ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                padding=ft.padding.symmetric(vertical=8, horizontal=12),
-                bgcolor=bg_color,
-                border_radius=8,
+                ], spacing=8, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                padding=ft.padding.symmetric(vertical=8, horizontal=0),
+                border=border_bottom,
             )
             items_list.controls.append(item_row)
         
@@ -510,70 +475,104 @@ class InvoiceCreateContent:
             qty = part.get('qty', 1)
             unit_price = part.get('unit_price', 0)
             total = part.get('total', qty * unit_price)
-            bg_color = ft.Colors.GREY_50 if (idx + len(self.services)) % 2 == 0 else ft.Colors.WHITE
+            total_amount += total
+            
+            border_bottom = ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_50)) if idx < len(self.parts) - 1 else None
             
             item_row = ft.Container(
                 content=ft.Row([
-                    ft.Container(
-                        content=ft.Icon(ft.Icons.INVENTORY, size=16, color=self.primary_color),
-                        width=30,
-                    ),
-                    ft.Text(name, size=13, expand=True, max_lines=2),
+                    ft.Icon(ft.Icons.INVENTORY, size=14, color=self.primary_color, width=25),
+                    ft.Text(name, size=13, color="#1E293B", expand=True, max_lines=2),
                     ft.Text(f"x{qty}", size=12, color="#64748B", width=50, text_align=ft.TextAlign.CENTER),
                     ft.Text(self._format_currency(unit_price), size=12, color="#64748B", width=100, text_align=ft.TextAlign.RIGHT),
                     ft.Text(self._format_currency(total), size=13, weight=ft.FontWeight.W_600, color=self.primary_color, width=120, text_align=ft.TextAlign.RIGHT),
-                ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                padding=ft.padding.symmetric(vertical=8, horizontal=12),
-                bgcolor=bg_color,
-                border_radius=8,
+                ], spacing=8, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                padding=ft.padding.symmetric(vertical=8, horizontal=0),
+                border=border_bottom,
             )
             items_list.controls.append(item_row)
         
-        items_card = ft.Card(
-            content=ft.Container(
-                content=ft.Column([
-                    ft.Row(
-                        [
-                            ft.Container(
-                                content=ft.Icon(ft.Icons.LIST_ALT, size=18, color=self.primary_color),
-                                bgcolor=ft.Colors.with_opacity(0.1, self.primary_color),
-                                border_radius=10,
-                                padding=ft.padding.all(8),
-                            ),
-                            ft.Text(get_text("items_list"), size=15, weight=ft.FontWeight.BOLD, color="#1E293B"),
-                            ft.Container(expand=True),
-                            ft.Container(
-                                content=ft.Row([
-                                    ft.Text(get_text("total") + ":", size=11, color="#64748B"),
-                                    ft.Text(self._format_currency(self.total_amount), size=13, weight=ft.FontWeight.W_600, color=self.primary_color),
-                                ], spacing=6),
-                                padding=ft.padding.symmetric(horizontal=10, vertical=4),
-                                bgcolor=ft.Colors.GREY_50,
-                                border_radius=16,
-                            ),
-                        ],
-                        spacing=10,
-                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        # Subtotal row
+        subtotal_row = ft.Container(
+            content=ft.Row([
+                ft.Container(expand=True),
+                ft.Text(get_text("subtotal") + ":", size=13, weight=ft.FontWeight.W_600, color="#64748B"),
+                ft.Text(self._format_currency(total_amount), size=14, weight=ft.FontWeight.W_700, color=self.primary_color),
+            ], spacing=12),
+            padding=ft.padding.symmetric(vertical=10, horizontal=0),
+            bgcolor="#F8FAFC",
+            border_radius=8,
+            margin=ft.margin.only(top=8),
+        )
+        items_list.controls.append(subtotal_row)
+        
+        # Discount row
+        if self.discount_amount > 0:
+            discount_row = ft.Container(
+                content=ft.Row([
+                    ft.Container(expand=True),
+                    ft.Text(get_text("discount") + ":", size=13, weight=ft.FontWeight.W_600, color="#64748B"),
+                    ft.Text(f"-{self._format_currency(self.discount_amount)}", size=14, weight=ft.FontWeight.W_700, color=ft.Colors.RED_600),
+                ], spacing=12),
+                padding=ft.padding.symmetric(vertical=8, horizontal=0),
+                bgcolor=ft.Colors.with_opacity(0.1, ft.Colors.RED_600),
+                border_radius=8,
+                margin=ft.margin.only(top=4),
+            )
+            items_list.controls.append(discount_row)
+            total_amount -= self.discount_amount
+        
+        # Final total row
+        final_total_row = ft.Container(
+            content=ft.Row([
+                ft.Container(expand=True),
+                ft.Text(get_text("final_total") + ":", size=15, weight=ft.FontWeight.W_700, color="#1E293B"),
+                ft.Text(self._format_currency(total_amount), size=18, weight=ft.FontWeight.W_800, color=self.success_color),
+            ], spacing=12),
+            padding=ft.padding.symmetric(vertical=12, horizontal=0),
+            bgcolor=ft.Colors.with_opacity(0.1, self.success_color),
+            border_radius=8,
+            margin=ft.margin.only(top=8),
+        )
+        items_list.controls.append(final_total_row)
+        
+        items_card = ft.Container(
+            content=ft.Column([
+                ft.Row([
+                    ft.Icon(ft.Icons.LIST_ALT, size=18, color=self.primary_color),
+                    ft.Text(get_text("items_list"), size=15, weight=ft.FontWeight.W_600, color="#1E293B"),
+                    ft.Container(expand=True),
+                    ft.Container(
+                        content=ft.Row([
+                            ft.Icon(ft.Icons.ATTACH_MONEY, size=14, color=self.success_color),
+                            ft.Text(self._format_currency(total_amount), size=14, weight=ft.FontWeight.W_700, color=self.success_color),
+                        ], spacing=4),
+                        padding=ft.padding.symmetric(horizontal=10, vertical=4),
+                        bgcolor=ft.Colors.with_opacity(0.1, self.success_color),
+                        border_radius=16,
                     ),
-                    ft.Divider(height=1, color=ft.Colors.GREY_200),
-                    ft.Container(height=8),
-                    items_list if items_list.controls else ft.Container(
-                        content=ft.Text(get_text("no_items"), size=13, color="#94A3B8"),
-                        padding=ft.padding.all(30),
-                        alignment=ft.Alignment(0, 0),
-                    ),
-                ]),
-                padding=ft.padding.all(20),
-            ),
-            elevation=2,
+                ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                ft.Divider(height=1, color=ft.Colors.GREY_100),
+                ft.Container(height=8),
+                ft.Row([
+                    ft.Text("#", size=11, weight=ft.FontWeight.W_600, color="#64748B", width=25),
+                    ft.Text(get_text("item_name"), size=11, weight=ft.FontWeight.W_600, color="#64748B", expand=True),
+                    ft.Text(get_text("qty"), size=11, weight=ft.FontWeight.W_600, color="#64748B", width=50, text_align=ft.TextAlign.CENTER),
+                    ft.Text(get_text("price"), size=11, weight=ft.FontWeight.W_600, color="#64748B", width=100, text_align=ft.TextAlign.RIGHT),
+                    ft.Text(get_text("total"), size=11, weight=ft.FontWeight.W_600, color="#64748B", width=120, text_align=ft.TextAlign.RIGHT),
+                ], spacing=8),
+                ft.Divider(height=1, color=ft.Colors.GREY_200),
+                ft.Container(height=4),
+                items_list,
+            ], spacing=0),
+            padding=ft.padding.all(16),
+            bgcolor=ft.Colors.WHITE,
+            border_radius=12,
+            shadow=ft.BoxShadow(blur_radius=4, color=ft.Colors.with_opacity(0.05, ft.Colors.BLACK)),
             margin=ft.margin.only(bottom=16),
         )
         
-        # Payment Section
-        self.total_amount_text = ft.Text(self._format_currency(self.total_amount), size=16, weight=ft.FontWeight.W_600, color="#1E293B", text_align=ft.TextAlign.RIGHT)
-        self.discount_text = ft.Text(self._format_currency(self.discount_amount), size=14, weight=ft.FontWeight.W_600, color=ft.Colors.RED_600, text_align=ft.TextAlign.RIGHT)
-        self.final_total_text = ft.Text(self._format_currency(self.final_total), size=22, weight=ft.FontWeight.BOLD, color=self.success_color, text_align=ft.TextAlign.RIGHT)
-        
+        # Payment Section (Clean Card)
         self.payment_method_dropdown = ft.Dropdown(
             label=get_text("payment_method"),
             value="cash",
@@ -613,94 +612,67 @@ class InvoiceCreateContent:
         
         self.received_field.on_change = on_received_change
         
-        # Total Card
-        total_card = ft.Card(
-            content=ft.Container(
-                content=ft.Column([
-                    ft.Row(
-                        [
-                            ft.Container(
-                                content=ft.Icon(ft.Icons.PAYMENT, size=18, color=self.primary_color),
-                                bgcolor=ft.Colors.with_opacity(0.1, self.primary_color),
-                                border_radius=10,
-                                padding=ft.padding.all(8),
-                            ),
-                            ft.Text(get_text("payment_summary"), size=15, weight=ft.FontWeight.BOLD, color="#1E293B"),
-                            ft.Container(expand=True),
-                        ],
-                        spacing=10,
-                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                    ),
-                    ft.Divider(height=1, color=ft.Colors.GREY_200),
-                    ft.Container(height=12),
-                    ft.Row([
-                        ft.Column([
-                            ft.Text(get_text("total_amount"), size=12, color="#64748B"),
-                            self.total_amount_text,
-                        ], spacing=4, expand=True, horizontal_alignment=ft.CrossAxisAlignment.START),
-                        ft.Column([
-                            ft.Text(get_text("discount"), size=12, color="#64748B"),
-                            self.discount_text,
-                        ], spacing=4, expand=True, horizontal_alignment=ft.CrossAxisAlignment.START),
-                    ]),
-                    ft.Container(height=8),
-                    ft.Divider(height=1, color=ft.Colors.GREY_200),
-                    ft.Container(height=8),
-                    ft.Row([
-                        ft.Column([
-                            ft.Text(get_text("final_total"), size=14, weight=ft.FontWeight.BOLD, color="#1E293B"),
-                            self.final_total_text,
-                        ], spacing=4, expand=True),
-                    ]),
-                    ft.Container(height=16),
-                    ft.Divider(height=1, color=ft.Colors.GREY_200),
-                    ft.Container(height=12),
-                    ft.Row([
-                        self.payment_method_dropdown,
-                        self.received_field,
-                    ], spacing=12, vertical_alignment=ft.CrossAxisAlignment.END),
-                    ft.Container(height=12),
-                    ft.Row([
-                        ft.Text(get_text("change"), size=12, color="#64748B", width=100),
-                        ft.Container(expand=True),
-                        self.change_text,
-                    ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
+        payment_card = ft.Container(
+            content=ft.Column([
+                ft.Row([
+                    ft.Icon(ft.Icons.PAYMENT, size=18, color=self.primary_color),
+                    ft.Text(get_text("payment_summary"), size=15, weight=ft.FontWeight.W_600, color="#1E293B"),
+                ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                ft.Divider(height=1, color=ft.Colors.GREY_100),
+                ft.Container(height=8),
+                self._create_info_row(get_text("final_total"), self._format_currency(self.final_total)),
+                ft.Divider(height=1, color=ft.Colors.GREY_100),
+                ft.Container(height=8),
+                self.payment_method_dropdown,
+                ft.Container(height=12),
+                self.received_field,
+                ft.Container(height=12),
+                ft.Row([
+                    ft.Text(get_text("change"), size=13, color="#64748B"),
+                    ft.Container(expand=True),
+                    self.change_text,
                 ]),
-                padding=ft.padding.all(20),
-            ),
-            elevation=2,
+            ], spacing=0),
+            padding=ft.padding.all(16),
+            bgcolor=ft.Colors.WHITE,
+            border_radius=12,
+            shadow=ft.BoxShadow(blur_radius=4, color=ft.Colors.with_opacity(0.05, ft.Colors.BLACK)),
         )
         
-        # Create Button (bottom)
-        bottom_create_btn = ft.ElevatedButton(
-            content=ft.Row([
-                ft.Icon(ft.Icons.PAYMENT, size=18, color=ft.Colors.WHITE),
-                ft.Text(get_text("confirm_payment"), size=14, color=ft.Colors.WHITE, weight=ft.FontWeight.W_600),
-            ], spacing=8),
-            on_click=self.confirm_payment,
-            style=ft.ButtonStyle(
-                bgcolor=self.success_color,
-                shape=ft.RoundedRectangleBorder(radius=10),
-                padding=ft.padding.symmetric(horizontal=32, vertical=14),
-            ),
+        # Two column layout
+        left_column = ft.Container(
+            content=ft.Column([job_card, items_card], spacing=0),
+            width=650,
+            expand=True,
         )
         
-        # Scrollable content
-        scrollable_content = ft.Column([
-            job_card,
-            items_card,
-            total_card,
-            ft.Container(height=24),
-            ft.Row([bottom_create_btn], alignment=ft.MainAxisAlignment.CENTER),
-            ft.Container(height=20),
-        ], spacing=0, scroll=ft.ScrollMode.AUTO, expand=True)
+        right_column = ft.Container(
+            content=ft.Column([payment_card], spacing=0),
+            width=400,
+            expand=True,
+        )
+        
+        two_columns = ft.Row(
+            [left_column, ft.VerticalDivider(width=1, color=ft.Colors.GREY_300), right_column],
+            spacing=20,
+            vertical_alignment=ft.CrossAxisAlignment.START,
+            expand=True,
+            scroll=ft.ScrollMode.AUTO,
+        )
+        
+        main_card = ft.Container(
+            content=two_columns,
+            padding=ft.padding.symmetric(horizontal=20, vertical=20),
+            bgcolor=ft.Colors.WHITE,
+            border_radius=16,
+            expand=True,
+        )
         
         # Update content area
-        self.content_area.content = scrollable_content
+        self.content_area.content = ft.Column([main_card], expand=True, scroll=ft.ScrollMode.AUTO)
         self.page.update()
     
     def confirm_payment(self, e):
-        """Confirm payment and create invoice"""
         if self.is_processing:
             return
         
@@ -754,7 +726,6 @@ class InvoiceCreateContent:
         
         def go_to_detail(e):
             popup.open = False
-            # Use lambda to capture invoice_id properly
             self.navigate("invoice_detail", invoice_id=invoice_id)
         
         popup = ft.AlertDialog(

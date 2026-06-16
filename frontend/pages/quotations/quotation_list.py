@@ -247,7 +247,7 @@ class QuotationListContent:
         quote_id = quote.get("id")
         customer_name = quote.get("customer_name", "-")
         plate_number = quote.get("plate_number", "-")
-        total_price = quote.get("total_price", 0)
+        total_price = quote.get("net_total", quote.get("sub_total", 0))
         status = quote.get("status", "draft")
         created_at = quote.get("created_at", "").split()[0] if quote.get("created_at") else "-"
         
@@ -562,7 +562,7 @@ class QuotationListContent:
                                 content=ft.Text(get_text("create_repair_order_now")),
                                 actions=[
                                     ft.TextButton(get_text("later"), on_click=lambda e: setattr(dialog, 'open', False)),
-                                    ft.ElevatedButton(get_text("go_to_repair"), on_click=go_to_repair, style=ft.ButtonStyle(bgcolor=self.primary_color)),
+                                    ft.ElevatedButton(get_text("go_to_repair"),color=ft.Colors.WHITE, on_click=go_to_repair, style=ft.ButtonStyle(bgcolor=self.primary_color)),
                                 ],
                                 actions_alignment=ft.MainAxisAlignment.END,
                             )

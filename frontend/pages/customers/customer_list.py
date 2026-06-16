@@ -25,6 +25,7 @@ class CustomerListContent:
         self.current_dialog = None
         self.customers_data = []
         self.filtered_customers = []
+        self.all_vehicles = []  # Cache all vehicles for detail dialogs
         self.search_input = None
         self.current_page = 1
         self.items_per_page = 10
@@ -198,23 +199,17 @@ class CustomerListContent:
         )
     
     def _create_table_row(self, customer, index, row_number):
-        """Create a single table row"""
+        """Create a single table row - using vehicle_count from API"""
         customer_id = customer.get('id')
         name = customer.get('name', '-')
         phone = customer.get('phone', '-')
         address = customer.get('address', '-')
+        vehicle_count = customer.get('vehicle_count', 0)
         
         row_bg = ft.Colors.GREY_50 if index % 2 == 0 else ft.Colors.WHITE
         
         # Shorten address if too long
         address_display = address if len(address) <= 30 else address[:27] + "..."
-        
-        # Get vehicle count
-        try:
-            vehicles = self.client.get_vehicles(customer_id=customer_id)
-            vehicle_count = len(vehicles) if vehicles else 0
-        except:
-            vehicle_count = 0
         
         # Action buttons
         view_btn = ft.Container(
@@ -377,12 +372,12 @@ class CustomerListContent:
     def prev_page(self, e=None):
         if self.current_page > 1:
             self.current_page -= 1
-            self.display_customers(self.filtered_customers)
+            self.display_customers()
     
     def next_page(self, e=None):
         if self.current_page < self.total_pages:
             self.current_page += 1
-            self.display_customers(self.filtered_customers)
+            self.display_customers()
     
     def filter_customers(self, e=None):
         query = self.search_input.value.lower() if self.search_input.value else ""
@@ -397,24 +392,26 @@ class CustomerListContent:
                 or query in c.get('phone', '').lower()
             ]
         
-        self.display_customers(self.filtered_customers)
+        self.display_customers()
     
-    def display_customers(self, customers):
+    def display_customers(self):
+        """Display customers with pagination (using already loaded data)"""
         self.table_rows.controls.clear()
         
-        if not customers:
+        if not self.filtered_customers:
             self.table_rows.controls.append(self._create_empty_state())
-        else:
-            start_idx = (self.current_page - 1) * self.items_per_page
-            end_idx = start_idx + self.items_per_page
-            page_customers = customers[start_idx:end_idx]
-            
-            global_start = start_idx + 1
-            
-            for i, customer in enumerate(page_customers):
-                row_number = global_start + i
-                row = self._create_table_row(customer, start_idx + i, row_number)
-                self.table_rows.controls.append(row)
+            self.update_pagination_controls()
+            self.page.update()
+            return
+        
+        start_idx = (self.current_page - 1) * self.items_per_page
+        end_idx = min(start_idx + self.items_per_page, len(self.filtered_customers))
+        page_customers = self.filtered_customers[start_idx:end_idx]
+        
+        for i, customer in enumerate(page_customers):
+            row_number = start_idx + i + 1
+            row = self._create_table_row(customer, start_idx + i, row_number)
+            self.table_rows.controls.append(row)
         
         self.update_pagination_controls()
         self.page.update()
@@ -427,10 +424,27 @@ class CustomerListContent:
             print(f"Error loading brands: {ex}")
             self.brands_list = []
     
+    def load_all_vehicles(self):
+        """Load all vehicles once for caching (used in detail/ edit dialogs)"""
+        try:
+            self.all_vehicles = self.client.get_vehicles() or []
+            # Enrich with brand names
+            for vehicle in self.all_vehicles:
+                brand_id = vehicle.get('brand_id')
+                if brand_id:
+                    brand = next((b for b in self.brands_list if b.get('id') == brand_id), None)
+                    vehicle['brand_name'] = brand.get('name') if brand else "-"
+                else:
+                    vehicle['brand_name'] = "-"
+        except Exception as ex:
+            print(f"Error loading vehicles: {ex}")
+            self.all_vehicles = []
+    
     async def _delayed_load(self):
         await asyncio.sleep(0.2)
-        self.load_data()
         self.load_brands()
+        await asyncio.sleep(0.1)
+        self.load_data()
     
     def load_data(self):
         if self.is_loading:
@@ -438,17 +452,29 @@ class CustomerListContent:
         self.is_loading = True
         
         try:
-            print("DEBUG: Loading customers data...")
-            self.customers_data = self.client.get_customers()
+            print("DEBUG: Loading customers with vehicle counts...")
+            # Use new API that returns vehicle_count directly
+            self.customers_data = self.client.get_customers_with_vehicles()
             self.filtered_customers = self.customers_data.copy()
-            print(f"DEBUG: Loaded {len(self.customers_data)} customers")
+            print(f"DEBUG: Loaded {len(self.customers_data)} customers with vehicle counts")
             
-            self.display_customers(self.filtered_customers)
+            # Load all vehicles once for caching (for detail/edit dialogs)
+            self.load_all_vehicles()
+            
+            self.display_customers()
             
         except Exception as e:
             print(f"DEBUG: Error loading customers: {e}")
             traceback.print_exc()
-            self.show_snackbar(f"{get_text('error')}: {e}", is_error=True)
+            # Fallback to old method
+            try:
+                self.customers_data = self.client.get_customers()
+                for customer in self.customers_data:
+                    customer['vehicle_count'] = 0
+                self.filtered_customers = self.customers_data.copy()
+                self.display_customers()
+            except:
+                self.show_snackbar(f"{get_text('error')}: {e}", is_error=True)
         finally:
             self.is_loading = False
     
@@ -507,23 +533,8 @@ class CustomerListContent:
             self.show_snackbar(f"❌ {get_text('error')}", is_error=True)
             return
         
-        # Get vehicles for this customer
-        vehicles = []
-        try:
-            vehicles = self.client.get_vehicles(customer_id=customer_id)
-            for vehicle in vehicles:
-                brand_id = vehicle.get('brand_id')
-                if brand_id:
-                    brand = next((b for b in self.brands_list if b.get('id') == brand_id), None)
-                    if brand:
-                        vehicle['brand_name'] = brand.get('name')
-                    else:
-                        vehicle['brand_name'] = "-"
-                else:
-                    vehicle['brand_name'] = "-"
-        except Exception as ex:
-            print(f"Error loading vehicles: {ex}")
-            vehicles = []
+        # Get vehicles for this customer from cached all_vehicles
+        vehicles = [v for v in self.all_vehicles if v.get('customer_id') == customer_id]
         
         dialog = show_detail_dialog(customer, vehicles, self.brands_list, self.primary_color, self._close_dialog)
         self._open_dialog(dialog)
@@ -534,28 +545,15 @@ class CustomerListContent:
             self.show_snackbar(f"❌ {get_text('error')}", is_error=True)
             return
         
-        # Get vehicles for this customer
-        vehicles = []
-        try:
-            vehicles = self.client.get_vehicles(customer_id=customer_id)
-            for vehicle in vehicles:
-                brand_id = vehicle.get('brand_id')
-                if brand_id:
-                    brand = next((b for b in self.brands_list if b.get('id') == brand_id), None)
-                    if brand:
-                        vehicle['brand_name'] = brand.get('name')
-                    else:
-                        vehicle['brand_name'] = "-"
-                else:
-                    vehicle['brand_name'] = "-"
-        except Exception as ex:
-            print(f"Error loading vehicles: {ex}")
-            vehicles = []
+        # Get vehicles for this customer from cached all_vehicles
+        vehicles = [v for v in self.all_vehicles if v.get('customer_id') == customer_id]
         
         def on_save_customer(update_data):
             try:
                 self.client.update_customer(customer_id, update_data)
                 self.show_snackbar(f"✅ {get_text('update_successful')}", is_error=False)
+                # Reload data after save
+                self.load_data()
             except Exception as err:
                 self.show_snackbar(f"{get_text('error')}: {err}", is_error=True)
         
@@ -581,6 +579,8 @@ class CustomerListContent:
                     }
                     if callback:
                         callback(new_vehicle)
+                    # Update cache
+                    self.all_vehicles.append(new_vehicle)
                     self.show_snackbar(get_text("vehicle_added_successfully"), is_error=False)
             except Exception as err:
                 self.show_snackbar(f"{get_text('error')}: {err}", is_error=True)
@@ -606,6 +606,11 @@ class CustomerListContent:
                 }
                 if callback:
                     callback(updated_vehicle)
+                # Update cache
+                for i, v in enumerate(self.all_vehicles):
+                    if v.get('id') == vehicle_id:
+                        self.all_vehicles[i] = updated_vehicle
+                        break
                 self.show_snackbar(f"✅ {get_text('edit_success')}", is_error=False)
             except Exception as err:
                 self.show_snackbar(f"{get_text('error')}: {err}", is_error=True)
@@ -615,6 +620,8 @@ class CustomerListContent:
                 self.client.delete_vehicle(vehicle_id)
                 if callback:
                     callback(vehicles)
+                # Update cache
+                self.all_vehicles = [v for v in self.all_vehicles if v.get('id') != vehicle_id]
                 self.show_snackbar(get_text("vehicle_deleted_successfully"), is_error=False)
             except Exception as err:
                 self.show_snackbar(f"{get_text('error')}: {err}", is_error=True)

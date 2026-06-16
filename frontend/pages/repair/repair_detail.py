@@ -25,12 +25,11 @@ class RepairDetailContent:
         self.qty_field = None
         self.selected_stock = None
         self.current_dialog = None
-        self.content_area = None  # Store reference to content area
+        self.content_area = None
         
     def build(self):
         header = self._build_header()
         
-        # Create content area with loading state
         self.content_area = ft.Container(
             content=ft.Column([
                 ft.ProgressRing(width=50, height=50),
@@ -40,29 +39,26 @@ class RepairDetailContent:
             alignment=ft.Alignment(0, 0),
             expand=True,
             padding=ft.padding.all(24),
-            bgcolor="#F0F2F5",
+            bgcolor="#F8FAFC",
         )
         
         main_content = ft.Container(
             content=ft.Column([header, self.content_area], expand=True),
             expand=True,
-            bgcolor="#F5F7FA",
+            bgcolor="#F1F5F9",
         )
         
-        # Load data after build
         self.page.run_task(self._load_data)
         
         return main_content
     
     async def _load_data(self):
-        """Load all data asynchronously"""
         await asyncio.sleep(0.1)
         self.load_repair_data()
         self.load_parts()
         self._refresh_content()
     
     def _refresh_content(self):
-        """Refresh the content area"""
         if not self.repair_data:
             self.content_area.content = ft.Column([
                 ft.Icon(ft.Icons.ERROR_OUTLINE, size=64, color=ft.Colors.RED_400),
@@ -77,11 +73,10 @@ class RepairDetailContent:
         self.content_area.update()
     
     def _build_header(self):
-        # Action Buttons in Header
         update_status_btn = ft.ElevatedButton(
             content=ft.Row([
                 ft.Icon(ft.Icons.EDIT, size=18, color=ft.Colors.WHITE),
-                ft.Text(get_text("update_status"), size=14, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500),
+                ft.Text(get_text("update_status"), size=14, color=ft.Colors.WHITE, weight=ft.FontWeight.W_600),
             ], spacing=6),
             on_click=self.show_update_status_dialog,
             style=ft.ButtonStyle(
@@ -110,15 +105,11 @@ class RepairDetailContent:
                         [
                             ft.Text(
                                 get_text("repair_detail"),
-                                size=20,
+                                size=18,
                                 weight=ft.FontWeight.BOLD,
                                 color=ft.Colors.WHITE,
                             ),
-                            ft.Text(
-                                get_text("repair_detail_subtitle"),
-                                size=12,
-                                color=ft.Colors.with_opacity(0.85, ft.Colors.WHITE),
-                            ),
+                            
                         ],
                         spacing=2,
                     ),
@@ -128,7 +119,7 @@ class RepairDetailContent:
                 spacing=12,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(vertical=14, horizontal=24),
+            padding=ft.padding.symmetric(vertical=12, horizontal=24),
             gradient=ft.LinearGradient(
                 begin=ft.Alignment(-1, -1),
                 end=ft.Alignment(1, 1),
@@ -142,8 +133,35 @@ class RepairDetailContent:
             if self.repair_id:
                 self.repair_data = self.client.get_repair_order(self.repair_id)
                 print(f"DEBUG: Loaded repair data for {self.repair_id}")
+                
+                if self.repair_data and self.repair_data.get('job_order_id'):
+                    self.load_quotation_items(self.repair_data.get('job_order_id'))
         except Exception as ex:
             print(f"Error loading repair detail: {ex}")
+    
+    def load_quotation_items(self, job_order_id: int):
+        try:
+            quotations = self.client.get_quotations(job_order_id=job_order_id) or []
+            approved_quotation = None
+            for q in quotations:
+                if q.get('status') == 'approved':
+                    approved_quotation = q
+                    break
+            
+            if approved_quotation:
+                items = self.client.get_quotation_items(approved_quotation.get('id')) or []
+                self.quotation_items = []
+                for item in items:
+                    self.quotation_items.append({
+                        'item_type': item.get('item_type'),
+                        'name': item.get('name', '-'),
+                        'qty': item.get('qty', 1),
+                        'unit_price': item.get('unit_price', 0),
+                        'total': item.get('total', 0)
+                    })
+                self.repair_data['quotation_items'] = self.quotation_items
+        except Exception as ex:
+            print(f"Error loading quotation items: {ex}")
     
     def load_parts(self):
         try:
@@ -151,6 +169,16 @@ class RepairDetailContent:
         except Exception as ex:
             print(f"Error loading parts: {ex}")
             self.parts_list = []
+    
+    def _create_info_row(self, label, value):
+        return ft.Container(
+            content=ft.Row([
+                ft.Text(label, size=12, color="#64748B", width=110),
+                ft.Text(value, size=13, color="#1E293B", weight=ft.FontWeight.W_500 if "R" in value or any(c.isdigit() for c in value) else ft.FontWeight.W_400, expand=True),
+            ], spacing=12),
+            padding=ft.padding.symmetric(vertical=5),
+            border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_50)),
+        )
     
     def _build_content(self):
         data = self.repair_data
@@ -183,6 +211,7 @@ class RepairDetailContent:
         start_date = data.get("start_date", "")
         end_date = data.get("end_date", "")
         parts_usage = data.get("parts_usage", [])
+        quotation_items = data.get("quotation_items", [])
         
         if start_date:
             start_date = start_date[:16] if len(start_date) > 16 else start_date
@@ -193,131 +222,166 @@ class RepairDetailContent:
         else:
             end_date = "-"
         
-        # Status Badge
         status_badge = ft.Container(
-            content=ft.Text(status_texts.get(status, status), size=13, color=ft.Colors.WHITE, weight=ft.FontWeight.W_600),
+            content=ft.Text(status_texts.get(status, status), size=12, color=ft.Colors.WHITE, weight=ft.FontWeight.W_600),
             bgcolor=status_colors.get(status, "#607D8B"),
             border_radius=20,
-            padding=ft.padding.symmetric(horizontal=16, vertical=6),
+            padding=ft.padding.symmetric(horizontal=14, vertical=5),
         )
         
-        # ========== REPAIR INFO CARD ==========
-        repair_info_card = ft.Card(
-            content=ft.Container(
-                content=ft.Column([
-                    ft.Row(
-                        [
-                            ft.Container(
-                                content=ft.Icon(ft.Icons.CONSTRUCTION, size=20, color=self.primary_color),
-                                bgcolor=ft.Colors.with_opacity(0.1, self.primary_color),
-                                border_radius=10,
-                                padding=ft.padding.all(8),
-                            ),
-                            ft.Text(get_text("repair_info"), size=16, weight=ft.FontWeight.BOLD, color="#1E293B"),
-                        ],
-                        spacing=12,
-                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                    ),
-                    ft.Divider(height=1, color=ft.Colors.GREY_100),
-                    ft.Container(height=12),
-                    ft.Row([
-                        ft.Column([
-                            ft.Text(get_text("repair_no"), size=11, color="#64748B"),
-                            ft.Text(repair_no, size=15, weight=ft.FontWeight.W_700, color=self.primary_color),
-                        ], spacing=4, expand=True),
-                        ft.Column([
-                            ft.Text(get_text("status"), size=11, color="#64748B"),
-                            status_badge,
-                        ], spacing=4, expand=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-                        ft.Column([
-                            ft.Text(get_text("mechanic"), size=11, color="#64748B"),
-                            ft.Text(mechanic_name, size=14, weight=ft.FontWeight.W_600, color="#1E293B"),
-                        ], spacing=4, expand=True),
-                    ]),
-                    ft.Container(height=8),
-                    ft.Row([
-                        ft.Column([
-                            ft.Text(get_text("start_date"), size=11, color="#64748B"),
-                            ft.Text(start_date, size=13, color="#1E293B"),
-                        ], spacing=4, expand=True),
-                        ft.Column([
-                            ft.Text(get_text("end_date"), size=11, color="#64748B"),
-                            ft.Text(end_date, size=13, color="#1E293B"),
-                        ], spacing=4, expand=True),
-                    ]),
-                ]),
-                padding=ft.padding.all(20),
-            ),
-            elevation=2,
-            margin=ft.margin.only(bottom=16),
+        # ========== LEFT COLUMN ==========
+        # Repair Info Card
+        repair_info_card = ft.Container(
+            content=ft.Column([
+                ft.Row([
+                    ft.Icon(ft.Icons.CONSTRUCTION, size=18, color=self.primary_color),
+                    ft.Text(get_text("repair_info"), size=15, weight=ft.FontWeight.W_600, color="#1E293B"),
+                    ft.Container(expand=True),
+                    status_badge,
+                ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                ft.Divider(height=1, color=ft.Colors.GREY_100),
+                ft.Container(height=4),
+                self._create_info_row(get_text("repair_no"), repair_no),
+                self._create_info_row(get_text("mechanic"), mechanic_name),
+                ft.Row([
+                    ft.Container(self._create_info_row(get_text("start_date"), start_date), expand=True),
+                    ft.Container(self._create_info_row(get_text("end_date"), end_date), expand=True),
+                ], spacing=20),
+            ], spacing=0),
+            padding=ft.padding.all(16),
+            bgcolor=ft.Colors.WHITE,
+            border_radius=12,
+            shadow=ft.BoxShadow(blur_radius=4, color=ft.Colors.with_opacity(0.05, ft.Colors.BLACK)),
+            margin=ft.margin.only(bottom=12),
         )
         
-        # ========== JOB ORDER INFO CARD ==========
-        job_info_card = ft.Card(
-            content=ft.Container(
-                content=ft.Column([
-                    ft.Row(
-                        [
-                            ft.Container(
-                                content=ft.Icon(ft.Icons.RECEIPT, size=20, color=self.primary_color),
-                                bgcolor=ft.Colors.with_opacity(0.1, self.primary_color),
-                                border_radius=10,
-                                padding=ft.padding.all(8),
-                            ),
-                            ft.Text(get_text("job_order_info"), size=16, weight=ft.FontWeight.BOLD, color="#1E293B"),
-                        ],
-                        spacing=12,
-                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                    ),
-                    ft.Divider(height=1, color=ft.Colors.GREY_100),
-                    ft.Container(height=12),
-                    ft.Row([
-                        ft.Column([
-                            ft.Text(get_text("job_number"), size=11, color="#64748B"),
-                            ft.Text(job_no, size=14, weight=ft.FontWeight.W_600, color="#1E293B"),
-                        ], spacing=4, expand=True),
-                        ft.Column([
-                            ft.Text(get_text("customer_name"), size=11, color="#64748B"),
-                            ft.Text(customer_name, size=14, weight=ft.FontWeight.W_600, color="#1E293B"),
-                        ], spacing=4, expand=True),
-                        ft.Column([
-                            ft.Text(get_text("customer_phone"), size=11, color="#64748B"),
-                            ft.Text(customer_phone, size=13, color="#1E293B"),
-                        ], spacing=4, expand=True),
-                    ]),
-                    ft.Container(height=8),
-                    ft.Row([
-                        ft.Column([
-                            ft.Text(get_text("plate_number"), size=11, color="#64748B"),
-                            ft.Text(plate_number, size=14, weight=ft.FontWeight.W_700, color=self.primary_color),
-                        ], spacing=4, expand=True),
-                        ft.Column([
-                            ft.Text(get_text("car_brand_model"), size=11, color="#64748B"),
-                            ft.Text(f"{brand} {model} {f'({year})' if year else ''}", size=13, color="#1E293B"),
-                        ], spacing=4, expand=True),
-                        ft.Column([
-                            ft.Text(get_text("car_color"), size=11, color="#64748B"),
-                            ft.Text(color, size=13, color="#1E293B"),
-                        ], spacing=4, expand=True),
-                    ]),
-                    ft.Container(height=8),
-                    ft.Text(get_text("problem_description"), size=11, color="#64748B"),
+        # Job Info Card
+        job_info_card = ft.Container(
+            content=ft.Column([
+                ft.Row([
+                    ft.Icon(ft.Icons.RECEIPT, size=18, color=self.primary_color),
+                    ft.Text(get_text("job_order_info"), size=15, weight=ft.FontWeight.W_600, color="#1E293B"),
+                ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                ft.Divider(height=1, color=ft.Colors.GREY_100),
+                ft.Container(height=4),
+                self._create_info_row(get_text("job_number"), job_no),
+                self._create_info_row(get_text("customer_name"), customer_name),
+                self._create_info_row(get_text("customer_phone"), customer_phone),
+                self._create_info_row(get_text("plate_number"), plate_number),
+                self._create_info_row(get_text("car_brand_model"), f"{brand} {model} {f'({year})' if year else ''}"),
+                self._create_info_row(get_text("car_color"), color),
+                ft.Container(height=4),
+                ft.Text(get_text("problem_description"), size=12, color="#64748B"),
+                ft.Container(
+                    content=ft.Text(problem, size=13, color="#1E293B"),
+                    padding=ft.padding.all(10),
+                    bgcolor="#F8FAFC",
+                    border_radius=8,
+                    margin=ft.margin.only(top=4),
+                ),
+            ], spacing=0),
+            padding=ft.padding.all(16),
+            bgcolor=ft.Colors.WHITE,
+            border_radius=12,
+            shadow=ft.BoxShadow(blur_radius=4, color=ft.Colors.with_opacity(0.05, ft.Colors.BLACK)),
+            margin=ft.margin.only(bottom=12),
+        )
+        
+        left_column = ft.Container(
+            content=ft.Column([repair_info_card, job_info_card], spacing=0),
+            width=450,
+            expand=True,
+        )
+        
+        # ========== RIGHT COLUMN ==========
+        # Quotation Items Card
+        quotation_items_list = ft.Column(spacing=0)
+        quotation_total = 0
+        
+        if quotation_items and len(quotation_items) > 0:
+            for idx, item in enumerate(quotation_items):
+                name = item.get('name', '-')
+                qty = item.get('qty', 1)
+                unit_price = item.get('unit_price', 0)
+                total = item.get('total', 0)
+                quotation_total += total
+                
+                border_bottom = ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_50)) if idx < len(quotation_items) - 1 else None
+                
+                item_row = ft.Container(
+                    content=ft.Row([
+                        ft.Text(f"{idx+1}", size=12, color="#64748B", width=30),
+                        ft.Text(name, size=12, color="#1E293B", expand=True, max_lines=2),
+                        ft.Text(f"x{qty}", size=12, color="#64748B", width=45, text_align=ft.TextAlign.CENTER),
+                        ft.Text(f"{int(unit_price):,}", size=12, color="#64748B", width=90, text_align=ft.TextAlign.RIGHT),
+                        ft.Text(f"{int(total):,}", size=12, weight=ft.FontWeight.W_600, color=self.success_color, width=110, text_align=ft.TextAlign.RIGHT),
+                    ], spacing=6, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                    padding=ft.padding.symmetric(vertical=6, horizontal=0),
+                    border=border_bottom,
+                )
+                quotation_items_list.controls.append(item_row)
+            
+            total_row = ft.Container(
+                content=ft.Row([
+                    ft.Container(expand=True),
+                    ft.Text(get_text("total") + ":", size=13, weight=ft.FontWeight.W_600, color="#1E293B"),
+                    ft.Text(f"{int(quotation_total):,} KIP", size=14, weight=ft.FontWeight.W_700, color=self.success_color),
+                ], spacing=12),
+                padding=ft.padding.symmetric(vertical=8, horizontal=0),
+                bgcolor="#F8FAFC",
+                border_radius=8,
+                margin=ft.margin.only(top=6),
+            )
+            quotation_items_list.controls.append(total_row)
+        else:
+            quotation_items_list.controls.append(
+                ft.Container(
+                    content=ft.Column([
+                        ft.Icon(ft.Icons.REQUEST_QUOTE, size=32, color="#CBD5E1"),
+                        ft.Text(get_text("no_quotation_items"), size=13, color="#94A3B8"),
+                    ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=8),
+                    padding=ft.padding.all(30),
+                    alignment=ft.Alignment(0, 0),
+                )
+            )
+        
+        quotation_card = ft.Container(
+            content=ft.Column([
+                ft.Row([
+                    ft.Icon(ft.Icons.REQUEST_QUOTE, size=18, color=self.primary_color),
+                    ft.Text(get_text("quotation_items"), size=15, weight=ft.FontWeight.W_600, color="#1E293B"),
+                    ft.Container(expand=True),
                     ft.Container(
-                        content=ft.Text(problem, size=13, color="#1E293B"),
-                        padding=ft.padding.all(12),
-                        bgcolor=ft.Colors.GREY_50,
-                        border_radius=8,
-                        margin=ft.margin.only(top=4),
+                        content=ft.Row([
+                            ft.Icon(ft.Icons.PRICE_CHANGE, size=14, color=self.success_color),
+                            ft.Text(f"{int(quotation_total):,} KIP", size=14, weight=ft.FontWeight.W_700, color=self.success_color),
+                        ], spacing=4),
+                        padding=ft.padding.symmetric(horizontal=10, vertical=4),
+                        bgcolor=ft.Colors.with_opacity(0.1, self.success_color),
+                        border_radius=16,
                     ),
-                ]),
-                padding=ft.padding.all(20),
-            ),
-            elevation=2,
-            margin=ft.margin.only(bottom=16),
+                ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                ft.Divider(height=1, color=ft.Colors.GREY_100),
+                ft.Container(height=4),
+                ft.Row([
+                    ft.Text("#", size=10, weight=ft.FontWeight.W_600, color="#64748B", width=30),
+                    ft.Text(get_text("item_name"), size=10, weight=ft.FontWeight.W_600, color="#64748B", expand=True),
+                    ft.Text(get_text("qty"), size=10, weight=ft.FontWeight.W_600, color="#64748B", width=45, text_align=ft.TextAlign.CENTER),
+                    ft.Text(get_text("price"), size=10, weight=ft.FontWeight.W_600, color="#64748B", width=90, text_align=ft.TextAlign.RIGHT),
+                    ft.Text(get_text("total"), size=10, weight=ft.FontWeight.W_600, color="#64748B", width=110, text_align=ft.TextAlign.RIGHT),
+                ], spacing=6),
+                ft.Divider(height=1, color=ft.Colors.GREY_200),
+                quotation_items_list,
+            ], spacing=0),
+            padding=ft.padding.all(16),
+            bgcolor=ft.Colors.WHITE,
+            border_radius=12,
+            shadow=ft.BoxShadow(blur_radius=4, color=ft.Colors.with_opacity(0.05, ft.Colors.BLACK)),
+            margin=ft.margin.only(bottom=12),
         )
         
-        # ========== PARTS USED CARD ==========
-        parts_list = ft.Column(spacing=6)
+        # Parts Used Card
+        parts_used_list = ft.Column(spacing=0)
         total_cost = 0
         
         if parts_usage and len(parts_usage) > 0:
@@ -329,39 +393,46 @@ class RepairDetailContent:
                 total = qty * cost_price
                 total_cost += total
                 
-                bg_color = ft.Colors.GREY_50 if idx % 2 == 0 else ft.Colors.WHITE
+                border_bottom = ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_50)) if idx < len(parts_usage) - 1 else None
                 
-                item = ft.Container(
+                item_row = ft.Container(
                     content=ft.Row([
-                        ft.Container(
-                            content=ft.Text(f"{qty}", size=14, weight=ft.FontWeight.W_700, color=self.primary_color),
-                            width=50,
-                            alignment=ft.Alignment(0, 0),
-                        ),
-                        ft.Column([
-                            ft.Text(part_name, size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
-                            ft.Text(f"{int(cost_price):,} KIP", size=11, color="#64748B"),
-                        ], spacing=2, expand=True),
-                        ft.Text(f"{int(total):,} KIP", size=13, weight=ft.FontWeight.W_600, color=self.success_color, width=120, text_align=ft.TextAlign.RIGHT),
+                        ft.Text(f"{idx+1}", size=12, color="#64748B", width=30),
+                        ft.Text(part_name, size=12, color="#1E293B", expand=True, max_lines=2),
+                        ft.Text(f"x{qty}", size=12, color="#64748B", width=45, text_align=ft.TextAlign.CENTER),
+                        ft.Text(f"{int(cost_price):,}", size=12, color="#64748B", width=90, text_align=ft.TextAlign.RIGHT),
+                        ft.Text(f"{int(total):,}", size=12, weight=ft.FontWeight.W_600, color=self.success_color, width=110, text_align=ft.TextAlign.RIGHT),
                         ft.IconButton(
-                            icon=ft.Icons.DELETE_OUTLINE,
-                            icon_size=18,
+                            icon=ft.Icons.REMOVE_CIRCLE_OUTLINE,
+                            icon_size=16,
                             icon_color=ft.Colors.RED_400,
                             tooltip=get_text("return_part"),
                             on_click=lambda e, uid=usage_id: self.return_part(uid),
                             padding=0,
                         ),
-                    ], spacing=12, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                    padding=ft.padding.symmetric(vertical=10, horizontal=12),
-                    bgcolor=bg_color,
-                    border_radius=8,
+                    ], spacing=6, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                    padding=ft.padding.symmetric(vertical=6, horizontal=0),
+                    border=border_bottom,
                 )
-                parts_list.controls.append(item)
+                parts_used_list.controls.append(item_row)
+            
+            total_row = ft.Container(
+                content=ft.Row([
+                    ft.Container(expand=True),
+                    ft.Text(get_text("total_parts_cost") + ":", size=13, weight=ft.FontWeight.W_600, color="#1E293B"),
+                    ft.Text(f"{int(total_cost):,} KIP", size=14, weight=ft.FontWeight.W_700, color=self.success_color),
+                ], spacing=12),
+                padding=ft.padding.symmetric(vertical=8, horizontal=0),
+                bgcolor="#F8FAFC",
+                border_radius=8,
+                margin=ft.margin.only(top=6),
+            )
+            parts_used_list.controls.append(total_row)
         else:
-            parts_list.controls.append(
+            parts_used_list.controls.append(
                 ft.Container(
                     content=ft.Column([
-                        ft.Icon(ft.Icons.INVENTORY, size=40, color="#CBD5E1"),
+                        ft.Icon(ft.Icons.INVENTORY, size=32, color="#CBD5E1"),
                         ft.Text(get_text("no_parts_used"), size=13, color="#94A3B8"),
                     ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=8),
                     padding=ft.padding.all(30),
@@ -369,61 +440,83 @@ class RepairDetailContent:
                 )
             )
         
-        # Add Part Button (only show if status is not completed)
         add_part_btn = None
         if status != "completed":
             add_part_btn = ft.ElevatedButton(
                 content=ft.Row([
-                    ft.Icon(ft.Icons.ADD, size=18, color=ft.Colors.WHITE),
-                    ft.Text(get_text("add_part"), size=13, color=ft.Colors.WHITE, weight=ft.FontWeight.W_600),
+                    ft.Icon(ft.Icons.ADD, size=14, color=ft.Colors.WHITE),
+                    ft.Text(get_text("add_part"), size=12, color=ft.Colors.WHITE, weight=ft.FontWeight.W_600),
                 ], spacing=6),
                 on_click=self.show_add_part_dialog,
                 style=ft.ButtonStyle(
                     bgcolor=self.primary_color,
                     shape=ft.RoundedRectangleBorder(radius=8),
-                    padding=ft.padding.symmetric(horizontal=16, vertical=8),
+                    padding=ft.padding.symmetric(horizontal=12, vertical=6),
                 ),
             )
         
-        parts_card = ft.Card(
-            content=ft.Container(
-                content=ft.Column([
-                    ft.Row(
-                        [
-                            ft.Container(
-                                content=ft.Icon(ft.Icons.INVENTORY_2, size=20, color=self.primary_color),
-                                bgcolor=ft.Colors.with_opacity(0.1, self.primary_color),
-                                border_radius=10,
-                                padding=ft.padding.all(8),
-                            ),
-                            ft.Text(get_text("parts_used"), size=16, weight=ft.FontWeight.BOLD, color="#1E293B"),
-                            ft.Container(expand=True),
-                            ft.Container(
-                                content=ft.Row([
-                                    ft.Text(get_text("total_parts_cost") + ":", size=12, color="#64748B"),
-                                    ft.Text(f"{int(total_cost):,} KIP", size=15, weight=ft.FontWeight.BOLD, color=self.success_color),
-                                ], spacing=6),
-                                padding=ft.padding.symmetric(horizontal=12, vertical=6),
-                                bgcolor=ft.Colors.GREY_50,
-                                border_radius=16,
-                            ),
-                        ],
-                        spacing=12,
-                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        parts_card = ft.Container(
+            content=ft.Column([
+                ft.Row([
+                    ft.Icon(ft.Icons.INVENTORY_2, size=18, color=self.primary_color),
+                    ft.Text(get_text("more_part"), size=15, weight=ft.FontWeight.W_600, color="#1E293B"),
+                    ft.Container(expand=True),
+                    ft.Container(
+                        content=ft.Row([
+                            ft.Icon(ft.Icons.ATTACH_MONEY, size=14, color=self.success_color),
+                            ft.Text(f"{int(total_cost):,} KIP", size=14, weight=ft.FontWeight.W_700, color=self.success_color),
+                        ], spacing=4),
+                        padding=ft.padding.symmetric(horizontal=10, vertical=4),
+                        bgcolor=ft.Colors.with_opacity(0.1, self.success_color),
+                        border_radius=16,
                     ),
-                    ft.Divider(height=1, color=ft.Colors.GREY_100),
-                    ft.Container(height=8),
-                    parts_list,
-                    ft.Container(height=8),
-                    ft.Row([add_part_btn], alignment=ft.MainAxisAlignment.END) if add_part_btn else ft.Container(),
-                ]),
-                padding=ft.padding.all(20),
-            ),
-            elevation=2,
-            margin=ft.margin.only(bottom=16),
+                ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                ft.Divider(height=1, color=ft.Colors.GREY_100),
+                ft.Container(height=4),
+                ft.Row([
+                    ft.Text("#", size=10, weight=ft.FontWeight.W_600, color="#64748B", width=30),
+                    ft.Text(get_text("part_name"), size=10, weight=ft.FontWeight.W_600, color="#64748B", expand=True),
+                    ft.Text(get_text("qty"), size=10, weight=ft.FontWeight.W_600, color="#64748B", width=45, text_align=ft.TextAlign.CENTER),
+                    ft.Text(get_text("cost_price"), size=10, weight=ft.FontWeight.W_600, color="#64748B", width=90, text_align=ft.TextAlign.RIGHT),
+                    ft.Text(get_text("total"), size=10, weight=ft.FontWeight.W_600, color="#64748B", width=110, text_align=ft.TextAlign.RIGHT),
+                    ft.Text("", size=10, width=30),
+                ], spacing=6),
+                ft.Divider(height=1, color=ft.Colors.GREY_200),
+                parts_used_list,
+                ft.Container(height=6),
+                ft.Row([add_part_btn], alignment=ft.MainAxisAlignment.END) if add_part_btn else ft.Container(),
+            ], spacing=0),
+            padding=ft.padding.all(16),
+            bgcolor=ft.Colors.WHITE,
+            border_radius=12,
+            shadow=ft.BoxShadow(blur_radius=4, color=ft.Colors.with_opacity(0.05, ft.Colors.BLACK)),
+            margin=ft.margin.only(bottom=12),
         )
         
-        # ========== ACTION BUTTONS ==========
+        right_column = ft.Container(
+            content=ft.Column([quotation_card, parts_card], spacing=0),
+            width=550,
+            expand=True,
+        )
+        
+        # ========== TWO COLUMN LAYOUT with Horizontal Scroll ==========
+        two_columns = ft.Row(
+            [left_column, ft.VerticalDivider(width=1, color=ft.Colors.GREY_300), right_column],
+            spacing=20,
+            vertical_alignment=ft.CrossAxisAlignment.START,
+            expand=True,
+            scroll=ft.ScrollMode.AUTO,  # Enable horizontal scroll
+        )
+        
+        main_content = ft.Container(
+            content=two_columns,
+            padding=ft.padding.all(20),
+            bgcolor=ft.Colors.WHITE,
+            border_radius=16,
+            expand=True,
+        )
+        
+        # Action Buttons
         back_btn = ft.OutlinedButton(
             content=ft.Row([
                 ft.Icon(ft.Icons.ARROW_BACK, size=18, color=self.primary_color),
@@ -440,15 +533,12 @@ class RepairDetailContent:
         action_row = ft.Row([back_btn], spacing=12, alignment=ft.MainAxisAlignment.CENTER)
         
         return ft.Column([
-            repair_info_card,
-            job_info_card,
-            parts_card,
-            ft.Container(height=20),
+            main_content,
+            ft.Container(height=16),
             action_row,
         ], spacing=0)
     
     def show_add_part_dialog(self, e):
-        """Show dialog to add part to repair"""
         if not self.parts_list:
             self.show_snack_bar(get_text("no_parts_available"), is_error=True)
             return
@@ -458,11 +548,10 @@ class RepairDetailContent:
         for part in self.parts_list:
             part_name = part.get("name", "-")
             stock_qty = part.get("stock_qty", 0)
-            status_text = "✓" if stock_qty > 5 else "⚠️" if stock_qty > 0 else "❌"
             part_options.append(
                 ft.dropdown.Option(
                     str(part.get('id')),
-                    f"{part_name} [{stock_qty}] {status_text}"
+                    f"{part_name} [{stock_qty}]"
                 )
             )
         
@@ -539,7 +628,6 @@ class RepairDetailContent:
         self._open_dialog(dialog)
     
     def _confirm_add_part(self, part_id_str, qty_str, dialog):
-        """Confirm add part"""
         if not part_id_str or part_id_str == "":
             self.show_snack_bar(get_text("select_part_first"), is_error=True)
             return
@@ -551,7 +639,6 @@ class RepairDetailContent:
             self.show_snack_bar(get_text("invalid_quantity"), is_error=True)
             return
         
-        # Find selected part to check stock
         selected_part = None
         for part in self.parts_list:
             if part.get('id') == part_id:
@@ -567,17 +654,14 @@ class RepairDetailContent:
             if result:
                 dialog.open = False
                 self.current_dialog = None
-                # Reload data
                 self.load_repair_data()
                 self.load_parts()
-                # Refresh UI
                 self._refresh_content()
                 self.show_snack_bar(f"✅ {get_text('part_withdrawn')}", is_error=False)
         except Exception as ex:
             self.show_snack_bar(f"Error: {str(ex)}", is_error=True)
     
     def on_part_select(self, e):
-        """When part is selected, show stock info"""
         if e.control.value and e.control.value != "":
             part_id = int(e.control.value)
             for part in self.parts_list:
@@ -598,7 +682,6 @@ class RepairDetailContent:
                     break
     
     def return_part(self, usage_id):
-        """Return part to stock"""
         dialog = ft.AlertDialog(
             modal=True,
             shape=ft.RoundedRectangleBorder(radius=16),
@@ -640,23 +723,19 @@ class RepairDetailContent:
         self._open_dialog(dialog)
     
     def _confirm_return_part(self, usage_id, dialog):
-        """Confirm return part"""
         try:
             result = self.client.delete_part_usage(self.repair_id, usage_id)
             if result:
                 dialog.open = False
                 self.current_dialog = None
-                # Reload data
                 self.load_repair_data()
                 self.load_parts()
-                # Refresh UI
                 self._refresh_content()
                 self.show_snack_bar(f"✅ {get_text('part_returned')}", is_error=False)
         except Exception as ex:
             self.show_snack_bar(f"Error: {str(ex)}", is_error=True)
     
     def show_update_status_dialog(self, e):
-        """Show dialog to update repair status"""
         current_status = self.repair_data.get("status", "waiting")
         
         status_dropdown = ft.Dropdown(
@@ -730,7 +809,6 @@ class RepairDetailContent:
         self._open_dialog(dialog)
     
     def _confirm_update_status(self, new_status, dialog):
-        """Confirm update status"""
         current_status = self.repair_data.get("status", "waiting")
         if new_status and new_status != current_status:
             try:

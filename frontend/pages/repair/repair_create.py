@@ -30,18 +30,16 @@ class RepairCreateContent:
         self.mechanics = []
         self.filtered_mechanics = []
         
-        # UI references - Left side (Job & Quotation)
+        # UI references - Left side (Job Order Selection & Mechanic)
         self.job_search_field = None
         self.job_clear_button = None
         self.job_results_container = None
         self.job_results_list = None
         self.selected_job_card = None
         self.selected_job_label = None
-        self.quotation_card = None
-        self.items_table_body = None
-        self.total_text = ft.Text("0 KIP", size=16, weight=ft.FontWeight.BOLD, color=self.success_color)
+        self.job_details_card = None
         
-        # UI references - Right side (Mechanic)
+        # UI references - Left side (Mechanic)
         self.mechanic_search_field = None
         self.mechanic_clear_button = None
         self.mechanic_results_list = None
@@ -49,6 +47,11 @@ class RepairCreateContent:
         self.selected_mechanic_label = None
         self.selected_mechanic_id = None
         self.selected_mechanic_data = None
+        
+        # UI references - Right side (Quotation Items)
+        self.quotation_card = None
+        self.items_table_body = None
+        self.total_text = ft.Text("0 KIP", size=16, weight=ft.FontWeight.BOLD, color=self.success_color)
         
     def build(self):
         # --- Header with Create Button ---
@@ -106,7 +109,7 @@ class RepairCreateContent:
             border_radius=ft.BorderRadius.only(bottom_left=20, bottom_right=20),
         )
         
-        # ==================== LEFT COLUMN: JOB ORDER INFO ====================
+        # ==================== LEFT COLUMN: JOB ORDER & MECHANIC ====================
         # Job Order Search Section
         self.job_search_field = ft.TextField(
             label=get_text("search_job_order"),
@@ -168,45 +171,40 @@ class RepairCreateContent:
             visible=False,
         )
         
-        # Job Details Card
-        self.job_details_card = ft.Card(
-            content=ft.Container(
-                content=ft.Column([
-                    ft.Row([
-                        ft.Icon(ft.Icons.RECEIPT, size=18, color=self.primary_color),
-                        ft.Text(get_text("job_order_info"), size=14, weight=ft.FontWeight.BOLD, color="#1E293B"),
-                    ], spacing=8),
-                    ft.Divider(height=1, color=ft.Colors.GREY_200),
-                    ft.Container(height=8),
-                    # Job details will be filled dynamically
-                    ft.Column(spacing=6, controls=[
-                        ft.Row([ft.Text(get_text("job_number")+":", size=12, color="#64748B", width=100), 
-                               ft.Text("", size=13, color="#1E293B", weight=ft.FontWeight.W_500, expand=True)], spacing=8),
-                        ft.Row([ft.Text(get_text("customer_name")+":", size=12, color="#64748B", width=100), 
-                               ft.Text("", size=13, color="#1E293B", expand=True)], spacing=8),
-                        ft.Row([ft.Text(get_text("plate_number")+":", size=12, color="#64748B", width=100), 
-                               ft.Text("", size=13, color="#1E293B", weight=ft.FontWeight.W_600, expand=True)], spacing=8),
-                        ft.Row([ft.Text(get_text("car_brand_model")+":", size=12, color="#64748B", width=100), 
-                               ft.Text("", size=13, color="#1E293B", expand=True)], spacing=8),
-                        ft.Row([ft.Text(get_text("problem_description")+":", size=12, color="#64748B", width=100), 
-                               ft.Text("", size=12, color="#64748B", expand=True, max_lines=2)], spacing=8),
-                    ]),
+        # Job Details Section (Clean Card style)
+        self.job_details_card = ft.Container(
+            content=ft.Column([
+                ft.Row([
+                    ft.Icon(ft.Icons.RECEIPT, size=18, color=self.primary_color),
+                    ft.Text(get_text("job_order_info"), size=15, weight=ft.FontWeight.W_600, color="#1E293B"),
+                ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                ft.Divider(height=1, color=ft.Colors.GREY_100),
+                ft.Container(height=4),
+                ft.Column(spacing=5, controls=[
+                    self._create_info_row(get_text("job_number"), ""),
+                    self._create_info_row(get_text("customer_name"), ""),
+                    self._create_info_row(get_text("plate_number"), ""),
+                    self._create_info_row(get_text("car_brand_model"), ""),
+                    self._create_info_row(get_text("problem_description"), "", max_lines=2),
                 ]),
-                padding=ft.padding.all(16),
-            ),
-            elevation=2,
-            visible=False,
+            ], spacing=0),
+            padding=ft.padding.all(16),
+            bgcolor=ft.Colors.WHITE,
+            border_radius=12,
+            shadow=ft.BoxShadow(blur_radius=4, color=ft.Colors.with_opacity(0.05, ft.Colors.BLACK)),
             margin=ft.margin.only(top=8),
+            visible=False,
         )
         
+        # Job Section
         job_section = ft.Column(
             [
                 ft.Row([
                     ft.Icon(ft.Icons.RECEIPT, size=18, color=self.primary_color),
-                    ft.Text(get_text("select_job_order"), size=15, weight=ft.FontWeight.BOLD, color="#1E293B")
-                ], spacing=8),
-                ft.Divider(height=1, color=ft.Colors.GREY_200),
-                ft.Container(height=12),
+                    ft.Text(get_text("select_job_order"), size=15, weight=ft.FontWeight.W_600, color="#1E293B")
+                ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                ft.Divider(height=1, color=ft.Colors.GREY_100),
+                ft.Container(height=8),
                 search_row,
                 ft.Container(height=8),
                 self.job_results_container,
@@ -216,52 +214,7 @@ class RepairCreateContent:
             spacing=0,
         )
         
-        # Quotation Items Section (แสดงเฉพาะ items ที่ได้รับการอนุมัติ)
-        items_header = ft.Container(
-            content=ft.Row([
-                ft.Container(content=ft.Text("#", size=12, weight=ft.FontWeight.BOLD, color="#64748B"), width=45),
-                ft.Container(content=ft.Text(get_text("item_name"), size=12, weight=ft.FontWeight.BOLD, color="#64748B"), expand=True),
-                ft.Container(content=ft.Text(get_text("quantity_short"), size=12, weight=ft.FontWeight.BOLD, color="#64748B"), width=70),
-                ft.Container(content=ft.Text(get_text("price_kip_short"), size=12, weight=ft.FontWeight.BOLD, color="#64748B"), width=110),
-                ft.Container(content=ft.Text(get_text("total_kip_short"), size=12, weight=ft.FontWeight.BOLD, color="#64748B"), width=110),
-            ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
-            padding=ft.padding.symmetric(vertical=10, horizontal=12),
-            bgcolor=ft.Colors.GREY_100,
-            border_radius=8,
-        )
-        
-        self.items_table_body = ft.Column(spacing=0, scroll=ft.ScrollMode.AUTO, height=250)
-        
-        self.quotation_card = ft.Card(
-            content=ft.Container(
-                content=ft.Column([
-                    ft.Row([
-                        ft.Icon(ft.Icons.REQUEST_QUOTE, size=18, color=self.primary_color),
-                        ft.Text(get_text("approved_quotation_items"), size=14, weight=ft.FontWeight.BOLD, color="#1E293B"),
-                        ft.Container(expand=True),
-                        ft.Container(
-                            content=ft.Row([
-                                ft.Text(get_text("total_amount") + ":", size=12, color="#64748B"),
-                                self.total_text,
-                            ], spacing=6),
-                            padding=ft.padding.symmetric(horizontal=10, vertical=4),
-                            bgcolor=ft.Colors.GREY_50,
-                            border_radius=16,
-                        ),
-                    ], spacing=8),
-                    ft.Divider(height=1, color=ft.Colors.GREY_200),
-                    ft.Container(height=8),
-                    items_header,
-                    self.items_table_body,
-                ]),
-                padding=ft.padding.all(16),
-            ),
-            elevation=2,
-            visible=False,
-            margin=ft.margin.only(top=16),
-        )
-        
-        # ==================== RIGHT COLUMN: MECHANIC ====================
+        # Mechanic Section
         self.mechanic_search_field = ft.TextField(
             label=get_text("search_mechanic"),
             hint_text=get_text("search_by_name_or_phone"),
@@ -285,14 +238,13 @@ class RepairCreateContent:
         
         mechanic_search_row = ft.Row([self.mechanic_search_field, self.mechanic_clear_button], spacing=8)
         
-        self.mechanic_results_list = ft.Column(spacing=8, scroll=ft.ScrollMode.AUTO, height=300)
+        self.mechanic_results_list = ft.Column(spacing=8, scroll=ft.ScrollMode.AUTO)
         mechanic_results_container = ft.Container(
             content=self.mechanic_results_list,
             border=ft.border.all(1, ft.Colors.GREY_200),
             border_radius=12,
             padding=ft.padding.all(12),
             bgcolor=ft.Colors.WHITE,
-            expand=True,
         )
         
         self.selected_mechanic_label = ft.Text("", size=13, weight=ft.FontWeight.W_500, color="#1E293B")
@@ -322,14 +274,14 @@ class RepairCreateContent:
             visible=False,
         )
         
-        mechanic_section = ft.Column(
-            [
+        mechanic_section = ft.Container(
+            content=ft.Column([
                 ft.Row([
                     ft.Icon(ft.Icons.PERSON, size=18, color=self.primary_color),
-                    ft.Text(get_text("assign_mechanic"), size=15, weight=ft.FontWeight.BOLD, color="#1E293B")
-                ], spacing=8),
-                ft.Divider(height=1, color=ft.Colors.GREY_200),
-                ft.Container(height=12),
+                    ft.Text(get_text("assign_mechanic"), size=15, weight=ft.FontWeight.W_600, color="#1E293B")
+                ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                ft.Divider(height=1, color=ft.Colors.GREY_100),
+                ft.Container(height=8),
                 mechanic_search_row,
                 ft.Container(height=8),
                 self.selected_mechanic_card,
@@ -337,29 +289,71 @@ class RepairCreateContent:
                 ft.Text(get_text("mechanic_list"), size=12, color="#64748B"),
                 ft.Container(height=4),
                 mechanic_results_container,
-            ],
-            spacing=0,
-            expand=True,
+            ], spacing=0),
+            padding=0,
+            bgcolor=None,
+            margin=ft.margin.only(top=0),
         )
         
-        # ==================== TWO COLUMN LAYOUT ====================
         left_column = ft.Container(
-            content=ft.Column([job_section, self.quotation_card], spacing=0, expand=True, scroll=ft.ScrollMode.AUTO),
-            width=650,
-            expand=True,
-        )
-        
-        right_column = ft.Container(
-            content=ft.Column([mechanic_section], spacing=0, expand=True),
+            content=ft.Column([job_section, ft.Container(height=16), mechanic_section], spacing=0, expand=True, scroll=ft.ScrollMode.AUTO),
             width=450,
             expand=True,
         )
         
+        # ==================== RIGHT COLUMN: QUOTATION ITEMS (Clean Card) ====================
+        self.items_table_body = ft.Column(spacing=0, scroll=ft.ScrollMode.AUTO, height=350)
+        
+        self.quotation_card = ft.Container(
+            content=ft.Column([
+                ft.Row([
+                    ft.Icon(ft.Icons.REQUEST_QUOTE, size=18, color=self.primary_color),
+                    ft.Text(get_text("approved_quotation_items"), size=15, weight=ft.FontWeight.W_600, color="#1E293B"),
+                    ft.Container(expand=True),
+                    ft.Container(
+                        content=ft.Row([
+                            ft.Icon(ft.Icons.PRICE_CHANGE, size=14, color=self.success_color),
+                            self.total_text,
+                        ], spacing=4),
+                        padding=ft.padding.symmetric(horizontal=10, vertical=4),
+                        bgcolor=ft.Colors.with_opacity(0.1, self.success_color),
+                        border_radius=16,
+                    ),
+                ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                ft.Divider(height=1, color=ft.Colors.GREY_100),
+                ft.Container(height=8),
+                # Header row
+                ft.Row([
+                    ft.Text("#", size=11, weight=ft.FontWeight.W_600, color="#64748B", width=35),
+                    ft.Text(get_text("item_name"), size=11, weight=ft.FontWeight.W_600, color="#64748B", expand=True),
+                    ft.Text(get_text("qty"), size=11, weight=ft.FontWeight.W_600, color="#64748B", width=60, text_align=ft.TextAlign.CENTER),
+                    ft.Text(get_text("price"), size=11, weight=ft.FontWeight.W_600, color="#64748B", width=100, text_align=ft.TextAlign.RIGHT),
+                    ft.Text(get_text("total"), size=11, weight=ft.FontWeight.W_600, color="#64748B", width=110, text_align=ft.TextAlign.RIGHT),
+                ], spacing=6),
+                ft.Divider(height=1, color=ft.Colors.GREY_200),
+                ft.Container(height=4),
+                self.items_table_body,
+            ], spacing=0),
+            padding=ft.padding.all(16),
+            bgcolor=ft.Colors.WHITE,
+            border_radius=12,
+            shadow=ft.BoxShadow(blur_radius=4, color=ft.Colors.with_opacity(0.05, ft.Colors.BLACK)),
+            visible=False,
+        )
+        
+        right_column = ft.Container(
+            content=ft.Column([self.quotation_card], spacing=0, expand=True, scroll=ft.ScrollMode.AUTO),
+            width=600,
+            expand=True,
+        )
+        
+        # ==================== TWO COLUMN LAYOUT ====================
         two_columns = ft.Row(
             [left_column, ft.VerticalDivider(width=1, color=ft.Colors.GREY_300), right_column],
             spacing=20,
             vertical_alignment=ft.CrossAxisAlignment.START,
             expand=True,
+            scroll=ft.ScrollMode.AUTO,
         )
         
         main_card = ft.Container(
@@ -387,14 +381,22 @@ class RepairCreateContent:
         
         return main_content
     
+    def _create_info_row(self, label, value, max_lines=1):
+        return ft.Container(
+            content=ft.Row([
+                ft.Text(label, size=12, color="#64748B", width=100),
+                ft.Text(value, size=13, color="#1E293B", weight=ft.FontWeight.W_500, expand=True, max_lines=max_lines),
+            ], spacing=12),
+            padding=ft.padding.symmetric(vertical=5),
+            border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_50)),
+        )
+    
     async def _load_data(self):
-        """Load all data"""
         await asyncio.sleep(0.2)
         self.load_mechanics()
         self.load_approved_job_orders()
     
     def load_mechanics(self):
-        """Load mechanics list from Employees with role='mechanic'"""
         try:
             self.mechanics = self.client.get_mechanics() or []
             self.filtered_mechanics = self.mechanics.copy()
@@ -406,15 +408,9 @@ class RepairCreateContent:
             self.filtered_mechanics = []
     
     def load_approved_job_orders(self):
-        """
-        Load job orders with status 'approved' 
-        (means quotation is approved, ready for repair)
-        """
         try:
-            # Get all job orders with status 'approved'
             all_jobs = self.client.get_job_orders(status='approved') or []
             
-            # Filter out jobs that already have repair orders
             self.approved_jobs = []
             for job in all_jobs:
                 try:
@@ -426,7 +422,6 @@ class RepairCreateContent:
             
             print(f"DEBUG: Loaded {len(self.approved_jobs)} approved job orders ready for repair")
             
-            # If job_order_id provided, auto-select
             if self.job_order_id:
                 for job in self.approved_jobs:
                     if job.get('id') == self.job_order_id:
@@ -440,7 +435,6 @@ class RepairCreateContent:
             self.approved_jobs = []
     
     def _update_job_list(self):
-        """Update the job results list display"""
         self.job_results_list.controls.clear()
         
         if not self.approved_jobs:
@@ -487,7 +481,6 @@ class RepairCreateContent:
             self.job_results_list.controls.append(result_item)
     
     def _update_mechanic_list(self):
-        """Update the mechanic results list display"""
         self.mechanic_results_list.controls.clear()
         
         if not self.filtered_mechanics:
@@ -501,47 +494,45 @@ class RepairCreateContent:
                     alignment=ft.Alignment(0, 0),
                 )
             )
-            return
-        
-        for mechanic in self.filtered_mechanics[:20]:
-            mech_id = mechanic.get('id')
-            name = mechanic.get('fullname', mechanic.get('name', '-'))
-            phone = mechanic.get('phone', '-')
-            role = mechanic.get('role', '-')
-            
-            is_selected = self.selected_mechanic_id == mech_id
-            
-            item_card = ft.Container(
-                content=ft.Row([
-                    ft.Container(
-                        content=ft.Icon(ft.Icons.PERSON, size=24, color=self.primary_color if is_selected else "#64748B"),
-                        bgcolor=ft.Colors.with_opacity(0.1, self.primary_color) if is_selected else ft.Colors.GREY_100,
-                        border_radius=12,
-                        padding=ft.padding.all(10),
-                    ),
-                    ft.Column([
-                        ft.Text(name, size=14, weight=ft.FontWeight.W_600, color="#1E293B"),
-                        ft.Text(f"{phone}", size=11, color="#64748B"),
-                    ], spacing=2, expand=True),
-                    ft.Icon(
-                        ft.Icons.CHECK_CIRCLE if is_selected else ft.Icons.RADIO_BUTTON_UNCHECKED,
-                        size=20,
-                        color=self.success_color if is_selected else "#CBD5E1",
-                    ),
-                ], spacing=12, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                padding=ft.padding.all(12),
-                bgcolor=ft.Colors.GREY_50 if is_selected else ft.Colors.WHITE,
-                border_radius=12,
-                border=ft.border.all(1, self.primary_color if is_selected else ft.Colors.GREY_200),
-                ink=True,
-                on_click=lambda e, m=mechanic: self.select_mechanic(m),
-            )
-            self.mechanic_results_list.controls.append(item_card)
+        else:
+            for mechanic in self.filtered_mechanics[:20]:
+                mech_id = mechanic.get('id')
+                name = mechanic.get('fullname', mechanic.get('name', '-'))
+                phone = mechanic.get('phone', '-')
+                role = mechanic.get('role', '-')
+                
+                is_selected = self.selected_mechanic_id == mech_id
+                
+                item_card = ft.Container(
+                    content=ft.Row([
+                        ft.Container(
+                            content=ft.Icon(ft.Icons.PERSON, size=24, color=self.primary_color if is_selected else "#64748B"),
+                            bgcolor=ft.Colors.with_opacity(0.1, self.primary_color) if is_selected else ft.Colors.GREY_100,
+                            border_radius=12,
+                            padding=ft.padding.all(10),
+                        ),
+                        ft.Column([
+                            ft.Text(name, size=14, weight=ft.FontWeight.W_600, color="#1E293B"),
+                            ft.Text(f"{phone}", size=11, color="#64748B"),
+                        ], spacing=2, expand=True),
+                        ft.Icon(
+                            ft.Icons.CHECK_CIRCLE if is_selected else ft.Icons.RADIO_BUTTON_UNCHECKED,
+                            size=20,
+                            color=self.success_color if is_selected else "#CBD5E1",
+                        ),
+                    ], spacing=12, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                    padding=ft.padding.all(12),
+                    bgcolor=ft.Colors.GREY_50 if is_selected else ft.Colors.WHITE,
+                    border_radius=12,
+                    border=ft.border.all(1, self.primary_color if is_selected else ft.Colors.GREY_200),
+                    ink=True,
+                    on_click=lambda e, m=mechanic: self.select_mechanic(m),
+                )
+                self.mechanic_results_list.controls.append(item_card)
         
         self.page.update()
     
     def select_job_order(self, job: dict):
-        """Select a job order and load its approved quotation items"""
         self.selected_job = job
         
         job_no = job.get('job_no', '-')
@@ -551,38 +542,31 @@ class RepairCreateContent:
         model = job.get('model', '-')
         problem = job.get('problem_description', '-')
         
-        # Update selected job card
         self.selected_job_label.value = f"{job_no} - {customer_name} - {plate_number}"
         self.job_search_field.value = job_no
         self.job_results_container.visible = False
         self.selected_job_card.visible = True
         
-        # Update job details card
-        self._update_job_details_card(job)
+        self._update_job_details_card(job_no, customer_name, plate_number, brand, model, problem)
         self.job_details_card.visible = True
         
-        # Load quotation items
         self.load_approved_quotation_items(job.get('id'))
         
         self.page.update()
     
-    def _update_job_details_card(self, job: dict):
-        """Update job details in the details card"""
-        details_column = self.job_details_card.content.content.controls[3]  # The Column with details
+    def _update_job_details_card(self, job_no, customer_name, plate_number, brand, model, problem):
+        details_column = self.job_details_card.content.controls[3]
         
-        details_column.controls[0].controls[1].value = job.get('job_no', '-')
-        details_column.controls[1].controls[1].value = job.get('customer_name', '-')
-        details_column.controls[2].controls[1].value = job.get('plate_number', '-')
-        details_column.controls[3].controls[1].value = f"{job.get('brand', '-')} {job.get('model', '-')}"
-        details_column.controls[4].controls[1].value = job.get('problem_description', '-')
+        details_column.controls[0].content.controls[1].value = job_no
+        details_column.controls[1].content.controls[1].value = customer_name
+        details_column.controls[2].content.controls[1].value = plate_number
+        details_column.controls[3].content.controls[1].value = f"{brand} {model}"
+        details_column.controls[4].content.controls[1].value = problem
     
     def load_approved_quotation_items(self, job_order_id: int):
-        """Load items from the approved quotation for this job order"""
         try:
-            # Get quotations for this job order
             quotations = self.client.get_quotations(job_order_id=job_order_id) or []
             
-            # Find the approved quotation
             approved_quotation = None
             for q in quotations:
                 if q.get('status') == 'approved':
@@ -596,18 +580,33 @@ class RepairCreateContent:
             
             self.selected_quotation = approved_quotation
             
-            # Get quotation items
             quotation_id = approved_quotation.get('id')
             items = self.client.get_quotation_items(quotation_id) or []
             
             self.quotation_items = []
             for item in items:
+                # Convert Decimal to float/int safely
+                try:
+                    unit_price = float(item.get('unit_price', 0))
+                except (TypeError, ValueError):
+                    unit_price = 0
+                
+                try:
+                    total = float(item.get('total', 0))
+                except (TypeError, ValueError):
+                    total = unit_price * int(item.get('qty', 1))
+                
+                try:
+                    qty = int(item.get('qty', 1))
+                except (TypeError, ValueError):
+                    qty = 1
+                
                 self.quotation_items.append({
                     'item_type': item.get('item_type'),
                     'name': item.get('name', '-'),
-                    'qty': item.get('qty', 1),
-                    'unit_price': item.get('unit_price', 0),
-                    'total': item.get('total', 0)
+                    'qty': qty,
+                    'unit_price': unit_price,
+                    'total': total
                 })
             
             self._update_items_table()
@@ -618,57 +617,92 @@ class RepairCreateContent:
             self.quotation_card.visible = False
     
     def _update_items_table(self):
-        """Update the quotation items table display"""
         self.items_table_body.controls.clear()
         
         if not self.quotation_items:
-            empty_row = ft.Container(
-                content=ft.Text(get_text("no_items_in_quotation"), size=13, color="#94A3B8"),
-                padding=ft.padding.all(40),
-                alignment=ft.Alignment(0, 0),
+            self.items_table_body.controls.append(
+                ft.Container(
+                    content=ft.Column([
+                        ft.Icon(ft.Icons.REQUEST_QUOTE, size=32, color="#CBD5E1"),
+                        ft.Text(get_text("no_items_in_quotation"), size=13, color="#94A3B8"),
+                    ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=8),
+                    padding=ft.padding.all(30),
+                    alignment=ft.Alignment(0, 0),
+                )
             )
-            self.items_table_body.controls.append(empty_row)
             self.total_text.value = "0 KIP"
+            self.page.update()
             return
         
-        subtotal = 0
+        subtotal = 0.0
         for idx, item in enumerate(self.quotation_items):
-            bg_color = ft.Colors.GREY_50 if idx % 2 == 0 else ft.Colors.WHITE
+            name = item.get('name', '-')
+            qty = item.get('qty', 1)
+            unit_price = item.get('unit_price', 0.0)
+            total = item.get('total', 0.0)
+            subtotal += total
+            
+            border_bottom = ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_50)) if idx < len(self.quotation_items) - 1 else None
+            
+            # Convert to int for display with commas
+            unit_price_int = int(unit_price) if unit_price else 0
+            total_int = int(total) if total else 0
             
             row = ft.Container(
                 content=ft.Row([
-                    ft.Container(content=ft.Text(str(idx + 1), size=12, color="#64748B"), width=45),
-                    ft.Container(content=ft.Text(item.get('name', '-'), size=13, color="#1E293B", max_lines=2), expand=True),
-                    ft.Container(content=ft.Text(str(item.get('qty', 1)), size=13, color="#1E293B"), width=70, alignment=ft.Alignment(0, 0)),
-                    ft.Container(content=ft.Text(f"{int(item.get('unit_price', 0)):,}", size=13, color="#64748B"), width=110, alignment=ft.Alignment(1, 0)),
-                    ft.Container(content=ft.Text(f"{int(item.get('total', 0)):,}", size=13, weight=ft.FontWeight.W_600, color=self.success_color), width=110, alignment=ft.Alignment(1, 0)),
-                ], spacing=8, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                padding=ft.padding.symmetric(vertical=8, horizontal=12),
-                bgcolor=bg_color,
+                    ft.Text(f"{idx+1}", size=12, color="#64748B", width=35),
+                    ft.Text(name, size=13, color="#1E293B", expand=True, max_lines=2),
+                    ft.Text(f"x{qty}", size=13, color="#64748B", width=60, text_align=ft.TextAlign.CENTER),
+                    ft.Text(f"{unit_price_int:,}", size=13, color="#64748B", width=100, text_align=ft.TextAlign.RIGHT),
+                    ft.Text(f"{total_int:,}", size=13, weight=ft.FontWeight.W_600, color=self.success_color, width=110, text_align=ft.TextAlign.RIGHT),
+                ], spacing=6, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                padding=ft.padding.symmetric(vertical=8, horizontal=0),
+                border=border_bottom,
             )
             self.items_table_body.controls.append(row)
-            subtotal += item.get('total', 0)
         
-        # Discount if any
-        discount_amount = self.selected_quotation.get('discount_amount', 0) or 0
+        # Discount row
+        discount_amount = self.selected_quotation.get('discount_amount', 0) if self.selected_quotation else 0
+        try:
+            discount_amount = float(discount_amount)
+        except (TypeError, ValueError):
+            discount_amount = 0
+        
         if discount_amount > 0:
+            discount_int = int(discount_amount)
             discount_row = ft.Container(
                 content=ft.Row([
                     ft.Container(expand=True),
                     ft.Text(get_text("discount") + ":", size=12, color="#64748B"),
-                    ft.Text(f"-{int(discount_amount):,} KIP", size=13, weight=ft.FontWeight.W_600, color=self.warning_color),
-                ], spacing=8),
-                padding=ft.padding.symmetric(vertical=5, horizontal=12),
-                bgcolor=ft.Colors.with_opacity(0.1, self.warning_color),
+                    ft.Text(f"-{discount_int:,} KIP", size=13, weight=ft.FontWeight.W_600, color=self.warning_color),
+                ], spacing=12),
+                padding=ft.padding.symmetric(vertical=8, horizontal=0),
+                bgcolor="#F8FAFC",
+                border_radius=8,
+                margin=ft.margin.only(top=4),
             )
             self.items_table_body.controls.append(discount_row)
             subtotal -= discount_amount
         
-        self.total_text.value = f"{int(subtotal):,} KIP"
+        # Total row
+        subtotal_int = int(subtotal) if subtotal else 0
+        total_row = ft.Container(
+            content=ft.Row([
+                ft.Container(expand=True),
+                ft.Text(get_text("total") + ":", size=13, weight=ft.FontWeight.W_600, color="#1E293B"),
+                ft.Text(f"{subtotal_int:,} KIP", size=14, weight=ft.FontWeight.W_700, color=self.success_color),
+            ], spacing=12),
+            padding=ft.padding.symmetric(vertical=10, horizontal=0),
+            bgcolor="#F8FAFC",
+            border_radius=8,
+            margin=ft.margin.only(top=4),
+        )
+        self.items_table_body.controls.append(total_row)
+        
+        self.total_text.value = f"{subtotal_int:,} KIP"
         self.page.update()
     
     def select_mechanic(self, mechanic: dict):
-        """Select a mechanic"""
         self.selected_mechanic_id = mechanic.get('id')
         self.selected_mechanic_data = mechanic
         name = mechanic.get('fullname', mechanic.get('name', '-'))
@@ -680,7 +714,6 @@ class RepairCreateContent:
         self.page.update()
     
     def clear_selected_mechanic(self):
-        """Clear selected mechanic"""
         self.selected_mechanic_id = None
         self.selected_mechanic_data = None
         self.selected_mechanic_card.visible = False
@@ -689,7 +722,6 @@ class RepairCreateContent:
         self.page.update()
     
     def clear_selected_job(self):
-        """Clear selected job"""
         self.selected_job = None
         self.selected_quotation = None
         self.quotation_items = []
@@ -804,7 +836,6 @@ class RepairCreateContent:
         self.page.update()
         
         try:
-            # Create repair order
             result = self.client.create_repair_order(
                 self.selected_job.get('id'), 
                 self.selected_mechanic_id
@@ -814,13 +845,11 @@ class RepairCreateContent:
             if result and result.get('id'):
                 repair_id = result.get('id')
                 
-                # Update status to 'working' immediately after creation
                 try:
                     self.client.update_repair_status(repair_id, 'working')
                     print(f"DEBUG: Updated repair {repair_id} status to 'working'")
                 except Exception as status_ex:
                     print(f"DEBUG: Error updating status: {status_ex}")
-                    # If status update fails, still continue (repair created at least)
                 
                 self.show_success_popup(repair_id)
             else:

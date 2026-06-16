@@ -21,10 +21,10 @@ def get_invoices(
         query = """
             SELECT i.*, 
                    jo.job_no,
-                   c.name as customer_name,
-                   v.plate_number,
-                   b.name as brand,
-                   v.model
+                   COALESCE(c.name, '') as customer_name,
+                   COALESCE(v.plate_number, '') as plate_number,
+                   COALESCE(b.name, '') as brand,
+                   COALESCE(v.model, '') as model
             FROM invoices i
             LEFT JOIN job_orders jo ON i.job_order_id = jo.id
             LEFT JOIN customers c ON jo.customer_id = c.id
@@ -49,10 +49,6 @@ def get_invoices(
         for invoice in invoices:
             if invoice.get('paid_date'):
                 invoice['paid_date'] = str(invoice['paid_date'])
-            if invoice.get('brand') is None:
-                invoice['brand'] = ""
-            if invoice.get('model') is None:
-                invoice['model'] = ""
         
         return invoices
     except Exception as e:
@@ -65,35 +61,84 @@ def get_invoices(
         db.close()
 
 
+@router.get("/invoices/ready-for-invoice")
+def get_invoices_ready_for_invoice(user: dict = Depends(authenticate_user)):
+    """
+    Get job orders that are ready to be invoiced
+    ດຶງ Job Orders ທີ່ສາມາດສ້າງໃບເກັບເງິນໄດ້
+    """
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+    try:
+        cursor.execute("""
+            SELECT 
+                jo.id,
+                jo.job_no,
+                jo.status,
+                jo.receive_date,
+                COALESCE(c.name, '') as customer_name,
+                COALESCE(c.phone, '') as customer_phone,
+                COALESCE(v.plate_number, '') as plate_number,
+                COALESCE(b.name, '') as brand,
+                COALESCE(v.model, '') as model,
+                q.id as quotation_id
+            FROM job_orders jo
+            LEFT JOIN customers c ON jo.customer_id = c.id
+            LEFT JOIN vehicles v ON jo.vehicle_id = v.id
+            LEFT JOIN brands b ON v.brand_id = b.id
+            LEFT JOIN quotations q ON jo.id = q.job_order_id AND q.status = 'approved'
+            WHERE jo.status IN ('finished', 'repairing')
+              AND jo.id NOT IN (SELECT COALESCE(job_order_id, 0) FROM invoices)
+            ORDER BY jo.id DESC
+        """)
+        
+        job_orders = cursor.fetchall()
+        
+        for order in job_orders:
+            if order.get('receive_date'):
+                order['receive_date'] = str(order['receive_date'])
+        
+        return job_orders
+    except Exception as e:
+        print(f"Error getting ready invoices: {e}")
+        import traceback
+        traceback.print_exc()
+        return []
+    finally:
+        cursor.close()
+        db.close()
+
+
 @router.get("/invoices/{invoice_id}")
 def get_invoice(invoice_id: int, user: dict = Depends(authenticate_user)):
-    """Get a single invoice by ID"""
+    """Get a single invoice by ID with its items"""
     db = get_db()
     cursor = db.cursor(dictionary=True)
     try:
         cursor.execute("""
             SELECT i.*, 
                    jo.job_no,
-                   c.name as customer_name, c.phone as customer_phone,
-                   v.plate_number,
-                   b.name as brand,
-                   v.model
+                   COALESCE(c.name, '') as customer_name, 
+                   COALESCE(c.phone, '') as customer_phone,
+                   COALESCE(v.plate_number, '') as plate_number,
+                   COALESCE(b.name, '') as brand,
+                   COALESCE(v.model, '') as model,
+                   COALESCE(e.name, '') as created_by_name
             FROM invoices i
             LEFT JOIN job_orders jo ON i.job_order_id = jo.id
             LEFT JOIN customers c ON jo.customer_id = c.id
             LEFT JOIN vehicles v ON jo.vehicle_id = v.id
             LEFT JOIN brands b ON v.brand_id = b.id
+            LEFT JOIN employees e ON i.created_by = e.id
             WHERE i.id = %s
         """, (invoice_id,))
         
         invoice = cursor.fetchone()
-        if invoice:
-            if invoice.get('paid_date'):
-                invoice['paid_date'] = str(invoice['paid_date'])
-            if invoice.get('brand') is None:
-                invoice['brand'] = ""
-            if invoice.get('model') is None:
-                invoice['model'] = ""
+        if not invoice:
+            raise HTTPException(status_code=404, detail="Invoice not found")
+        
+        if invoice.get('paid_date'):
+            invoice['paid_date'] = str(invoice['paid_date'])
         
         return invoice
     except Exception as e:
@@ -111,17 +156,31 @@ def get_invoice_info_by_job_order(
     job_order_id: int, 
     user: dict = Depends(authenticate_user)
 ):
-    """Get invoice information for a job order - simplified version"""
+    """
+    Get invoice information for a job order
+    ດຶງຂໍ້ມູນຈາກ:
+    - Parts_Usage (ອາໄຫຼ່ທີ່ເບີກໃຊ້ຈິງ)
+    - Quotation_Items (ບໍລິການ ແລະ ອາໄຫຼ່ທີ່ຕົກລົງໃນໃບສະເໜີ)
+    """
     db = get_db()
     cursor = db.cursor(dictionary=True)
     try:
-        # Get job order basic info with brand from brands table
+        # Get job order basic info with COALESCE
         cursor.execute("""
             SELECT 
-                jo.id, jo.job_no, jo.problem_description, jo.mileage, jo.fuel_level,
-                c.id as customer_id, c.name as customer_name, c.phone as customer_phone,
-                v.id as vehicle_id, v.plate_number, v.model, v.year,
-                b.name as brand
+                jo.id, 
+                COALESCE(jo.job_no, '') as job_no, 
+                COALESCE(jo.problem_description, '') as problem_description, 
+                COALESCE(jo.mileage, 0) as mileage, 
+                COALESCE(jo.fuel_level, '') as fuel_level,
+                COALESCE(c.id, 0) as customer_id, 
+                COALESCE(c.name, '') as customer_name, 
+                COALESCE(c.phone, '') as customer_phone,
+                COALESCE(v.id, 0) as vehicle_id, 
+                COALESCE(v.plate_number, '') as plate_number, 
+                COALESCE(v.model, '') as model, 
+                COALESCE(v.year, 0) as year,
+                COALESCE(b.name, '') as brand
             FROM job_orders jo
             LEFT JOIN customers c ON jo.customer_id = c.id
             LEFT JOIN vehicles v ON jo.vehicle_id = v.id
@@ -130,116 +189,143 @@ def get_invoice_info_by_job_order(
         """, (job_order_id,))
         
         job_info = cursor.fetchone()
+        
         if not job_info:
-            # Return default data
             return {
                 "job_order": {
                     "id": job_order_id,
-                    "job_no": f"JO-{job_order_id:04d}",
+                    "job_no": f"JOB-{job_order_id:04d}",
                     "customer_name": "",
                     "customer_phone": "",
                     "plate_number": "",
                     "brand": "",
                     "model": "",
+                    "year": "",
                     "mileage": 0,
                     "fuel_level": "",
                     "problem_description": ""
                 },
                 "parts": [],
-                "services": [
-                    {
-                        "id": 1,
-                        "name": "ຄ່າແຮງງານຊ່າງ",
-                        "qty": 1,
-                        "unit_price": 100000,
-                        "total": 100000,
-                        "discount_amount": 0
-                    }
-                ],
+                "services": [],
                 "summary": {
-                    "total_amount": 100000,
+                    "total_amount": 0,
                     "total_discount": 0,
-                    "final_total": 100000
+                    "final_total": 0
                 }
             }
         
-        # Get parts usage from repair_orders (actual parts used)
         parts_list = []
-        try:
+        services_list = []
+        total_amount = 0
+        total_discount = 0
+        
+        # ========== 1. GET ACTUAL PARTS USAGE FROM REPAIR (D14) ==========
+        cursor.execute("""
+            SELECT ro.id as repair_id
+            FROM repair_orders ro
+            WHERE ro.job_order_id = %s
+            ORDER BY ro.id DESC LIMIT 1
+        """, (job_order_id,))
+        repair = cursor.fetchone()
+        
+        if repair:
             cursor.execute("""
-                SELECT pu.part_id, pu.qty, pu.cost_price, p.name as part_name
+                SELECT 
+                    pu.id,
+                    pu.part_id,
+                    pu.qty,
+                    pu.cost_price,
+                    pu.note,
+                    COALESCE(p.name, 'ອາໄຫຼ່ທີ່ບໍ່ຮູ້ຈັກ') as item_name
                 FROM parts_usage pu
                 LEFT JOIN parts p ON pu.part_id = p.id
-                LEFT JOIN repair_orders ro ON pu.repair_id = ro.id
-                WHERE ro.job_order_id = %s
-            """, (job_order_id,))
-            parts = cursor.fetchall()
+                WHERE pu.repair_id = %s
+            """, (repair['repair_id'],))
+            parts_usage = cursor.fetchall()
             
-            for part in parts:
+            for part in parts_usage:
+                qty = part.get('qty', 0)
+                unit_price = part.get('cost_price', 0)
+                total = qty * unit_price
+                
                 parts_list.append({
-                    'name': part.get('part_name', '-'),
-                    'qty': part.get('qty', 0),
-                    'unit_price': part.get('cost_price', 0),
-                    'total': (part.get('qty', 0) * part.get('cost_price', 0)),
-                    'discount_amount': 0
+                    'id': part.get('id'),
+                    'part_id': part.get('part_id'),
+                    'name': part.get('item_name', '-'),
+                    'qty': qty,
+                    'unit_price': float(unit_price),
+                    'total': float(total),
+                    'note': part.get('note', '')
                 })
-        except Exception as e:
-            print(f"Error getting parts usage: {e}")
+                total_amount += total
         
-        # Get services from quotation (labor charges)
-        services_list = []
-        try:
-            cursor.execute("""
-                SELECT qi.name, qi.qty, qi.unit_price, qi.total
-                FROM quotation_items qi
-                LEFT JOIN quotations q ON qi.quotation_id = q.id
-                WHERE q.job_order_id = %s AND qi.item_type = 'service'
-            """, (job_order_id,))
-            services = cursor.fetchall()
+        # ========== 2. GET SERVICES FROM QUOTATION (D11 + D12) ==========
+        cursor.execute("""
+            SELECT q.id, q.discount_amount, q.sub_total, q.net_total
+            FROM quotations q
+            WHERE q.job_order_id = %s AND q.status = 'approved'
+            ORDER BY q.id DESC LIMIT 1
+        """, (job_order_id,))
+        quotation = cursor.fetchone()
+        
+        if quotation:
+            total_discount = quotation.get('discount_amount', 0)
             
-            for service in services:
+            # Get only services from quotation_items
+            cursor.execute("""
+                SELECT 
+                    qi.id,
+                    qi.qty,
+                    qi.unit_price,
+                    qi.total,
+                    qi.service_id,
+                    COALESCE(s.name, 'ບໍລິການທີ່ບໍ່ຮູ້ຈັກ') as item_name
+                FROM quotation_items qi
+                LEFT JOIN services s ON qi.service_id = s.id
+                WHERE qi.quotation_id = %s AND qi.service_id IS NOT NULL
+                ORDER BY qi.id
+            """, (quotation['id'],))
+            quotation_services = cursor.fetchall()
+            
+            for service in quotation_services:
+                qty = service.get('qty', 1)
+                unit_price = service.get('unit_price', 0)
+                total = service.get('total', qty * unit_price)
+                
                 services_list.append({
-                    'name': service.get('name', '-'),
-                    'qty': service.get('qty', 1),
-                    'unit_price': service.get('unit_price', 0),
-                    'total': service.get('total', 0),
-                    'discount_amount': 0
+                    'id': service.get('id'),
+                    'service_id': service.get('service_id'),
+                    'name': service.get('item_name', '-'),
+                    'qty': qty,
+                    'unit_price': float(unit_price),
+                    'total': float(total)
                 })
-        except Exception as e:
-            print(f"Error getting services: {e}")
+                total_amount += float(total)
         
-        # Calculate totals
-        total_amount = sum(p['total'] for p in parts_list) + sum(s['total'] for s in services_list)
+        final_total = total_amount - total_discount
+        if final_total < 0:
+            final_total = 0
         
         return {
             "job_order": {
                 "id": job_info['id'],
-                "job_no": job_info.get('job_no', ''),
-                "customer_name": job_info.get('customer_name', ''),
-                "customer_phone": job_info.get('customer_phone', ''),
-                "plate_number": job_info.get('plate_number', ''),
-                "brand": job_info.get('brand', ''),
-                "model": job_info.get('model', ''),
-                "year": job_info.get('year', ''),
-                "mileage": job_info.get('mileage', 0),
-                "fuel_level": job_info.get('fuel_level', ''),
-                "problem_description": job_info.get('problem_description', '')
+                "job_no": job_info.get('job_no', f"JOB-{job_order_id:04d}"),
+                "customer_name": job_info.get('customer_name') or "-",
+                "customer_phone": job_info.get('customer_phone') or "-",
+                "plate_number": job_info.get('plate_number') or "-",
+                "brand": job_info.get('brand') or "-",
+                "model": job_info.get('model') or "-",
+                "year": job_info.get('year') or "",
+                "mileage": job_info.get('mileage') or 0,
+                "fuel_level": job_info.get('fuel_level') or "",
+                "problem_description": job_info.get('problem_description') or ""
             },
             "parts": parts_list,
-            "services": services_list if services_list else [
-                {
-                    "id": 1,
-                    "name": "ຄ່າແຮງງານຊ່າງ",
-                    "qty": 1,
-                    "unit_price": 100000,
-                    "total": 100000,
-                    "discount_amount": 0
-                }
-            ],
+            "services": services_list,
             "summary": {
                 "total_amount": total_amount,
-                "total_discount": 0,
-                "final_total": total_amount
+                "total_discount": total_discount,
+                "final_total": final_total
             }
         }
         
@@ -250,31 +336,23 @@ def get_invoice_info_by_job_order(
         return {
             "job_order": {
                 "id": job_order_id,
-                "job_no": f"JO-{job_order_id:04d}",
+                "job_no": f"JOB-{job_order_id:04d}",
                 "customer_name": "",
                 "customer_phone": "",
                 "plate_number": "",
                 "brand": "",
                 "model": "",
+                "year": "",
                 "mileage": 0,
                 "fuel_level": "",
                 "problem_description": ""
             },
             "parts": [],
-            "services": [
-                {
-                    "id": 1,
-                    "name": "ຄ່າແຮງງານຊ່າງ",
-                    "qty": 1,
-                    "unit_price": 100000,
-                    "total": 100000,
-                    "discount_amount": 0
-                }
-            ],
+            "services": [],
             "summary": {
-                "total_amount": 100000,
+                "total_amount": 0,
                 "total_discount": 0,
-                "final_total": 100000
+                "final_total": 0
             }
         }
     finally:
@@ -294,9 +372,9 @@ def create_invoice(
     change_amount: float = Form(0),
     user: dict = Depends(authenticate_user)
 ):
-    """Create a new invoice and close job order if paid"""
+    """Create a new invoice"""
     db = get_db()
-    cursor = db.cursor()
+    cursor = db.cursor(dictionary=True)
     try:
         # Check if invoice already exists
         cursor.execute("SELECT id FROM invoices WHERE job_order_id = %s", (job_order_id,))
@@ -304,7 +382,7 @@ def create_invoice(
         
         if existing:
             return {
-                "id": existing[0],
+                "id": existing['id'],
                 "message": "Invoice already exists",
                 "existing": True
             }
@@ -314,15 +392,17 @@ def create_invoice(
         cursor.execute("""
             INSERT INTO invoices 
             (job_order_id, total_amount, total_discount, final_total, 
-             payment_method, payment_status, received_amount, change_amount, paid_date)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+             payment_method, payment_status, received_amount, change_amount, 
+             paid_date, created_by)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """, (job_order_id, total_amount, total_discount, final_total, 
-              payment_method, payment_status, received_amount, change_amount, paid_date))
+              payment_method, payment_status, received_amount, change_amount, 
+              paid_date, user.get('id')))
         
         db.commit()
         invoice_id = cursor.lastrowid
         
-        # If paid, close the job order (D10 - ສົ່ງມອບລົດຄືນລູກຄ້າ)
+        # If paid, close the job order
         if payment_status == 'paid':
             cursor.execute("""
                 UPDATE job_orders 
@@ -358,12 +438,12 @@ def record_payment(
 ):
     """Record payment for an invoice and close job order"""
     db = get_db()
-    cursor = db.cursor()
+    cursor = db.cursor(dictionary=True)
     try:
         # Get job_order_id from invoice
         cursor.execute("SELECT job_order_id FROM invoices WHERE id = %s", (invoice_id,))
         result = cursor.fetchone()
-        job_order_id = result[0] if result else None
+        job_order_id = result['job_order_id'] if result else None
         
         # Update invoice payment
         cursor.execute("""
@@ -377,7 +457,7 @@ def record_payment(
         """, (payment_method, received_amount, change_amount, datetime.now(), invoice_id))
         db.commit()
         
-        # Close the job order (D10 - ສົ່ງມອບລົດຄືນລູກຄ້າ)
+        # Close the job order
         if job_order_id:
             cursor.execute("""
                 UPDATE job_orders 
@@ -405,9 +485,8 @@ def update_invoice_status(
 ):
     """Update invoice payment status"""
     db = get_db()
-    cursor = db.cursor()
+    cursor = db.cursor(dictionary=True)
     try:
-        # If status is being changed to paid, also update paid_date
         if payment_status == 'paid':
             cursor.execute("""
                 UPDATE invoices 
@@ -415,10 +494,9 @@ def update_invoice_status(
                 WHERE id = %s
             """, (payment_status, datetime.now(), invoice_id))
             
-            # Also get job_order_id and close it
             cursor.execute("SELECT job_order_id FROM invoices WHERE id = %s", (invoice_id,))
             result = cursor.fetchone()
-            job_order_id = result[0] if result else None
+            job_order_id = result['job_order_id'] if result else None
             
             if job_order_id:
                 cursor.execute("""

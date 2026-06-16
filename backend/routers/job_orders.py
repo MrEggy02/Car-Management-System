@@ -7,6 +7,7 @@ from datetime import datetime
 
 router = APIRouter()
 
+
 @router.get("/job-orders")
 def get_job_orders(
     status: Optional[str] = None,
@@ -29,6 +30,8 @@ def get_job_orders(
                     jo.fuel_level,
                     jo.status,
                     jo.created_by,
+                    jo.closed_by,
+                    jo.closed_at,
                     c.name as customer_name,
                     c.phone as customer_phone,
                     v.plate_number,
@@ -36,12 +39,14 @@ def get_job_orders(
                     v.model,
                     v.year,
                     v.color,
-                    e.name as created_by_name
+                    e.name as created_by_name,
+                    ce.name as closed_by_name
                 FROM job_orders jo
                 LEFT JOIN customers c ON jo.customer_id = c.id
                 LEFT JOIN vehicles v ON jo.vehicle_id = v.id
                 LEFT JOIN brands b ON v.brand_id = b.id
-                LEFT JOIN Employees e ON jo.created_by = e.id
+                LEFT JOIN employees e ON jo.created_by = e.id
+                LEFT JOIN employees ce ON jo.closed_by = ce.id
                 WHERE jo.status = %s
                 ORDER BY jo.id DESC
             """, (status,))
@@ -58,6 +63,8 @@ def get_job_orders(
                     jo.fuel_level,
                     jo.status,
                     jo.created_by,
+                    jo.closed_by,
+                    jo.closed_at,
                     c.name as customer_name,
                     c.phone as customer_phone,
                     v.plate_number,
@@ -65,23 +72,26 @@ def get_job_orders(
                     v.model,
                     v.year,
                     v.color,
-                    e.name as created_by_name
+                    e.name as created_by_name,
+                    ce.name as closed_by_name
                 FROM job_orders jo
                 LEFT JOIN customers c ON jo.customer_id = c.id
                 LEFT JOIN vehicles v ON jo.vehicle_id = v.id
                 LEFT JOIN brands b ON v.brand_id = b.id
-                LEFT JOIN Employees e ON jo.created_by = e.id
+                LEFT JOIN employees e ON jo.created_by = e.id
+                LEFT JOIN employees ce ON jo.closed_by = ce.id
                 ORDER BY jo.id DESC
             """)
         
         job_orders = cursor.fetchall()
         
-        # Convert datetime to string for JSON serialization
         for order in job_orders:
             if order.get('receive_date'):
                 order['receive_date'] = str(order['receive_date'])
+            if order.get('closed_at'):
+                order['closed_at'] = str(order['closed_at'])
             
-            # Handle None values
+            # Set default values for null fields
             if not order.get('customer_name'):
                 order['customer_name'] = "-"
             if not order.get('customer_phone'):
@@ -94,10 +104,99 @@ def get_job_orders(
                 order['model'] = "-"
             if not order.get('created_by_name'):
                 order['created_by_name'] = "-"
+            if not order.get('closed_by_name'):
+                order['closed_by_name'] = "-"
         
         return job_orders
     except Exception as e:
         print(f"Error in get_job_orders: {e}")
+        import traceback
+        traceback.print_exc()
+        return []
+    finally:
+        cursor.close()
+        db.close()
+
+
+# ========== NEW FAST API: Get job orders with all details in ONE query ==========
+@router.get("/job-orders-with-details")
+def get_job_orders_with_details(
+    status: Optional[str] = None,
+    user: dict = Depends(authenticate_user)
+):
+    """
+    Get all job orders with customer and vehicle details in ONE query (FASTER)
+    ດຶງຂໍ້ມູນ Job Orders ພ້ອມລາຍລະອຽດລູກຄ້າ ແລະ ລົດ ໃນຄຳສັ່ງດຽວ (ໄວຂຶ້ນ)
+    """
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+    try:
+        query = """
+            SELECT 
+                jo.id,
+                jo.job_no,
+                jo.customer_id,
+                jo.vehicle_id,
+                jo.receive_date,
+                jo.problem_description,
+                jo.mileage,
+                jo.fuel_level,
+                jo.status,
+                jo.created_by,
+                jo.closed_by,
+                jo.closed_at,
+                c.name as customer_name,
+                c.phone as customer_phone,
+                v.plate_number,
+                b.name as brand,
+                v.model,
+                v.year,
+                v.color,
+                e.name as created_by_name,
+                ce.name as closed_by_name
+            FROM job_orders jo
+            LEFT JOIN customers c ON jo.customer_id = c.id
+            LEFT JOIN vehicles v ON jo.vehicle_id = v.id
+            LEFT JOIN brands b ON v.brand_id = b.id
+            LEFT JOIN employees e ON jo.created_by = e.id
+            LEFT JOIN employees ce ON jo.closed_by = ce.id
+        """
+        params = []
+        
+        if status:
+            query += " WHERE jo.status = %s"
+            params.append(status)
+        
+        query += " ORDER BY jo.id DESC"
+        
+        cursor.execute(query, params)
+        job_orders = cursor.fetchall()
+        
+        for order in job_orders:
+            if order.get('receive_date'):
+                order['receive_date'] = str(order['receive_date'])
+            if order.get('closed_at'):
+                order['closed_at'] = str(order['closed_at'])
+            
+            # Set default values for null fields
+            if not order.get('customer_name'):
+                order['customer_name'] = "-"
+            if not order.get('customer_phone'):
+                order['customer_phone'] = "-"
+            if not order.get('plate_number'):
+                order['plate_number'] = "-"
+            if not order.get('brand'):
+                order['brand'] = "-"
+            if not order.get('model'):
+                order['model'] = "-"
+            if not order.get('created_by_name'):
+                order['created_by_name'] = "-"
+            if not order.get('closed_by_name'):
+                order['closed_by_name'] = "-"
+        
+        return job_orders
+    except Exception as e:
+        print(f"Error in get_job_orders_with_details: {e}")
         import traceback
         traceback.print_exc()
         return []
@@ -124,6 +223,8 @@ def get_job_order(order_id: int, user: dict = Depends(authenticate_user)):
                 jo.fuel_level,
                 jo.status,
                 jo.created_by,
+                jo.closed_by,
+                jo.closed_at,
                 c.name as customer_name,
                 c.phone as customer_phone,
                 c.address,
@@ -132,12 +233,14 @@ def get_job_order(order_id: int, user: dict = Depends(authenticate_user)):
                 v.model,
                 v.year,
                 v.color,
-                e.name as created_by_name
+                e.name as created_by_name,
+                ce.name as closed_by_name
             FROM job_orders jo
             LEFT JOIN customers c ON jo.customer_id = c.id
             LEFT JOIN vehicles v ON jo.vehicle_id = v.id
             LEFT JOIN brands b ON v.brand_id = b.id
-            LEFT JOIN Employees e ON jo.created_by = e.id
+            LEFT JOIN employees e ON jo.created_by = e.id
+            LEFT JOIN employees ce ON jo.closed_by = ce.id
             WHERE jo.id = %s
         """, (order_id,))
         
@@ -145,6 +248,10 @@ def get_job_order(order_id: int, user: dict = Depends(authenticate_user)):
         if order:
             if order.get('receive_date'):
                 order['receive_date'] = str(order['receive_date'])
+            if order.get('closed_at'):
+                order['closed_at'] = str(order['closed_at'])
+            
+            # Set default values for null fields
             if not order.get('customer_name'):
                 order['customer_name'] = "-"
             if not order.get('plate_number'):
@@ -155,6 +262,9 @@ def get_job_order(order_id: int, user: dict = Depends(authenticate_user)):
                 order['model'] = "-"
             if not order.get('created_by_name'):
                 order['created_by_name'] = "-"
+            if not order.get('closed_by_name'):
+                order['closed_by_name'] = "-"
+        
         return order
     except Exception as e:
         print(f"Error in get_job_order: {e}")
@@ -179,14 +289,12 @@ def create_job_order(
     db = get_db()
     cursor = db.cursor()
     try:
-        # Generate job number
         year = datetime.now().year
         cursor.execute("SELECT COUNT(*) as count FROM job_orders WHERE YEAR(receive_date) = %s", (year,))
         count = cursor.fetchone()
         count_num = count[0] + 1 if count else 1
         job_no = f"JOB-{year}-{count_num:04d}"
         
-        # Insert job order
         cursor.execute("""
             INSERT INTO job_orders 
             (job_no, customer_id, vehicle_id, problem_description, mileage, fuel_level, status, created_by, receive_date)
@@ -225,12 +333,25 @@ def update_job_order(
     db = get_db()
     cursor = db.cursor()
     try:
+        # Check if job order exists
+        cursor.execute("SELECT id FROM job_orders WHERE id = %s", (order_id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail="Job order not found")
+        
         update_fields = []
         values = []
         
         if status:
             update_fields.append("status = %s")
             values.append(status)
+            
+            # If status is 'closed', set closed_by and closed_at
+            if status == 'closed':
+                update_fields.append("closed_by = %s")
+                values.append(user.get('id'))
+                update_fields.append("closed_at = %s")
+                values.append(datetime.now())
+        
         if problem_description:
             update_fields.append("problem_description = %s")
             values.append(problem_description)
@@ -248,9 +369,13 @@ def update_job_order(
             db.commit()
         
         return {"message": "Job order updated successfully"}
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
         print(f"Error updating job order: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         cursor.close()
@@ -263,7 +388,6 @@ def delete_job_order(order_id: int, user: dict = Depends(authenticate_user)):
     db = get_db()
     cursor = db.cursor()
     try:
-        # Check if job order exists
         cursor.execute("SELECT id FROM job_orders WHERE id = %s", (order_id,))
         if not cursor.fetchone():
             raise HTTPException(status_code=404, detail="Job order not found")
@@ -276,241 +400,97 @@ def delete_job_order(order_id: int, user: dict = Depends(authenticate_user)):
     except Exception as e:
         db.rollback()
         print(f"Error deleting job order: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         cursor.close()
         db.close()
 
 
-# ========== NEW ENDPOINTS FOR JOB ORDER PARTS AND SERVICES ==========
+# ========== JOB ORDERS READY FOR INVOICE ==========
 
-@router.post("/job-orders/{job_order_id}/parts")
-def add_job_order_part(
-    job_order_id: int,
-    part_id: int = Form(...),
-    quantity: int = Form(1),
-    unit_price: float = Form(0),
-    user: dict = Depends(authenticate_user)
-):
-    """Add a part to job order"""
-    db = get_db()
-    cursor = db.cursor()
-    try:
-        # Check if job order exists
-        cursor.execute("SELECT id FROM job_orders WHERE id = %s", (job_order_id,))
-        if not cursor.fetchone():
-            raise HTTPException(status_code=404, detail="Job order not found")
-        
-        # Check if job_order_parts table exists, if not create it
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS job_order_parts (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                job_order_id INT NOT NULL,
-                part_id INT NOT NULL,
-                quantity INT NOT NULL DEFAULT 1,
-                unit_price DECIMAL(12,2) NOT NULL DEFAULT 0,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (job_order_id) REFERENCES job_orders(id) ON DELETE CASCADE,
-                FOREIGN KEY (part_id) REFERENCES parts(id)
-            )
-        """)
-        db.commit()
-        
-        # Insert into job_order_parts
-        cursor.execute("""
-            INSERT INTO job_order_parts (job_order_id, part_id, quantity, unit_price)
-            VALUES (%s, %s, %s, %s)
-        """, (job_order_id, part_id, quantity, unit_price))
-        
-        db.commit()
-        return {"message": "Part added successfully", "id": cursor.lastrowid}
-    except Exception as e:
-        db.rollback()
-        print(f"Error adding job order part: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        cursor.close()
-        db.close()
-
-
-@router.post("/job-orders/{job_order_id}/services")
-def add_job_order_service(
-    job_order_id: int,
-    service_id: int = Form(...),
-    quantity: int = Form(1),
-    unit_price: float = Form(0),
-    user: dict = Depends(authenticate_user)
-):
-    """Add a service to job order"""
-    db = get_db()
-    cursor = db.cursor()
-    try:
-        # Check if job order exists
-        cursor.execute("SELECT id FROM job_orders WHERE id = %s", (job_order_id,))
-        if not cursor.fetchone():
-            raise HTTPException(status_code=404, detail="Job order not found")
-        
-        # Check if job_order_services table exists, if not create it
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS job_order_services (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                job_order_id INT NOT NULL,
-                service_id INT NOT NULL,
-                quantity INT NOT NULL DEFAULT 1,
-                unit_price DECIMAL(12,2) NOT NULL DEFAULT 0,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (job_order_id) REFERENCES job_orders(id) ON DELETE CASCADE,
-                FOREIGN KEY (service_id) REFERENCES services(id)
-            )
-        """)
-        db.commit()
-        
-        # Insert into job_order_services
-        cursor.execute("""
-            INSERT INTO job_order_services (job_order_id, service_id, quantity, unit_price)
-            VALUES (%s, %s, %s, %s)
-        """, (job_order_id, service_id, quantity, unit_price))
-        
-        db.commit()
-        return {"message": "Service added successfully", "id": cursor.lastrowid}
-    except Exception as e:
-        db.rollback()
-        print(f"Error adding job order service: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        cursor.close()
-        db.close()
-
-
-@router.get("/job-orders/{job_order_id}/parts")
-def get_job_order_parts(
-    job_order_id: int,
-    user: dict = Depends(authenticate_user)
-):
-    """Get all parts for a job order"""
+@router.get("/job-orders/ready-for-invoice")
+def get_job_orders_ready_for_invoice(user: dict = Depends(authenticate_user)):
+    """
+    Get job orders that are ready to be invoiced
+    ດຶງ Job Orders ທີ່ສາມາດສ້າງໃບເກັບເງິນໄດ້
+    (status = 'finished' OR 'repairing') AND no invoice yet
+    """
     db = get_db()
     cursor = db.cursor(dictionary=True)
     try:
-        # Check if table exists
         cursor.execute("""
-            SELECT COUNT(*) as cnt FROM information_schema.tables 
-            WHERE table_schema = DATABASE() AND table_name = 'job_order_parts'
+            SELECT 
+                jo.id,
+                jo.job_no,
+                jo.status,
+                jo.receive_date,
+                COALESCE(c.name, '') as customer_name,
+                COALESCE(c.phone, '') as customer_phone,
+                COALESCE(v.plate_number, '') as plate_number,
+                COALESCE(b.name, '') as brand,
+                COALESCE(v.model, '') as model,
+                q.id as quotation_id
+            FROM job_orders jo
+            LEFT JOIN customers c ON jo.customer_id = c.id
+            LEFT JOIN vehicles v ON jo.vehicle_id = v.id
+            LEFT JOIN brands b ON v.brand_id = b.id
+            LEFT JOIN quotations q ON jo.id = q.job_order_id AND q.status = 'approved'
+            WHERE jo.status IN ('finished', 'repairing')
+              AND jo.id NOT IN (SELECT COALESCE(job_order_id, 0) FROM invoices)
+            ORDER BY jo.id DESC
         """)
-        table_exists = cursor.fetchone()
         
-        if not table_exists or table_exists['cnt'] == 0:
-            return []
+        job_orders = cursor.fetchall()
         
-        cursor.execute("""
-            SELECT jop.*, p.name as part_name, p.sell_price
-            FROM job_order_parts jop
-            LEFT JOIN parts p ON jop.part_id = p.id
-            WHERE jop.job_order_id = %s
-        """, (job_order_id,))
-        return cursor.fetchall()
+        for order in job_orders:
+            if order.get('receive_date'):
+                order['receive_date'] = str(order['receive_date'])
+        
+        return job_orders
     except Exception as e:
-        print(f"Error getting job order parts: {e}")
+        print(f"Error getting ready invoices: {e}")
+        import traceback
+        traceback.print_exc()
         return []
     finally:
         cursor.close()
         db.close()
 
 
-@router.get("/job-orders/{job_order_id}/services")
-def get_job_order_services(
-    job_order_id: int,
-    user: dict = Depends(authenticate_user)
-):
-    """Get all services for a job order"""
-    db = get_db()
-    cursor = db.cursor(dictionary=True)
-    try:
-        # Check if table exists
-        cursor.execute("""
-            SELECT COUNT(*) as cnt FROM information_schema.tables 
-            WHERE table_schema = DATABASE() AND table_name = 'job_order_services'
-        """)
-        table_exists = cursor.fetchone()
-        
-        if not table_exists or table_exists['cnt'] == 0:
-            return []
-        
-        cursor.execute("""
-            SELECT jos.*, s.name as service_name, s.price
-            FROM job_order_services jos
-            LEFT JOIN services s ON jos.service_id = s.id
-            WHERE jos.job_order_id = %s
-        """, (job_order_id,))
-        return cursor.fetchall()
-    except Exception as e:
-        print(f"Error getting job order services: {e}")
-        return []
-    finally:
-        cursor.close()
-        db.close()
-
-
-@router.delete("/job-orders/{job_order_id}/parts/{item_id}")
-def delete_job_order_part(
-    job_order_id: int,
-    item_id: int,
-    user: dict = Depends(authenticate_user)
-):
-    """Delete a part from job order"""
-    db = get_db()
-    cursor = db.cursor()
-    try:
-        cursor.execute("DELETE FROM job_order_parts WHERE id = %s AND job_order_id = %s", 
-                      (item_id, job_order_id))
-        db.commit()
-        return {"message": "Part removed successfully"}
-    except Exception as e:
-        db.rollback()
-        print(f"Error deleting job order part: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        cursor.close()
-        db.close()
-
-
-@router.delete("/job-orders/{job_order_id}/services/{item_id}")
-def delete_job_order_service(
-    job_order_id: int,
-    item_id: int,
-    user: dict = Depends(authenticate_user)
-):
-    """Delete a service from job order"""
-    db = get_db()
-    cursor = db.cursor()
-    try:
-        cursor.execute("DELETE FROM job_order_services WHERE id = %s AND job_order_id = %s", 
-                      (item_id, job_order_id))
-        db.commit()
-        return {"message": "Service removed successfully"}
-    except Exception as e:
-        db.rollback()
-        print(f"Error deleting job order service: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        cursor.close()
-        db.close()
-
+# ========== INVOICE INFO - Get data from Quotation (D11, D12) ==========
 
 @router.get("/job-orders/{job_order_id}/invoice-info")
 def get_invoice_info_by_job_order(
     job_order_id: int, 
     user: dict = Depends(authenticate_user)
 ):
-    """Get invoice information for a job order"""
+    """
+    Get invoice information for a job order
+    ດຶງຂໍ້ມູນຈາກ:
+    - Parts_Usage (ອາໄຫຼ່ທີ່ເບີກໃຊ້ຈິງ)
+    - Quotation_Items (ບໍລິການ ແລະ ອາໄຫຼ່ທີ່ຕົກລົງໃນໃບສະເໜີ)
+    """
     db = get_db()
     cursor = db.cursor(dictionary=True)
     try:
-        # Get job order info with brand from brands table
+        # Get job order basic info with COALESCE
         cursor.execute("""
             SELECT 
-                jo.id, jo.job_no, jo.problem_description, jo.mileage, jo.fuel_level,
-                c.id as customer_id, c.name as customer_name, c.phone as customer_phone,
-                v.id as vehicle_id, v.plate_number, b.name as brand, v.model, v.year
+                jo.id, 
+                COALESCE(jo.job_no, '') as job_no, 
+                COALESCE(jo.problem_description, '') as problem_description, 
+                COALESCE(jo.mileage, 0) as mileage, 
+                COALESCE(jo.fuel_level, '') as fuel_level,
+                COALESCE(c.id, 0) as customer_id, 
+                COALESCE(c.name, '') as customer_name, 
+                COALESCE(c.phone, '') as customer_phone,
+                COALESCE(v.id, 0) as vehicle_id, 
+                COALESCE(v.plate_number, '') as plate_number, 
+                COALESCE(v.model, '') as model, 
+                COALESCE(v.year, 0) as year,
+                COALESCE(b.name, '') as brand
             FROM job_orders jo
             LEFT JOIN customers c ON jo.customer_id = c.id
             LEFT JOIN vehicles v ON jo.vehicle_id = v.id
@@ -519,11 +499,12 @@ def get_invoice_info_by_job_order(
         """, (job_order_id,))
         
         job_info = cursor.fetchone()
+        
         if not job_info:
             return {
                 "job_order": {
                     "id": job_order_id,
-                    "job_no": f"JO-{job_order_id:04d}",
+                    "job_no": f"JOB-{job_order_id:04d}",
                     "customer_name": "",
                     "customer_phone": "",
                     "plate_number": "",
@@ -543,72 +524,113 @@ def get_invoice_info_by_job_order(
                 }
             }
         
-        # Get parts from job_order_parts
         parts_list = []
-        try:
+        services_list = []
+        total_amount = 0.0
+        total_discount = 0.0
+        
+        # ========== 1. GET ACTUAL PARTS USAGE FROM REPAIR (D14) ==========
+        cursor.execute("""
+            SELECT ro.id as repair_id
+            FROM repair_orders ro
+            WHERE ro.job_order_id = %s
+            ORDER BY ro.id DESC LIMIT 1
+        """, (job_order_id,))
+        repair = cursor.fetchone()
+        
+        if repair:
             cursor.execute("""
-                SELECT jop.*, p.name as part_name, p.sell_price
-                FROM job_order_parts jop
-                LEFT JOIN parts p ON jop.part_id = p.id
-                WHERE jop.job_order_id = %s
-            """, (job_order_id,))
-            parts = cursor.fetchall()
+                SELECT 
+                    pu.id,
+                    pu.part_id,
+                    pu.qty,
+                    pu.cost_price,
+                    pu.note,
+                    COALESCE(p.name, 'ອາໄຫຼ່ທີ່ບໍ່ຮູ້ຈັກ') as item_name
+                FROM parts_usage pu
+                LEFT JOIN parts p ON pu.part_id = p.id
+                WHERE pu.repair_id = %s
+            """, (repair['repair_id'],))
+            parts_usage = cursor.fetchall()
             
-            for part in parts:
-                price = part.get('unit_price', part.get('sell_price', 0)) or 0
+            for part in parts_usage:
+                qty = part.get('qty', 0)
+                unit_price = float(part.get('cost_price', 0))
+                total = qty * unit_price
+                
                 parts_list.append({
                     'id': part.get('id'),
-                    'name': part.get('part_name', '-'),
-                    'qty': part.get('quantity', 0),
-                    'unit_price': price,
-                    'total': (part.get('quantity', 0) * price),
-                    'discount_amount': 0
+                    'part_id': part.get('part_id'),
+                    'name': part.get('item_name', '-'),
+                    'qty': qty,
+                    'unit_price': unit_price,
+                    'total': total,
+                    'note': part.get('note', '')
                 })
-        except Exception as e:
-            print(f"Error getting parts: {e}")
+                total_amount += total
         
-        # Get services from job_order_services
-        services_list = []
-        try:
-            cursor.execute("""
-                SELECT jos.*, s.name as service_name, s.price
-                FROM job_order_services jos
-                LEFT JOIN services s ON jos.service_id = s.id
-                WHERE jos.job_order_id = %s
-            """, (job_order_id,))
-            services = cursor.fetchall()
+        # ========== 2. GET SERVICES FROM QUOTATION (D11 + D12) ==========
+        cursor.execute("""
+            SELECT id, sub_total, discount_amount, net_total
+            FROM quotations 
+            WHERE job_order_id = %s AND status = 'approved'
+            ORDER BY id DESC LIMIT 1
+        """, (job_order_id,))
+        quotation = cursor.fetchone()
+        
+        if quotation:
+            # Convert discount_amount to float
+            total_discount = float(quotation.get('discount_amount', 0))
             
-            for service in services:
-                price = service.get('unit_price', service.get('price', 0)) or 0
+            # Get services from quotation_items (only services, not parts)
+            cursor.execute("""
+                SELECT 
+                    qi.id,
+                    qi.qty,
+                    qi.unit_price,
+                    qi.total,
+                    qi.service_id,
+                    COALESCE(s.name, 'ບໍລິການທີ່ບໍ່ຮູ້ຈັກ') as item_name
+                FROM quotation_items qi
+                LEFT JOIN services s ON qi.service_id = s.id
+                WHERE qi.quotation_id = %s AND qi.service_id IS NOT NULL
+                ORDER BY qi.id
+            """, (quotation['id'],))
+            quotation_services = cursor.fetchall()
+            
+            for service in quotation_services:
+                qty = service.get('qty', 1)
+                unit_price = float(service.get('unit_price', 0))
+                total = float(service.get('total', qty * unit_price))
+                
                 services_list.append({
                     'id': service.get('id'),
-                    'name': service.get('service_name', '-'),
-                    'qty': service.get('quantity', 1),
-                    'unit_price': price,
-                    'total': (service.get('quantity', 1) * price),
-                    'discount_amount': 0
+                    'service_id': service.get('service_id'),
+                    'name': service.get('item_name', '-'),
+                    'qty': qty,
+                    'unit_price': unit_price,
+                    'total': total
                 })
-        except Exception as e:
-            print(f"Error getting services: {e}")
+                total_amount += total
         
-        # Calculate totals
-        total_amount = sum(p['total'] for p in parts_list) + sum(s['total'] for s in services_list)
-        total_discount = sum(p.get('discount_amount', 0) for p in parts_list) + sum(s.get('discount_amount', 0) for s in services_list)
+        # Calculate final total
         final_total = total_amount - total_discount
+        if final_total < 0:
+            final_total = 0
         
         return {
             "job_order": {
                 "id": job_info['id'],
-                "job_no": job_info.get('job_no', ''),
-                "customer_name": job_info.get('customer_name', ''),
-                "customer_phone": job_info.get('customer_phone', ''),
-                "plate_number": job_info.get('plate_number', ''),
-                "brand": job_info.get('brand', ''),
-                "model": job_info.get('model', ''),
-                "year": job_info.get('year', ''),
-                "mileage": job_info.get('mileage', 0),
-                "fuel_level": job_info.get('fuel_level', ''),
-                "problem_description": job_info.get('problem_description', '')
+                "job_no": job_info.get('job_no', f"JOB-{job_order_id:04d}"),
+                "customer_name": job_info.get('customer_name') or "-",
+                "customer_phone": job_info.get('customer_phone') or "-",
+                "plate_number": job_info.get('plate_number') or "-",
+                "brand": job_info.get('brand') or "-",
+                "model": job_info.get('model') or "-",
+                "year": job_info.get('year') or "",
+                "mileage": job_info.get('mileage') or 0,
+                "fuel_level": job_info.get('fuel_level') or "",
+                "problem_description": job_info.get('problem_description') or ""
             },
             "parts": parts_list,
             "services": services_list,
@@ -626,7 +648,7 @@ def get_invoice_info_by_job_order(
         return {
             "job_order": {
                 "id": job_order_id,
-                "job_no": f"JO-{job_order_id:04d}",
+                "job_no": f"JOB-{job_order_id:04d}",
                 "customer_name": "",
                 "customer_phone": "",
                 "plate_number": "",
