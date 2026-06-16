@@ -467,7 +467,8 @@ class AppLayout:
 
     def navigate_to(self, page_name: str, customer_id: int = None, order_id: int = None, 
                     quotation_id: int = None, job_order_id: int = None, repair_id: int = None,
-                    po_id: int = None, promotion_id: int = None, promotion_name: str = None):
+                    po_id: int = None, promotion_id: int = None, promotion_name: str = None, 
+                    part_id: int = None):
         """Navigate to a specific page by name with optional parameters"""
         page_index_map = {
             "dashboard": 0,
@@ -542,6 +543,9 @@ class AppLayout:
         if page_name == "promotion_items":
             self._promotion_id = promotion_id
             self._promotion_name = promotion_name
+            
+        if page_name == "purchase_order_create" and part_id:
+           self._part_id = part_id
 
         if page_name in page_index_map:
             self.on_nav_click(page_index_map[page_name])

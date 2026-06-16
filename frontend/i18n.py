@@ -1183,7 +1183,7 @@ LO: Dict[str, str] = {
 "no_items_added": "ຍັງບໍ່ມີລາຍການ",
 "total_amount": "ລວມທັງໝົດ",
 "select_supplier": "ເລືອກຜູ້ສະໜອງ",
-"purchase_management": "ຈັດການສັ່ງຊື້",
+"purchase_management": "ຄັງອາໄຫຼ່",
 "low_stock_alert": "ອາໄຫຼ່ໃກ້ໝົດ",
 "critical_stock": "ວິກິດ",
 "warning_stock": "ເຕືອນ",

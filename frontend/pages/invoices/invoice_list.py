@@ -27,7 +27,8 @@ class InvoiceListContent:
         self.items_per_page = 10
         self.total_pages = 1
         self.search_field = None
-        self.status_filter = None
+        self.current_status_filter = "all"  # เปลี่ยนจาก dropdown เป็น chip
+        self.status_chips = None
         self.table_rows = None
         self.pagination_container = None
         self.current_dialog = None
@@ -101,24 +102,46 @@ class InvoiceListContent:
             border_radius=ft.BorderRadius.only(bottom_left=20, bottom_right=20),
         )
     
-    def _build_search_bar(self):
-        self.status_filter = ft.Dropdown(
-            hint_text=get_text("filter_by_status"),
-            border_radius=12,
-            bgcolor=ft.Colors.WHITE,
-            filled=True,
-            options=[
-                ft.dropdown.Option("all", get_text("all_status")),
-                ft.dropdown.Option("pending", get_text("status_pending")),
-                ft.dropdown.Option("paid", get_text("status_paid")),
-                ft.dropdown.Option("partial", get_text("status_partial")),
-                ft.dropdown.Option("refunded", get_text("status_refunded")),
-            ],
-            value="all",
-            expand=True,
-        )
+    def _load_status_chips(self):
+        """Load status filter chips"""
+        if not self.status_chips:
+            return
         
-        self.status_filter.on_change = self.filter_invoices
+        self.status_chips.controls.clear()
+        
+        status_list = [
+            {"id": "all", "name": get_text("all_status")},
+            {"id": "pending", "name": get_text("status_pending")},
+            {"id": "paid", "name": get_text("status_paid")},
+            {"id": "partial", "name": get_text("status_partial")},
+            {"id": "refunded", "name": get_text("status_refunded")},
+        ]
+        
+        for status in status_list:
+            is_active = self.current_status_filter == status["id"]
+            chip = ft.Container(
+                content=ft.Text(status["name"], size=12, weight=ft.FontWeight.W_500,
+                               color=ft.Colors.WHITE if is_active else "#64748B"),
+                bgcolor=self.primary_color if is_active else ft.Colors.GREY_200,
+                border_radius=20,
+                padding=ft.padding.symmetric(horizontal=12, vertical=6),
+                ink=True,
+                on_click=lambda e, sid=status["id"]: self.filter_by_status(sid),
+            )
+            self.status_chips.controls.append(chip)
+        
+        self.page.update()
+    
+    def filter_by_status(self, status_id):
+        """Filter by status chip click"""
+        self.current_status_filter = status_id
+        self._load_status_chips()
+        self.apply_filters()
+    
+    def _build_search_bar(self):
+        # Status Chips
+        self.status_chips = ft.Row(spacing=8, scroll=ft.ScrollMode.AUTO)
+        self._load_status_chips()
         
         self.search_field = ft.TextField(
             hint_text=get_text("search_invoice"),
@@ -131,7 +154,7 @@ class InvoiceListContent:
             border_color=ft.Colors.GREY_200,
             focused_border_color=self.primary_color,
         )
-        self.search_field.on_change = self.search_invoices
+        self.search_field.on_change = self.on_search_change
         
         refresh_button = ft.IconButton(
             icon=ft.Icons.REFRESH,
@@ -145,7 +168,11 @@ class InvoiceListContent:
         )
         
         return ft.Container(
-            content=ft.Row([self.status_filter, self.search_field, refresh_button], spacing=10),
+            content=ft.Column([
+                ft.Row([self.search_field, refresh_button], spacing=10),
+                ft.Container(height=12),
+                self.status_chips,
+            ], spacing=0),
             margin=ft.margin.only(bottom=16),
         )
     
@@ -242,38 +269,32 @@ class InvoiceListContent:
             )
             self.page.update()
     
-    def filter_invoices(self, e):
-        status = self.status_filter.value
-        print(f"DEBUG: Filtering by status: {status}")
-        
-        if status and status != "all":
-            self.filtered_invoices = [i for i in self.invoices if i.get("payment_status") == status]
-        else:
-            self.filtered_invoices = self.invoices.copy()
-        
-        print(f"DEBUG: Filtered {len(self.filtered_invoices)} invoices")
-        self.current_page = 1
-        self.display_invoices()
+    def on_search_change(self, e):
+        """Real-time search"""
+        self.apply_filters()
     
-    def search_invoices(self, e):
+    def apply_filters(self):
+        """Apply both status and search filters"""
+        selected_status = self.current_status_filter if self.current_status_filter else "all"
         keyword = self.search_field.value.lower() if self.search_field.value else ""
-        print(f"DEBUG: Searching with keyword: {keyword}")
         
+        filtered = self.invoices.copy()
+        
+        # Apply status filter
+        if selected_status and selected_status != "all":
+            filtered = [i for i in filtered if i.get("payment_status") == selected_status]
+        
+        # Apply search filter
         if keyword:
-            self.filtered_invoices = [
-                i for i in self.invoices
+            filtered = [
+                i for i in filtered
                 if keyword in f"INV-{i.get('id', 0):04d}".lower()
                 or keyword in i.get("job_no", "").lower()
                 or keyword in i.get("customer_name", "").lower()
                 or keyword in i.get("plate_number", "").lower()
             ]
-        else:
-            self.filtered_invoices = self.invoices.copy()
         
-        if self.status_filter.value != "all":
-            self.filtered_invoices = [i for i in self.filtered_invoices if i.get("payment_status") == self.status_filter.value]
-        
-        print(f"DEBUG: Search found {len(self.filtered_invoices)} invoices")
+        self.filtered_invoices = filtered
         self.current_page = 1
         self.display_invoices()
     

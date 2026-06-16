@@ -21,30 +21,23 @@ class PurchaseOrderListContent:
         self.items_per_page = 10
         self.total_pages = 1
         self.search_field = None
-        self.status_filter = None
+        self.current_status_filter = "all"
+        self.status_chips = None
         self.table_rows = None
         self.pagination_container = None
-        self.low_stock_container = None
-        self.low_stock_visible = True
+        self.notification_button = None
+        self.header_container = None
+        self.current_dialog = None
 
     def build(self):
         header = self._build_header()
-        
-        # Low Stock Alert Section (Process 7.1)
-        self.low_stock_container = ft.Container(
-            content=self._build_low_stock_alert(),
-            margin=ft.margin.only(bottom=16),
-            visible=True,
-        )
         
         search_bar = self._build_search_bar()
         table = self._build_table()
         self.pagination_container = ft.Container(padding=ft.padding.symmetric(vertical=12, horizontal=20))
         
-        # Main scrollable content area
         content_area = ft.Container(
             content=ft.Column([
-                self.low_stock_container,
                 search_bar,
                 table,
                 self.pagination_container,
@@ -65,8 +58,45 @@ class PurchaseOrderListContent:
         
         return main_content
     
-    def _build_header(self):
+    def _build_notification_button(self):
+        """Build notification button with badge"""
+        count = len(self.low_stock_parts)
+        has_notification = count > 0
+        
+        # ✅ เปลี่ยนเป็น Text + จำนวน
         return ft.Container(
+            content=ft.Row([
+                ft.Text("⚠️", size=16),
+                ft.Text(
+                    get_text("low_stock"),
+                    size=13,
+                    color=ft.Colors.WHITE,
+                    weight=ft.FontWeight.W_500,
+                ),
+                ft.Container(
+                    content=ft.Text(
+                        str(count),
+                        size=11,
+                        weight=ft.FontWeight.BOLD,
+                        color=ft.Colors.WHITE,
+                    ),
+                    bgcolor="#EF4444" if has_notification else ft.Colors.TRANSPARENT,
+                    border_radius=10,
+                    padding=ft.padding.symmetric(horizontal=6, vertical=2),
+                    visible=has_notification,
+                ),
+            ], spacing=4),
+            padding=ft.padding.symmetric(horizontal=12, vertical=8),
+            bgcolor=ft.Colors.with_opacity(0.2, ft.Colors.WHITE),
+            border_radius=10,
+            on_click=self.show_low_stock_dialog,
+            ink=True,
+        )
+    
+    def _build_header(self):
+        self.notification_button = self._build_notification_button()
+        
+        self.header_container = ft.Container(
             content=ft.Row(
                 [
                     ft.Column(
@@ -81,19 +111,22 @@ class PurchaseOrderListContent:
                         spacing=2,
                     ),
                     ft.Container(expand=True),
-                    ft.ElevatedButton(
-                        content=ft.Row([
-                            ft.Icon(ft.Icons.ADD, size=18, color=ft.Colors.WHITE),
-                            ft.Text(get_text("create_purchase_order"), size=14, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500),
-                        ], spacing=6),
-                        on_click=lambda e: self.navigate("purchase_order_create"),
-                        style=ft.ButtonStyle(
-                            bgcolor=ft.Colors.with_opacity(0.2, ft.Colors.WHITE),
-                            shape=ft.RoundedRectangleBorder(radius=10),
-                            elevation=0,
-                            padding=ft.padding.symmetric(horizontal=20, vertical=12),
+                    ft.Row([
+                        self.notification_button,
+                        ft.ElevatedButton(
+                            content=ft.Row([
+                                ft.Icon(ft.Icons.ADD, size=18, color=ft.Colors.WHITE),
+                                ft.Text(get_text("create_purchase_order"), size=14, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500),
+                            ], spacing=6),
+                            on_click=lambda e: self.navigate("purchase_order_create"),
+                            style=ft.ButtonStyle(
+                                bgcolor=ft.Colors.with_opacity(0.2, ft.Colors.WHITE),
+                                shape=ft.RoundedRectangleBorder(radius=10),
+                                elevation=0,
+                                padding=ft.padding.symmetric(horizontal=20, vertical=12),
+                            ),
                         ),
-                    ),
+                    ], spacing=8),
                 ],
                 spacing=16,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -106,170 +139,86 @@ class PurchaseOrderListContent:
             ),
             border_radius=ft.BorderRadius.only(bottom_left=20, bottom_right=20),
         )
+        return self.header_container
     
-    def _build_low_stock_alert(self):
-        """Build low stock alert section (Process 7.1) with scrollable list"""
-        
-        # Header with toggle button (using KEYBOARD_ARROW_UP/DOWN instead of ARROW_UP/DOWN)
-        header_row = ft.Row([
-            ft.Container(
-                content=ft.Icon(ft.Icons.WARNING, size=20, color=ft.Colors.WHITE),
-                bgcolor="#F59E0B",
-                border_radius=8,
-                padding=ft.padding.all(6),
-            ),
-            ft.Text(get_text("low_stock_alert"), size=15, weight=ft.FontWeight.BOLD, color="#1E293B"),
-            ft.Container(expand=True),
-            ft.IconButton(
-                icon=ft.Icons.KEYBOARD_ARROW_UP if self.low_stock_visible else ft.Icons.KEYBOARD_ARROW_DOWN,
-                icon_size=18,
-                icon_color="#64748B",
-                tooltip=get_text("collapse"),
-                on_click=self._toggle_low_stock_alert,
-            ),
-        ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER)
-        
-        # Low stock list with max height and scroll
-        low_stock_list = ft.Column(spacing=6, scroll=ft.ScrollMode.AUTO, height=250)
-        
-        def create_low_stock_card(part):
-            part_id = part.get('id')
-            part_name = part.get('name', '-')
-            stock_qty = part.get('stock_qty', 0)
-            min_stock = part.get('min_stock', 5)
-            supplier_name = part.get('supplier_name', '-')
-            supplier_phone = part.get('supplier_phone', '-')
-            
-            # Calculate percentage
-            percentage = (stock_qty / min_stock * 100) if min_stock > 0 else 0
-            
-            # Determine urgency color
-            if percentage <= 25:
-                urgency_color = "#EF4444"
-                urgency_text = get_text("critical_stock")
-            elif percentage <= 50:
-                urgency_color = "#F59E0B"
-                urgency_text = get_text("warning_stock")
-            else:
-                urgency_color = "#10B981"
-                urgency_text = get_text("low_stock")
-            
-            return ft.Container(
-                content=ft.Row([
-                    ft.Container(
-                        content=ft.Icon(ft.Icons.WARNING_AMBER, size=20, color=urgency_color),
-                        bgcolor=ft.Colors.with_opacity(0.1, urgency_color),
-                        border_radius=10,
-                        padding=ft.padding.all(8),
+    def _update_header(self):
+        """Update header when low stock count changes"""
+        if self.header_container:
+            self.notification_button = self._build_notification_button()
+            self.header_container.content = ft.Row(
+                [
+                    ft.Column(
+                        [
+                            ft.Text(
+                                get_text("purchase_order_list_title"),
+                                size=18,
+                                weight=ft.FontWeight.BOLD,
+                                color=ft.Colors.WHITE,
+                            ),
+                        ],
+                        spacing=2,
                     ),
-                    ft.Column([
-                        ft.Text(part_name, size=14, weight=ft.FontWeight.W_600, color="#1E293B"),
-                        ft.Text(f"{get_text('supplier')}: {supplier_name} | {get_text('phone')}: {supplier_phone}", size=11, color="#64748B"),
-                    ], spacing=2, expand=True),
-                    ft.Column([
-                        ft.Container(
-                            content=ft.Text(f"{stock_qty} / {min_stock}", size=13, weight=ft.FontWeight.W_700, color=urgency_color),
-                            bgcolor=ft.Colors.with_opacity(0.1, urgency_color),
-                            border_radius=12,
-                            padding=ft.padding.symmetric(horizontal=12, vertical=4),
+                    ft.Container(expand=True),
+                    ft.Row([
+                        self.notification_button,
+                        ft.ElevatedButton(
+                            content=ft.Row([
+                                ft.Icon(ft.Icons.ADD, size=18, color=ft.Colors.WHITE),
+                                ft.Text(get_text("create_purchase_order"), size=14, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500),
+                            ], spacing=6),
+                            on_click=lambda e: self.navigate("purchase_order_create"),
+                            style=ft.ButtonStyle(
+                                bgcolor=ft.Colors.with_opacity(0.2, ft.Colors.WHITE),
+                                shape=ft.RoundedRectangleBorder(radius=10),
+                                elevation=0,
+                                padding=ft.padding.symmetric(horizontal=20, vertical=12),
+                            ),
                         ),
-                        ft.Text(urgency_text, size=10, color=urgency_color),
-                    ], spacing=2, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-                    ft.ElevatedButton(
-                        content=ft.Row([
-                            ft.Icon(ft.Icons.SHOPPING_CART, size=14, color=ft.Colors.WHITE),
-                            ft.Text(get_text("order_now"), size=12, color=ft.Colors.WHITE),
-                        ], spacing=4),
-                        on_click=lambda e, pid=part_id: self.navigate("purchase_order_create", part_id=pid),
-                        style=ft.ButtonStyle(
-                            bgcolor=self.primary_color,
-                            shape=ft.RoundedRectangleBorder(radius=8),
-                            padding=ft.padding.symmetric(horizontal=12, vertical=6),
-                        ),
-                    ),
-                ], spacing=12, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                padding=ft.padding.all(12),
-                bgcolor=ft.Colors.WHITE,
-                border_radius=10,
-                border=ft.border.all(1, ft.Colors.GREY_200),
+                    ], spacing=8),
+                ],
+                spacing=16,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
             )
-        
-        if self.low_stock_parts:
-            for part in self.low_stock_parts[:10]:  # Show max 10 items
-                low_stock_list.controls.append(create_low_stock_card(part))
-            
-            # Show more indicator if more than 10
-            if len(self.low_stock_parts) > 10:
-                low_stock_list.controls.append(
-                    ft.Container(
-                        content=ft.Text(f"... {get_text('and_more')} {len(self.low_stock_parts) - 10} {get_text('items')}", size=11, color="#64748B"),
-                        padding=ft.padding.all(8),
-                        alignment=ft.Alignment(0, 0),
-                    )
-                )
-        else:
-            low_stock_list.controls.append(
-                ft.Container(
-                    content=ft.Text(get_text("no_low_stock_parts"), size=13, color="#94A3B8"),
-                    padding=ft.padding.all(30),
-                    alignment=ft.Alignment(0, 0),
-                )
-            )
-        
-        info_text = ft.Text(
-            f"{get_text('parts_need_reorder')}: {len(self.low_stock_parts)} {get_text('items')}",
-            size=12,
-            color="#64748B",
-        )
-        
-        content_column = ft.Column([
-            header_row,
-            ft.Divider(height=1, color=ft.Colors.GREY_200),
-            ft.Container(height=8),
-            info_text,
-            ft.Container(height=8),
-            low_stock_list,
-        ], spacing=0)
-        
-        # Make the low stock card collapsible
-        if not self.low_stock_visible:
-            content_column = ft.Column([
-                header_row,
-                ft.Divider(height=1, color=ft.Colors.GREY_200),
-            ], spacing=0)
-        
-        return ft.Card(
-            content=ft.Container(
-                content=content_column,
-                padding=ft.padding.all(16),
-            ),
-            elevation=2,
-            margin=ft.margin.only(bottom=16),
-        )
+            self.page.update()
     
-    def _toggle_low_stock_alert(self, e):
-        """Toggle low stock alert visibility"""
-        self.low_stock_visible = not self.low_stock_visible
-        self.low_stock_container.content = self._build_low_stock_alert()
-        self.low_stock_container.update()
+    def _load_status_chips(self):
+        """Load status filter chips"""
+        if not self.status_chips:
+            return
+        
+        self.status_chips.controls.clear()
+        
+        status_list = [
+            {"id": "all", "name": get_text("all_status")},
+            {"id": "pending", "name": get_text("pending")},
+            {"id": "ordered", "name": get_text("ordered")},
+            {"id": "received", "name": get_text("received")},
+            {"id": "cancelled", "name": get_text("cancelled")},
+        ]
+        
+        for status in status_list:
+            is_active = self.current_status_filter == status["id"]
+            chip = ft.Container(
+                content=ft.Text(status["name"], size=12, weight=ft.FontWeight.W_500,
+                               color=ft.Colors.WHITE if is_active else "#64748B"),
+                bgcolor=self.primary_color if is_active else ft.Colors.GREY_200,
+                border_radius=20,
+                padding=ft.padding.symmetric(horizontal=12, vertical=6),
+                ink=True,
+                on_click=lambda e, sid=status["id"]: self.filter_by_status(sid),
+            )
+            self.status_chips.controls.append(chip)
+        
+        self.page.update()
+    
+    def filter_by_status(self, status_id):
+        self.current_status_filter = status_id
+        self._load_status_chips()
+        self.apply_filters()
     
     def _build_search_bar(self):
-        self.status_filter = ft.Dropdown(
-            hint_text=get_text("filter_by_status"),
-            border_radius=12,
-            bgcolor=ft.Colors.WHITE,
-            filled=True,
-            options=[
-                ft.dropdown.Option("all", get_text("all_status")),
-                ft.dropdown.Option("pending", get_text("pending")),
-                ft.dropdown.Option("ordered", get_text("ordered")),
-                ft.dropdown.Option("received", get_text("received")),
-                ft.dropdown.Option("cancelled", get_text("cancelled")),
-            ],
-            value="all",
-            expand=True,
-        )
-        self.status_filter.on_change = self.on_filter_change
+        self.status_chips = ft.Row(spacing=8, scroll=ft.ScrollMode.AUTO)
+        self._load_status_chips()
         
         self.search_field = ft.TextField(
             hint_text=get_text("search_purchase_order"),
@@ -294,7 +243,11 @@ class PurchaseOrderListContent:
         )
         
         return ft.Container(
-            content=ft.Row([self.status_filter, self.search_field, refresh_button], spacing=10),
+            content=ft.Column([
+                ft.Row([self.search_field, refresh_button], spacing=10),
+                ft.Container(height=12),
+                self.status_chips,
+            ], spacing=0),
             margin=ft.margin.only(bottom=16),
         )
     
@@ -303,49 +256,48 @@ class PurchaseOrderListContent:
             content=ft.Row([
                 ft.Container(
                     content=ft.Text(get_text("po_no"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=120,
-                    padding=ft.padding.only(left=10),
+                    width=110,
+                    padding=ft.padding.only(left=8),
                 ),
                 ft.Container(
                     content=ft.Text(get_text("supplier"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=160,
-                    padding=ft.padding.only(left=10),
+                    width=140,
+                    padding=ft.padding.only(left=8),
                 ),
                 ft.Container(
                     content=ft.Text(get_text("order_date"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=110,
+                    width=95,
                     alignment=ft.Alignment(0, 0),
                 ),
                 ft.Container(
                     content=ft.Text(get_text("total_amount"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=140,
+                    width=100,
                     alignment=ft.Alignment(1, 0),
-                    padding=ft.padding.only(right=10),
+                    padding=ft.padding.only(right=8),
                 ),
                 ft.Container(
                     content=ft.Text(get_text("status"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=100,
+                    width=85,
                     alignment=ft.Alignment(0, 0),
                 ),
                 ft.Container(
                     content=ft.Text(get_text("created_by"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=130,
-                    padding=ft.padding.only(left=10),
+                    width=100,
+                    padding=ft.padding.only(left=8),
                 ),
                 ft.Container(
                     content=ft.Text(get_text("actions"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=140,
+                    width=130,
                     alignment=ft.Alignment(0, 0),
                 ),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
-            padding=ft.padding.symmetric(vertical=14, horizontal=10),
+            padding=ft.padding.symmetric(vertical=12, horizontal=8),
             bgcolor=ft.Colors.GREY_100,
             border_radius=ft.BorderRadius.only(top_left=12, top_right=12),
         )
         
         self.table_rows = ft.Column(spacing=0, scroll=ft.ScrollMode.AUTO, expand=True)
         
-        # Add horizontal scroll for table
         table_content = ft.Column([
             table_header,
             ft.Divider(height=1, color=ft.Colors.GREY_300),
@@ -354,7 +306,7 @@ class PurchaseOrderListContent:
         
         table_scroll = ft.Container(
             content=table_content,
-            width=1000,
+            width=950,
         )
         
         return ft.Container(
@@ -367,20 +319,444 @@ class PurchaseOrderListContent:
         )
     
     def refresh_all(self):
-        """Refresh both low stock and purchase orders"""
         self.load_low_stock_parts()
         self.load_purchase_orders()
     
     def load_low_stock_parts(self):
-        """Load low stock parts for alert (Process 7.1)"""
         try:
-            parts = self.client.get_low_stock_parts()
-            self.low_stock_parts = parts
-            
-            self.low_stock_container.content = self._build_low_stock_alert()
-            self.low_stock_container.update()
+            self.low_stock_parts = self.client.get_low_stock_parts()
+            self._update_header()
         except Exception as ex:
             print(f"Error loading low stock parts: {ex}")
+            self.low_stock_parts = []
+            self._update_header()
+    
+    def show_low_stock_dialog(self, e):
+        if not self.low_stock_parts:
+            dialog = ft.AlertDialog(
+                modal=True,
+                shape=ft.RoundedRectangleBorder(radius=16),
+                bgcolor=ft.Colors.WHITE,
+                title=ft.Container(
+                    content=ft.Row(
+                        [
+                            ft.Container(
+                                content=ft.Icon(ft.Icons.CHECK_CIRCLE, size=24, color=ft.Colors.WHITE),
+                                bgcolor="#10B981",
+                                border_radius=12,
+                                padding=ft.padding.all(8),
+                            ),
+                            ft.Text(
+                                get_text("low_stock"),
+                                size=18,
+                                weight=ft.FontWeight.BOLD,
+                                color="#1E293B",
+                            ),
+                        ],
+                        spacing=12,
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                    ),
+                    padding=ft.padding.symmetric(horizontal=20, vertical=16),
+                    border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
+                ),
+                content=ft.Container(
+                    content=ft.Column([
+                        ft.Icon(ft.Icons.INBOX, size=48, color="#CBD5E1"),
+                        ft.Text(get_text("no_low_stock_parts"), size=14, color="#94A3B8"),
+                    ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=12),
+                    padding=ft.padding.all(40),
+                    width=400,
+                ),
+                actions=[
+                    ft.TextButton(get_text("close"), on_click=lambda e: self._close_dialog(dialog)),
+                ],
+                actions_alignment=ft.MainAxisAlignment.END,
+            )
+            self._open_dialog(dialog)
+            return
+        
+        parts_list = ft.Column(spacing=8, scroll=ft.ScrollMode.AUTO, height=350)
+        
+        for part in self.low_stock_parts[:30]:
+            name = part.get('name', '-')
+            stock_qty = part.get('stock_qty', 0)
+            min_stock = part.get('min_stock', 5)
+            supplier_name = part.get('supplier_name', '-')
+            
+            if stock_qty <= 0:
+                color = "#EF4444"
+                status = get_text("out_of_stock")
+            elif stock_qty <= min_stock / 2:
+                color = "#F59E0B"
+                status = get_text("critical")
+            else:
+                color = "#10B981"
+                status = get_text("low")
+            
+            part_row = ft.Container(
+                content=ft.Row([
+                    ft.Column([
+                        ft.Text(name, size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
+                        ft.Text(f"{get_text('supplier')}: {supplier_name}", size=11, color="#64748B"),
+                    ], spacing=2, expand=True),
+                    ft.Column([
+                        ft.Text(f"{stock_qty} / {min_stock}", size=13, weight=ft.FontWeight.W_700, color=color),
+                        ft.Text(status, size=10, color=color),
+                    ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=2),
+                ], spacing=12, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                padding=ft.padding.symmetric(vertical=8, horizontal=12),
+                bgcolor=ft.Colors.GREY_50,
+                border_radius=8,
+            )
+            parts_list.controls.append(part_row)
+        
+        dialog = ft.AlertDialog(
+            modal=True,
+            shape=ft.RoundedRectangleBorder(radius=16),
+            bgcolor=ft.Colors.WHITE,
+            title=ft.Container(
+                content=ft.Row(
+                    [
+                        ft.Container(
+                            content=ft.Icon(ft.Icons.WARNING, size=24, color=ft.Colors.WHITE),
+                            bgcolor="#F59E0B",
+                            border_radius=12,
+                            padding=ft.padding.all(8),
+                        ),
+                        ft.Text(
+                            f"{get_text('low_stock')} ({len(self.low_stock_parts)})",
+                            size=18,
+                            weight=ft.FontWeight.BOLD,
+                            color="#1E293B",
+                        ),
+                    ],
+                    spacing=12,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                ),
+                padding=ft.padding.symmetric(horizontal=20, vertical=16),
+                border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
+            ),
+            content=ft.Container(
+                content=ft.Column([
+                    ft.Text(get_text("parts_need_reorder"), size=12, color="#64748B"),
+                    ft.Container(height=8),
+                    parts_list,
+                ]),
+                padding=ft.padding.all(20),
+                width=450,
+                height=450,
+            ),
+            actions=[
+                ft.TextButton(get_text("close"), on_click=lambda e: self._close_dialog(dialog)),
+                ft.ElevatedButton(
+                    get_text("create_purchase_order"),
+                    on_click=lambda e: (self._close_dialog(dialog), self.navigate("purchase_order_create")),
+                    style=ft.ButtonStyle(bgcolor=self.primary_color, color=ft.Colors.WHITE),
+                ),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+        
+        self._open_dialog(dialog)
+    
+    # ==================== RECEIVE DIALOG (Process 7.3) ====================
+    
+    def show_receive_dialog(self, po_id: int):
+        """Show dialog to receive purchase order items (Process 7.3)"""
+        try:
+            print(f"🔍 DEBUG: show_receive_dialog called with po_id={po_id}")
+            
+            po_data = self.client.get_purchase_order(po_id)
+            print(f"🔍 DEBUG: po_data = {po_data}")
+            
+            if not po_data:
+                self.show_snack_bar(get_text("purchase_order_not_found"), is_error=True)
+                return
+            
+            current_status = po_data.get('status')
+            print(f"🔍 DEBUG: Current status = {current_status}")
+            
+            # ✅ รับได้ทั้ง pending และ ordered
+            if current_status not in ['pending', 'ordered']:
+                self.show_snack_bar(get_text("only_ordered_po_can_be_received"), is_error=True)
+                return
+            
+            items = po_data.get('items', [])
+            print(f"🔍 DEBUG: items count = {len(items)}")
+            
+            if not items:
+                self.show_snack_bar(get_text("no_items_in_order"), is_error=True)
+                return
+            
+            receive_items = []
+            qty_fields = {}
+            
+            for item in items:
+                part_id = item.get('part_id')
+                part_name = item.get('part_name', '-')
+                qty = item.get('qty', 0)
+                already_received = item.get('received_qty', 0)
+                remaining = qty - already_received
+                
+                if remaining <= 0:
+                    continue
+                
+                receive_items.append({
+                    'part_id': part_id,
+                    'part_name': part_name,
+                    'qty': qty,
+                    'already_received': already_received,
+                    'remaining': remaining,
+                    'unit_cost': item.get('unit_cost', 0)
+                })
+            
+            if not receive_items:
+                self.show_snack_bar(get_text("all_items_already_received"), is_error=True)
+                return
+            
+            items_column = ft.Column(spacing=8, scroll=ft.ScrollMode.AUTO, height=300)
+            
+            for idx, item in enumerate(receive_items):
+                qty_field = ft.TextField(
+                    value=str(item['remaining']),
+                    width=80,
+                    text_align=ft.TextAlign.CENTER,
+                    input_filter=ft.NumbersOnlyInputFilter(),
+                    border_radius=8,
+                    bgcolor=ft.Colors.WHITE,
+                    content_padding=ft.padding.symmetric(horizontal=8, vertical=6),
+                )
+                qty_fields[idx] = qty_field
+                
+                def create_qty_handler(idx_item, qty_field_ref, max_qty):
+                    def handler(e):
+                        try:
+                            qty = int(qty_field_ref.value) if qty_field_ref.value else 0
+                            if qty > max_qty:
+                                qty_field_ref.value = str(max_qty)
+                                self.page.update()
+                            elif qty < 0:
+                                qty_field_ref.value = "0"
+                                self.page.update()
+                        except:
+                            qty_field_ref.value = "0"
+                            self.page.update()
+                    return handler
+                
+                qty_field.on_change = create_qty_handler(idx, qty_field, item['remaining'])
+                
+                bg_color = ft.Colors.GREY_50 if idx % 2 == 0 else ft.Colors.WHITE
+                
+                item_row = ft.Container(
+                    content=ft.Row([
+                        ft.Column([
+                            ft.Text(item['part_name'], size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
+                            ft.Text(f"{get_text('unit_cost')}: {int(item['unit_cost']):,} KIP", size=11, color="#64748B"),
+                        ], spacing=2, expand=True),
+                        ft.Text(f"{item['qty']}", size=13, color="#64748B", width=50, text_align=ft.TextAlign.CENTER),
+                        qty_field,
+                        ft.Text(f"{get_text('remaining')}: {item['remaining']}", size=11, color="#F59E0B", width=80),
+                    ], spacing=12, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                    padding=ft.padding.symmetric(vertical=8, horizontal=12),
+                    bgcolor=bg_color,
+                    border_radius=8,
+                )
+                items_column.controls.append(item_row)
+            
+            po_no = po_data.get('po_no', '-')
+            supplier_name = po_data.get('supplier_name', '-')
+            
+            dialog = ft.AlertDialog(
+                modal=True,
+                shape=ft.RoundedRectangleBorder(radius=16),
+                bgcolor=ft.Colors.WHITE,
+                title=ft.Container(
+                    content=ft.Row(
+                        [
+                            ft.Container(
+                                content=ft.Icon(ft.Icons.INVENTORY_2, size=24, color=ft.Colors.WHITE),
+                                bgcolor="#10B981",
+                                border_radius=12,
+                                padding=ft.padding.all(8),
+                            ),
+                            ft.Text(
+                                f"{get_text('receive')}: {po_no}",
+                                size=18,
+                                weight=ft.FontWeight.BOLD,
+                                color="#1E293B",
+                            ),
+                        ],
+                        spacing=12,
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                    ),
+                    padding=ft.padding.symmetric(horizontal=20, vertical=16),
+                    border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
+                ),
+                content=ft.Container(
+                    content=ft.Column([
+                        ft.Text(f"{get_text('supplier')}: {supplier_name}", size=13, color="#64748B"),
+                        ft.Container(height=8),
+                        ft.Row([
+                            ft.Text(get_text("item"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", expand=True),
+                            ft.Text(get_text("ordered"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=50, text_align=ft.TextAlign.CENTER),
+                            ft.Text(get_text("receive_qty"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=80, text_align=ft.TextAlign.CENTER),
+                            ft.Text(get_text("remaining"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=80, text_align=ft.TextAlign.CENTER),
+                        ], spacing=12),
+                        ft.Divider(height=1, color=ft.Colors.GREY_200),
+                        items_column,
+                    ]),
+                    padding=ft.padding.all(20),
+                    width=550,
+                    height=450,
+                ),
+                actions=[
+                    ft.TextButton(
+                        get_text("cancel"),
+                        on_click=lambda e: self._close_dialog(dialog),
+                    ),
+                    ft.ElevatedButton(
+                        get_text("confirm_receive"),
+                        on_click=lambda e: self.confirm_receive(dialog, po_id, receive_items, qty_fields),
+                        style=ft.ButtonStyle(
+                            bgcolor="#10B981",
+                            color=ft.Colors.WHITE,
+                        ),
+                    ),
+                ],
+                actions_alignment=ft.MainAxisAlignment.END,
+            )
+            
+            self._open_dialog(dialog)
+            
+        except Exception as ex:
+            print(f"❌ Error showing receive dialog: {ex}")
+            import traceback
+            traceback.print_exc()
+            self.show_snack_bar(f"Error: {str(ex)}", is_error=True)
+    
+    def confirm_receive(self, dialog, po_id, receive_items, qty_fields):
+        """Confirm receiving items"""
+        received_items_data = []
+        has_received = False
+        
+        for idx, item in enumerate(receive_items):
+            qty_field = qty_fields.get(idx)
+            if qty_field:
+                try:
+                    qty = int(qty_field.value) if qty_field.value else 0
+                except:
+                    qty = 0
+                
+                if qty > item['remaining']:
+                    qty = item['remaining']
+                    qty_field.value = str(qty)
+                
+                if qty > 0:
+                    has_received = True
+                    received_items_data.append({
+                        'part_id': item['part_id'],
+                        'received_qty': qty
+                    })
+        
+        if not has_received:
+            self.show_snack_bar(get_text("no_items_to_receive"), is_error=True)
+            return
+        
+        try:
+            result = self.client.receive_purchase_order(po_id, received_items_data)
+            if result:
+                self._close_dialog(dialog)
+                self.load_purchase_orders()
+                self.show_snack_bar(get_text("receive_success"), is_error=False)
+            else:
+                self.show_snack_bar(get_text("receive_failed"), is_error=True)
+        except Exception as ex:
+            print(f"Error receiving: {ex}")
+            self.show_snack_bar(f"Error: {str(ex)}", is_error=True)
+    
+    def show_cancel_dialog(self, po_id: int, po_no: str):
+        """Show cancel confirmation dialog"""
+        def confirm_cancel(e):
+            try:
+                self.client.update_purchase_order_status(po_id, 'cancelled')
+                self._close_dialog(dialog)
+                self.load_purchase_orders()
+                self.show_snack_bar(f"✅ {get_text('cancelled_success')}", is_error=False)
+            except Exception as ex:
+                self.show_snack_bar(f"Error: {str(ex)}", is_error=True)
+        
+        dialog = ft.AlertDialog(
+            modal=True,
+            shape=ft.RoundedRectangleBorder(radius=16),
+            bgcolor=ft.Colors.WHITE,
+            title=ft.Container(
+                content=ft.Row(
+                    [
+                        ft.Container(
+                            content=ft.Icon(ft.Icons.WARNING, size=24, color=ft.Colors.WHITE),
+                            bgcolor="#EF4444",
+                            border_radius=12,
+                            padding=ft.padding.all(8),
+                        ),
+                        ft.Text(
+                            get_text("confirm_cancel"),
+                            size=18,
+                            weight=ft.FontWeight.BOLD,
+                            color="#1E293B",
+                        ),
+                    ],
+                    spacing=12,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                ),
+                padding=ft.padding.symmetric(horizontal=20, vertical=16),
+                border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
+            ),
+            content=ft.Container(
+                content=ft.Column([
+                    ft.Text(
+                        f"{get_text('cancel_po_confirm')}: {po_no}?",
+                        size=14,
+                        color="#1E293B",
+                        text_align=ft.TextAlign.CENTER,
+                    ),
+                    ft.Container(height=8),
+                    ft.Text(
+                        get_text("cancel_warning"),
+                        size=12,
+                        color="#64748B",
+                        text_align=ft.TextAlign.CENTER,
+                    ),
+                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=4),
+                padding=ft.padding.all(24),
+                width=380,
+            ),
+            actions=[
+                ft.TextButton(
+                    get_text("no"),
+                    on_click=lambda e: self._close_dialog(dialog),
+                ),
+                ft.ElevatedButton(
+                    get_text("yes_cancel"),
+                    on_click=confirm_cancel,
+                    style=ft.ButtonStyle(
+                        bgcolor="#EF4444",
+                        color=ft.Colors.WHITE,
+                    ),
+                ),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+        
+        self._open_dialog(dialog)
+    
+    def _open_dialog(self, dialog):
+        self.page.overlay.append(dialog)
+        dialog.open = True
+        self.page.update()
+    
+    def _close_dialog(self, dialog):
+        dialog.open = False
+        self.page.update()
     
     def load_purchase_orders(self):
         self.table_rows.controls.clear()
@@ -404,26 +780,18 @@ class PurchaseOrderListContent:
             )
             self.page.update()
     
-    def on_filter_change(self, e):
-        """Real-time filter by status"""
-        self.apply_filters()
-    
     def on_search_change(self, e):
-        """Real-time search"""
         self.apply_filters()
     
     def apply_filters(self):
-        """Apply both status and search filters"""
-        selected_status = self.status_filter.value
+        selected_status = self.current_status_filter if self.current_status_filter else "all"
         keyword = self.search_field.value.lower() if self.search_field.value else ""
         
         filtered = self.purchase_orders.copy()
         
-        # Apply status filter
         if selected_status and selected_status != "all":
             filtered = [o for o in filtered if o.get("status") == selected_status]
         
-        # Apply search filter
         if keyword:
             filtered = [
                 o for o in filtered
@@ -499,19 +867,18 @@ class PurchaseOrderListContent:
             "cancelled": get_text("cancelled")
         }
         
-        # Clickable status badge to update status
+        # Status badge - แสดงสถานะอย่างเดียว (ไม่มี dropdown)
         status_badge = ft.Container(
             content=ft.Row([
                 ft.Icon(ft.Icons.CIRCLE, size=8, color=ft.Colors.WHITE),
                 ft.Text(status_texts.get(status, status), size=11, color=ft.Colors.WHITE),
-                ft.Icon(ft.Icons.ARROW_DROP_DOWN, size=16, color=ft.Colors.WHITE),
             ], spacing=4),
             bgcolor=status_colors.get(status, "#607D8B"),
             border_radius=12,
-            padding=ft.padding.symmetric(horizontal=10, vertical=4),
-            on_click=lambda e, pid=po_id, cur_status=status: self.show_update_status_dialog(pid, cur_status),
+            padding=ft.padding.symmetric(horizontal=8, vertical=4),
         )
         
+        # View button
         view_btn = ft.IconButton(
             icon=ft.Icons.VISIBILITY_OUTLINED,
             icon_size=18,
@@ -519,57 +886,75 @@ class PurchaseOrderListContent:
             on_click=lambda e, pid=po_id: self.view_detail(pid),
         )
         
-        # Show receive button only if status is 'ordered' (ready to receive)
+        # ✅ Receive button (เฉพาะ status = pending หรือ ordered)
         receive_btn = None
-        if status == "ordered":
+        if status in ["pending", "ordered"]:
             receive_btn = ft.IconButton(
                 icon=ft.Icons.INVENTORY_2_OUTLINED,
                 icon_size=18,
                 tooltip=get_text("receive"),
                 icon_color=ft.Colors.GREEN_600,
-                on_click=lambda e, pid=po_id: self.receive_order(pid),
+                on_click=lambda e, pid=po_id: self.show_receive_dialog(pid),
             )
+        
+        # Cancel button (เฉพาะ status = pending หรือ ordered)
+        cancel_btn = None
+        if status in ["pending", "ordered"]:
+            cancel_btn = ft.IconButton(
+                icon=ft.Icons.CANCEL_OUTLINED,
+                icon_size=18,
+                tooltip=get_text("cancel"),
+                icon_color=ft.Colors.RED_600,
+                on_click=lambda e, pid=po_id, pno=po_no: self.show_cancel_dialog(pid, pno),
+            )
+        
+        # Actions row
+        actions = [view_btn]
+        if receive_btn:
+            actions.append(receive_btn)
+        if cancel_btn:
+            actions.append(cancel_btn)
         
         row = ft.Container(
             content=ft.Row([
                 ft.Container(
                     content=ft.Text(po_no, size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
-                    width=120,
-                    padding=ft.padding.only(left=10),
+                    width=110,
+                    padding=ft.padding.only(left=8),
                 ),
                 ft.Container(
                     content=ft.Text(supplier_name, size=13, color="#1E293B", max_lines=1),
-                    width=160,
-                    padding=ft.padding.only(left=10),
+                    width=140,
+                    padding=ft.padding.only(left=8),
                 ),
                 ft.Container(
                     content=ft.Text(order_date, size=12, color="#64748B"),
-                    width=110,
+                    width=95,
                     alignment=ft.Alignment(0, 0),
                 ),
                 ft.Container(
                     content=ft.Text(f"{int(total_amount):,}", size=13, weight=ft.FontWeight.W_500, color=ft.Colors.GREEN_700),
-                    width=140,
+                    width=100,
                     alignment=ft.Alignment(1, 0),
-                    padding=ft.padding.only(right=10),
+                    padding=ft.padding.only(right=8),
                 ),
                 ft.Container(
                     content=status_badge,
-                    width=100,
+                    width=85,
                     alignment=ft.Alignment(0, 0),
                 ),
                 ft.Container(
                     content=ft.Text(created_by, size=12, color="#64748B", max_lines=1),
-                    width=130,
-                    padding=ft.padding.only(left=10),
+                    width=100,
+                    padding=ft.padding.only(left=8),
                 ),
                 ft.Container(
-                    content=ft.Row([view_btn, receive_btn] if receive_btn else [view_btn], spacing=4),
-                    width=140,
+                    content=ft.Row(actions, spacing=2),
+                    width=130,
                     alignment=ft.Alignment(0, 0),
                 ),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
-            padding=ft.padding.symmetric(vertical=12, horizontal=10),
+            padding=ft.padding.symmetric(vertical=10, horizontal=8),
             bgcolor=row_bg,
         )
         
@@ -577,94 +962,6 @@ class PurchaseOrderListContent:
             row,
             ft.Divider(height=1, color=ft.Colors.GREY_200),
         ], spacing=0)
-    
-    def show_update_status_dialog(self, po_id: int, current_status: str):
-        """Show dialog to update purchase order status"""
-        status_options = []
-        if current_status == "pending":
-            status_options = ["ordered", "cancelled"]
-        elif current_status == "ordered":
-            status_options = ["received", "cancelled"]
-        elif current_status == "received":
-            status_options = []
-        else:
-            status_options = []
-        
-        if not status_options:
-            self.show_snack_bar(get_text("cannot_update_status"), is_error=True)
-            return
-        
-        status_dropdown = ft.Dropdown(
-            label=get_text("select_status"),
-            value=status_options[0] if status_options else current_status,
-            options=[
-                ft.dropdown.Option("ordered", get_text("ordered")),
-                ft.dropdown.Option("received", get_text("received")),
-                ft.dropdown.Option("cancelled", get_text("cancelled")),
-            ],
-            width=250,
-            border_radius=12,
-        )
-        
-        def update_status(e):
-            new_status = status_dropdown.value
-            if new_status and new_status != current_status:
-                try:
-                    self.client.update_purchase_order_status(po_id, new_status)
-                    dialog.open = False
-                    self.load_purchase_orders()
-                    self.show_snack_bar(f"✅ {get_text('status_updated_to')} {get_text(new_status)}", is_error=False)
-                except Exception as ex:
-                    self.show_snack_bar(f"Error: {str(ex)}", is_error=True)
-            else:
-                dialog.open = False
-                self.page.update()
-        
-        dialog = ft.AlertDialog(
-            modal=True,
-            shape=ft.RoundedRectangleBorder(radius=16),
-            bgcolor=ft.Colors.WHITE,
-            title=ft.Container(
-                content=ft.Row(
-                    [
-                        ft.Container(
-                            content=ft.Icon(ft.Icons.EDIT, size=24, color=ft.Colors.WHITE),
-                            bgcolor=self.primary_color,
-                            border_radius=12,
-                            padding=ft.padding.all(8),
-                        ),
-                        ft.Text(
-                            get_text("update_purchase_order_status"),
-                            size=20,
-                            weight=ft.FontWeight.BOLD,
-                            color="#1E293B",
-                        ),
-                    ],
-                    spacing=12,
-                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                ),
-                padding=ft.padding.all(20),
-                border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
-            ),
-            content=ft.Container(
-                content=ft.Column([
-                    ft.Text(f"{get_text('current_status')}: {get_text(current_status)}", size=14, color="#64748B"),
-                    ft.Container(height=16),
-                    status_dropdown,
-                ]),
-                padding=ft.padding.all(24),
-                width=350,
-            ),
-            actions=[
-                ft.TextButton(get_text("cancel"), on_click=lambda e: self.close_dialog(dialog)),
-                ft.ElevatedButton(get_text("update"), on_click=update_status, style=ft.ButtonStyle(bgcolor=self.primary_color, color=ft.Colors.WHITE)),
-            ],
-            actions_alignment=ft.MainAxisAlignment.END,
-        )
-        
-        self.page.overlay.append(dialog)
-        dialog.open = True
-        self.page.update()
     
     def update_pagination(self):
         prev_disabled = self.current_page <= 1
@@ -720,13 +1017,6 @@ class PurchaseOrderListContent:
     
     def view_detail(self, po_id: int):
         self.navigate("purchase_order_detail", po_id=po_id)
-    
-    def receive_order(self, po_id: int):
-        self.navigate("purchase_order_receive", po_id=po_id)
-    
-    def close_dialog(self, dialog):
-        dialog.open = False
-        self.page.update()
     
     def show_snack_bar(self, message: str, is_error: bool = False):
         self.page.snack_bar = ft.SnackBar(

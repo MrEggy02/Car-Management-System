@@ -29,25 +29,25 @@ class ServiceItemsReportContent:
         # UI Components
         self.start_date_picker = None
         self.end_date_picker = None
+        self.content_container = None
         
     def build(self):
         header = self._build_header()
         filter_section = self._build_filter_section()
         
-        self.content_area = ft.Column(
+        # Main content container
+        self.content_container = ft.Column(
             [
                 filter_section,
                 ft.Container(height=20),
-                self._build_top_services_table(),
-                ft.Container(height=20),
-                self._build_service_by_brand_table(),
+                self._build_loading(),
             ],
             scroll=ft.ScrollMode.AUTO,
             expand=True,
         )
         
         main_content = ft.Container(
-            content=ft.Column([header, self.content_area]),
+            content=ft.Column([header, self.content_container]),
             expand=True,
             bgcolor="#F5F7FA",
         )
@@ -68,7 +68,6 @@ class ServiceItemsReportContent:
                                 weight=ft.FontWeight.BOLD,
                                 color=ft.Colors.WHITE,
                             ),
-                            
                         ],
                         spacing=2,
                     ),
@@ -159,7 +158,7 @@ class ServiceItemsReportContent:
             padding=ft.padding.all(20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
-            margin=ft.margin.symmetric(horizontal=24, vertical=10),
+            margin=ft.margin.only(left=24, right=24, top=10, bottom=10),
             shadow=ft.BoxShadow(
                 blur_radius=10,
                 color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
@@ -197,28 +196,6 @@ class ServiceItemsReportContent:
         date_picker.open = True
         self.page.update()
     
-    def load_report(self, e=None):
-        try:
-            self.content_area.controls = [self._build_loading()]
-            self.page.update()
-            
-            self.report_data = self.client.get_service_items_report(
-                start_date=self.start_date,
-                end_date=self.end_date
-            )
-            
-            self.content_area.controls = [
-                self._build_filter_section(),
-                ft.Container(height=20),
-                self._build_top_services_table(),
-                ft.Container(height=20),
-                self._build_service_by_brand_table(),
-            ]
-            self.page.update()
-        except Exception as ex:
-            print(f"Error loading service items report: {ex}")
-            self._show_error(str(ex))
-    
     def _build_loading(self):
         return ft.Container(
             content=ft.Column([
@@ -230,8 +207,55 @@ class ServiceItemsReportContent:
             height=400,
         )
     
+    def load_report(self, e=None):
+        try:
+            self.content_container.controls = [
+                self._build_filter_section(),
+                ft.Container(height=20),
+                self._build_loading(),
+            ]
+            self.page.update()
+            
+            self.report_data = self.client.get_service_items_report(
+                start_date=self.start_date,
+                end_date=self.end_date
+            )
+            
+            print("=" * 50)
+            print("SERVICE ITEMS DATA:")
+            print(f"top_services count: {len(self.report_data.get('top_services', []))}")
+            print(f"service_by_brand count: {len(self.report_data.get('service_by_brand', []))}")
+            print("=" * 50)
+            
+            self._build_report_ui()
+            
+        except Exception as ex:
+            print(f"Error loading service items report: {ex}")
+            import traceback
+            traceback.print_exc()
+            self._show_error(str(ex))
+    
+    def _build_report_ui(self):
+        """Build the complete report UI"""
+        content_list = [
+            self._build_filter_section(),
+            ft.Container(height=20),
+        ]
+        
+        # 1. Top Services Table
+        content_list.append(self._build_top_services_table())
+        content_list.append(ft.Container(height=20))
+        
+        # 2. Services by Brand Table
+        content_list.append(self._build_service_by_brand_table())
+        
+        self.content_container.controls = content_list
+        self.page.update()
+    
     def _show_error(self, message):
-        self.content_area.controls = [
+        self.content_container.controls = [
+            self._build_filter_section(),
+            ft.Container(height=20),
             ft.Container(
                 content=ft.Column([
                     ft.Icon(ft.Icons.ERROR_OUTLINE, size=48, color=ft.Colors.RED_400),
@@ -268,7 +292,7 @@ class ServiceItemsReportContent:
                 padding=ft.padding.all(20),
                 bgcolor=ft.Colors.WHITE,
                 border_radius=16,
-                margin=ft.margin.symmetric(horizontal=24),
+                margin=ft.margin.only(left=24, right=24, top=0, bottom=0),
                 shadow=ft.BoxShadow(
                     blur_radius=10,
                     color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
@@ -325,7 +349,7 @@ class ServiceItemsReportContent:
             padding=ft.padding.all(20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
-            margin=ft.margin.symmetric(horizontal=24),
+            margin=ft.margin.only(left=24, right=24, top=0, bottom=0),
             shadow=ft.BoxShadow(
                 blur_radius=10,
                 color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
@@ -350,56 +374,50 @@ class ServiceItemsReportContent:
                 brand_data[brand] = []
             brand_data[brand].append({'name': service_name, 'count': service_count})
         
-        # Create accordion for each brand
-        accordion_items = []
+        # Table header
+        header = ft.Container(
+            content=ft.Row([
+                ft.Text(get_text("brand"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=150),
+                ft.Text(get_text("service_name"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", expand=True),
+                ft.Text(get_text("service_count"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=120),
+            ]),
+            padding=ft.padding.symmetric(vertical=12, horizontal=16),
+            bgcolor=ft.Colors.GREY_100,
+            border_radius=ft.BorderRadius.only(top_left=12, top_right=12),
+        )
         
+        table_body = ft.Column(spacing=0)
+        
+        row_index = 0
         for brand, services in brand_data.items():
-            services_list = ft.Column(spacing=4)
-            for service in services[:10]:  # Top 10 per brand
-                services_list.controls.append(
+            for service in services[:10]:
+                bg = ft.Colors.GREY_50 if row_index % 2 == 0 else ft.Colors.WHITE
+                
+                table_body.controls.append(
                     ft.Container(
                         content=ft.Row([
-                            ft.Text(service['name'], size=12, color="#1E293B", expand=True),
-                            ft.Text(str(service['count']), size=12, color="#3B82F6", weight=ft.FontWeight.W_500),
+                            ft.Text(brand if row_index == 0 or services.index(service) == 0 else "", 
+                                   size=13, weight=ft.FontWeight.W_500, color="#1E293B", width=150),
+                            ft.Text(service['name'], size=13, color="#1E293B", expand=True),
+                            ft.Text(str(service['count']), size=13, color="#3B82F6", weight=ft.FontWeight.W_500, width=120),
                         ]),
-                        padding=ft.padding.symmetric(vertical=4, horizontal=12),
+                        padding=ft.padding.symmetric(vertical=12, horizontal=16),
+                        bgcolor=bg,
                     )
                 )
-            
-            accordion_items.append(
-                ft.Container(
-                    content=ft.Column([
-                        ft.Container(
-                            content=ft.Row([
-                                ft.Text(brand, size=14, weight=ft.FontWeight.W_500, color="#1E293B", expand=True),
-                                ft.Text(f"{len(services)} {get_text('services')}", size=11, color="#64748B"),
-                            ]),
-                            padding=ft.padding.all(12),
-                            bgcolor=ft.Colors.GREY_100,
-                            border_radius=8,
-                        ),
-                        services_list,
-                    ]),
-                    margin=ft.margin.only(bottom=8),
-                )
-            )
+                row_index += 1
         
         return ft.Container(
             content=ft.Column([
                 ft.Text(get_text("services_by_vehicle_brand"), size=16, weight=ft.FontWeight.BOLD, color="#1E293B"),
                 ft.Container(height=12),
-                ft.Container(
-                    content=ft.Column(accordion_items, spacing=8),
-                    padding=ft.padding.all(16),
-                    bgcolor=ft.Colors.WHITE,
-                    border_radius=12,
-                    border=ft.border.all(1, ft.Colors.GREY_100),
-                ),
+                header,
+                table_body,
             ]),
             padding=ft.padding.all(20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
-            margin=ft.margin.symmetric(horizontal=24, bottom=24),
+            margin=ft.margin.only(left=24, right=24, top=0, bottom=24),
             shadow=ft.BoxShadow(
                 blur_radius=10,
                 color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
@@ -416,25 +434,18 @@ class ServiceItemsReportContent:
     def print_report(self, e):
         """Print report using browser print dialog"""
         try:
-            # Show loading indicator
             self._show_snack_bar(get_text("preparing_print"), is_error=False)
             
-            # Generate HTML for printing in a separate thread
             def generate_and_print():
                 html_content = self._generate_print_html()
                 
-                # Create temporary HTML file
                 with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False, encoding='utf-8') as f:
                     f.write(html_content)
                     temp_path = f.name
                 
-                # Small delay to ensure file is written
                 time.sleep(0.5)
-                
-                # Open in browser
                 webbrowser.open(f'file://{temp_path}')
                 
-                # Schedule cleanup after a delay (30 seconds)
                 def cleanup():
                     time.sleep(30)
                     try:
@@ -445,7 +456,6 @@ class ServiceItemsReportContent:
                 
                 threading.Thread(target=cleanup, daemon=True).start()
             
-            # Run in background thread to not block UI
             threading.Thread(target=generate_and_print, daemon=True).start()
             
         except Exception as ex:
@@ -457,7 +467,6 @@ class ServiceItemsReportContent:
         top_services = self.report_data.get('top_services', [])
         service_by_brand = self.report_data.get('service_by_brand', [])
         
-        # Get shop info
         shop_info = {}
         try:
             shop_info = self.client.get_shop()
@@ -468,18 +477,15 @@ class ServiceItemsReportContent:
         shop_address = shop_info.get('address', '')
         shop_phone = shop_info.get('phone', '')
         
-        # Get current language
-        current_lang = 'lo'  # default
+        current_lang = 'lo'
         try:
             from i18n import get_current_language
             current_lang = get_current_language()
         except:
             pass
         
-        # Set titles based on language
         if current_lang == 'lo':
             report_title = "ລາຍງານບໍລິການ"
-            summary_title = "ສະຫຼຸບບໍລິການ"
             top_services_title = "ບໍລິການທີ່ຖືກໃຊ້ຫຼາຍທີ່ສຸດ"
             by_brand_title = "ບໍລິການແບ່ງຕາມຍີ່ຫໍ້ລົດ"
             service_name_text = "ຊື່ບໍລິການ"
@@ -492,10 +498,9 @@ class ServiceItemsReportContent:
             printed_text = "ພິມເມື່ອ"
             phone_text = "ໂທ"
             brand_text = "ຍີ່ຫໍ້"
-            services_text = "ບໍລິການ"
+            service_count_text = "ຈຳນວນ"
         else:
             report_title = "Service Items Report"
-            summary_title = "Service Summary"
             top_services_title = "Top Services"
             by_brand_title = "Services by Vehicle Brand"
             service_name_text = "Service Name"
@@ -508,28 +513,22 @@ class ServiceItemsReportContent:
             printed_text = "Printed on"
             phone_text = "Tel"
             brand_text = "Brand"
-            services_text = "Services"
+            service_count_text = "Count"
         
         # Build top services table HTML
         top_services_html = ""
         for service in top_services:
-            name = service.get('service_name', '-')
-            unit_price = service.get('unit_price', 0)
-            usage_count = service.get('usage_count', 0)
-            quoted_amount = service.get('quoted_amount', 0)
-            actual_revenue = service.get('actual_revenue', 0)
             top_services_html += f"""
             <tr>
-                <td>{name}</td>
-                <td class="text-right">{self._format_currency(unit_price)}</td>
-                <td class="text-right">{usage_count}</td>
-                <td class="text-right">{self._format_currency(quoted_amount)}</td>
-                <td class="text-right">{self._format_currency(actual_revenue)}</td>
+                <td>{service.get('service_name', '-')}</td>
+                <td class="text-right">{self._format_currency(service.get('unit_price', 0))}</td>
+                <td class="text-right">{service.get('usage_count', 0)}</td>
+                <td class="text-right">{self._format_currency(service.get('quoted_amount', 0))}</td>
+                <td class="text-right">{self._format_currency(service.get('actual_revenue', 0))}</td>
             </tr>
             """
         
         # Build service by brand HTML
-        brand_html = ""
         brand_data = {}
         for item in service_by_brand:
             brand = item.get('brand', 'Other')
@@ -540,26 +539,16 @@ class ServiceItemsReportContent:
                 brand_data[brand] = []
             brand_data[brand].append({'name': service_name, 'count': service_count})
         
+        brand_html = ""
         for brand, services in brand_data.items():
-            brand_html += f"""
-            <div class="brand-section">
-                <div class="brand-header">
-                    <span class="brand-name">{brand}</span>
-                    <span class="brand-count">{len(services)} {services_text}</span>
-                </div>
-                <table class="brand-table">
-            """
             for service in services[:15]:
                 brand_html += f"""
-                    <tr>
-                        <td>{service['name']}</td>
-                        <td class="text-right">{service['count']}</td>
-                    </tr>
+                <tr>
+                    <td>{brand}</td>
+                    <td>{service['name']}</td>
+                    <td class="text-right">{service['count']}</td>
+                </tr>
                 """
-            brand_html += """
-                </table>
-            </div>
-            """
         
         html_content = f"""<!DOCTYPE html>
 <html>
@@ -567,136 +556,42 @@ class ServiceItemsReportContent:
     <meta charset="UTF-8">
     <title>{report_title}</title>
     <style>
-        @media print {{
-            body {{ margin: 0; padding: 15px; }}
-            .no-break {{ page-break-inside: avoid; }}
-        }}
-        * {{
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }}
+        @media print {{ body {{ margin: 0; padding: 15px; }} }}
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
         body {{
             font-family: 'Noto Sans', 'DejaVu Sans', 'Segoe UI', Arial, sans-serif;
-            font-size: 12px;
-            padding: 20px;
-            color: #333;
-            background: white;
+            font-size: 12px; padding: 20px; color: #333; background: white;
         }}
-        .print-container {{
-            max-width: 1200px;
-            margin: 0 auto;
-        }}
+        .print-container {{ max-width: 1200px; margin: 0 auto; }}
         .header {{
-            text-align: center;
-            margin-bottom: 25px;
-            border-bottom: 2px solid #1565C0;
-            padding-bottom: 15px;
+            text-align: center; margin-bottom: 25px;
+            border-bottom: 2px solid #1565C0; padding-bottom: 15px;
         }}
-        .shop-name {{
-            font-size: 22px;
-            font-weight: bold;
-            color: #1565C0;
-            margin-bottom: 5px;
-        }}
-        .shop-address {{
-            font-size: 11px;
-            color: #666;
-        }}
-        .shop-phone {{
-            font-size: 11px;
-            color: #666;
-        }}
-        .report-title {{
-            font-size: 18px;
-            font-weight: bold;
-            margin-top: 12px;
-            color: #1E293B;
-        }}
-        .period {{
-            font-size: 11px;
-            color: #64748B;
-            margin-top: 5px;
-        }}
-        .print-date {{
-            font-size: 10px;
-            color: #94A3B8;
-            margin-top: 3px;
-        }}
-        .section {{
-            margin-bottom: 25px;
-        }}
+        .shop-name {{ font-size: 22px; font-weight: bold; color: #1565C0; }}
+        .shop-address {{ font-size: 11px; color: #666; }}
+        .shop-phone {{ font-size: 11px; color: #666; }}
+        .report-title {{ font-size: 18px; font-weight: bold; margin-top: 12px; color: #1E293B; }}
+        .period {{ font-size: 11px; color: #64748B; margin-top: 5px; }}
+        .print-date {{ font-size: 10px; color: #94A3B8; margin-top: 3px; }}
+        .section {{ margin-bottom: 25px; }}
         .section-title {{
-            font-size: 14px;
-            font-weight: bold;
-            background-color: #F1F5F9;
-            padding: 8px 12px;
-            margin-bottom: 12px;
-            border-left: 4px solid #1565C0;
+            font-size: 14px; font-weight: bold;
+            background-color: #F1F5F9; padding: 8px 12px;
+            margin-bottom: 12px; border-left: 4px solid #1565C0;
         }}
-        table {{
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 15px;
-        }}
+        table {{ width: 100%; border-collapse: collapse; margin-bottom: 12px; }}
         th {{
-            background-color: #F8FAFC;
-            border: 1px solid #E2E8F0;
-            padding: 8px 10px;
-            text-align: left;
-            font-weight: bold;
-            font-size: 11px;
+            background-color: #F8FAFC; border: 1px solid #E2E8F0;
+            padding: 6px 8px; text-align: left; font-weight: bold; font-size: 10px;
         }}
         td {{
-            border: 1px solid #E2E8F0;
-            padding: 6px 10px;
-            font-size: 11px;
+            border: 1px solid #E2E8F0; padding: 5px 8px; font-size: 10px;
         }}
-        .text-right {{
-            text-align: right;
-        }}
-        .text-center {{
-            text-align: center;
-        }}
-        .brand-section {{
-            margin-bottom: 15px;
-            page-break-inside: avoid;
-        }}
-        .brand-header {{
-            background-color: #F1F5F9;
-            padding: 8px 12px;
-            margin-bottom: 8px;
-            border-radius: 6px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }}
-        .brand-name {{
-            font-size: 13px;
-            font-weight: bold;
-            color: #1565C0;
-        }}
-        .brand-count {{
-            font-size: 11px;
-            color: #64748B;
-        }}
-        .brand-table {{
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 10px;
-        }}
-        .brand-table td {{
-            border: none;
-            border-bottom: 1px solid #E2E8F0;
-            padding: 6px 8px;
-        }}
+        .text-right {{ text-align: right; }}
+        .text-center {{ text-align: center; }}
         .footer {{
-            margin-top: 25px;
-            text-align: center;
-            font-size: 9px;
-            color: #94A3B8;
-            border-top: 1px solid #E2E8F0;
-            padding-top: 12px;
+            margin-top: 25px; text-align: center; font-size: 9px;
+            color: #94A3B8; border-top: 1px solid #E2E8F0; padding-top: 12px;
         }}
     </style>
 </head>
@@ -714,30 +609,20 @@ class ServiceItemsReportContent:
         <div class="section">
             <div class="section-title">{top_services_title}</div>
             <table>
-                <thead>
-                    <tr>
-                        <th>{service_name_text}</th>
-                        <th class="text-right">{unit_price_text}</th>
-                        <th class="text-right">{usage_count_text}</th>
-                        <th class="text-right">{quoted_amount_text}</th>
-                        <th class="text-right">{actual_revenue_text}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {top_services_html if top_services_html else '<tr><td colspan="5" class="text-center">-</td></tr>'}
-                </tbody>
+                <thead><tr><th>{service_name_text}</th><th class="text-right">{unit_price_text}</th><th class="text-right">{usage_count_text}</th><th class="text-right">{quoted_amount_text}</th><th class="text-right">{actual_revenue_text}</th></tr></thead>
+                <tbody>{top_services_html if top_services_html else '<tr><td colspan="5" class="text-center">-</td></tr>'}</tbody>
             </table>
         </div>
         
         <div class="section">
             <div class="section-title">{by_brand_title}</div>
-            {brand_html if brand_html else '<div class="text-center" style="padding: 20px;">-</div>'}
+            <table>
+                <thead><tr><th>{brand_text}</th><th>{service_name_text}</th><th class="text-right">{service_count_text}</th></tr></thead>
+                <tbody>{brand_html if brand_html else '<tr><td colspan="3" class="text-center">-</td></tr>'}</tbody>
+            </table>
         </div>
         
-        <div class="footer">
-            {shop_name}<br>
-            {shop_address} | {phone_text}: {shop_phone}
-        </div>
+        <div class="footer">{shop_name}<br>{shop_address} | {phone_text}: {shop_phone}</div>
     </div>
     
     <script>
@@ -754,7 +639,7 @@ class ServiceItemsReportContent:
     
     def _show_snack_bar(self, message, is_error=False):
         self.page.snack_bar = ft.SnackBar(
-            content=ft.Text(message),
+            content=ft.Text(message, size=13),
             bgcolor=ft.Colors.RED_600 if is_error else ft.Colors.GREEN_600,
             open=True,
             duration=2000,

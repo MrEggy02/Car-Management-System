@@ -140,7 +140,7 @@ def create_purchase_order(
             INSERT INTO purchase_orders 
             (po_no, supplier_id, order_date, total_amount, status, created_by)
             VALUES (%s, %s, %s, %s, %s, %s)
-        """, (po_no, supplier_id, datetime.now(), total_amount, 'pending', user.get('id')))
+        """, (po_no, supplier_id, datetime.now(), total_amount, 'ordered', user.get('id')))
         
         db.commit()
         po_id = cursor.lastrowid
@@ -237,7 +237,7 @@ def receive_purchase_order(
         if not po:
             raise HTTPException(status_code=404, detail="Purchase order not found")
         
-        if po['status'] != 'ordered':
+        if po['status'] not in ['pending', 'ordered']:
             raise HTTPException(status_code=400, detail=f"Cannot receive order with status: {po['status']}")
         
         # Parse received items
