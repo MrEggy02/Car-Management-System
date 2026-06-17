@@ -411,14 +411,12 @@ class RepairCreateContent:
         try:
             all_jobs = self.client.get_job_orders(status='approved') or []
             
-            self.approved_jobs = []
-            for job in all_jobs:
-                try:
-                    existing_repairs = self.client.get_repair_orders(job_order_id=job.get('id'))
-                    if not existing_repairs:
-                        self.approved_jobs.append(job)
-                except:
-                    self.approved_jobs.append(job)
+            # Optimized: Fetch all repair orders in one single call and build a set of job_order_ids
+            # that already have repair orders. This reduces database queries and API latency significantly.
+            all_repairs = self.client.get_repair_orders() or []
+            jobs_with_repairs = {r.get('job_order_id') for r in all_repairs if r.get('job_order_id')}
+            
+            self.approved_jobs = [job for job in all_jobs if job.get('id') not in jobs_with_repairs]
             
             print(f"DEBUG: Loaded {len(self.approved_jobs)} approved job orders ready for repair")
             

@@ -334,16 +334,9 @@ class QuotationCreateContent:
         subtotal = sum(item.get("total", 0) for item in self.temp_items)
         
         for promo in self.promotions_list:
-            # Get promotion items
-            promo_parts = []
-            promo_services = []
-            try:
-                promo_parts = self.client.get_promotion_parts(promo.get('id')) or []
-                promo_services = self.client.get_promotion_services(promo.get('id')) or []
-                promo_parts = [p.get('part_id') for p in promo_parts if p.get('part_id')]
-                promo_services = [s.get('service_id') for s in promo_services if s.get('service_id')]
-            except:
-                pass
+            # Get promotion items (from cache)
+            promo_parts = promo.get('parts', [])
+            promo_services = promo.get('services', [])
             
             # Check if promotion applies
             is_applicable = False
@@ -440,19 +433,9 @@ class QuotationCreateContent:
         self.applied_promotion = promo
         self.selected_promotion_id = promo.get('id')
         
-        # Load promotion items
-        self.promotion_parts = []
-        self.promotion_services = []
-        try:
-            parts = self.client.get_promotion_parts(self.selected_promotion_id)
-            self.promotion_parts = [p.get('part_id') for p in parts if p.get('part_id')]
-        except:
-            pass
-        try:
-            services = self.client.get_promotion_services(self.selected_promotion_id)
-            self.promotion_services = [s.get('service_id') for s in services if s.get('service_id')]
-        except:
-            pass
+        # Load promotion items (from cache)
+        self.promotion_parts = promo.get('parts', [])
+        self.promotion_services = promo.get('services', [])
         
         # Calculate discount
         subtotal = sum(item.get("total", 0) for item in self.temp_items)
@@ -614,7 +597,18 @@ class QuotationCreateContent:
     def load_promotions(self):
         try:
             self.promotions_list = self.client.get_active_promotions() or []
-            print(f"Loaded {len(self.promotions_list)} promotions")
+            for promo in self.promotions_list:
+                promo_id = promo.get('id')
+                try:
+                    parts = self.client.get_promotion_parts(promo_id) or []
+                    services = self.client.get_promotion_services(promo_id) or []
+                    promo['parts'] = [p.get('part_id') for p in parts if p.get('part_id')]
+                    promo['services'] = [s.get('service_id') for s in services if s.get('service_id')]
+                except Exception as ex:
+                    print(f"Error loading promotion details for ID {promo_id}: {ex}")
+                    promo['parts'] = []
+                    promo['services'] = []
+            print(f"Loaded {len(self.promotions_list)} promotions with details")
         except Exception as e:
             print(f"Error loading promotions: {e}")
     
