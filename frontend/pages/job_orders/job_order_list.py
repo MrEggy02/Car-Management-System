@@ -12,7 +12,6 @@ import time
 from i18n import get_text, get_current_language
 from pages.job_orders.job_order_dialogs import (
     show_job_order_detail_dialog,
-    show_status_update_dialog
 )
 
 
@@ -63,7 +62,6 @@ class JobOrderListContent:
         
         self.table_rows = ft.Column(spacing=0, scroll=ft.ScrollMode.AUTO, expand=True)
         self.pagination_container = ft.Container()
-        self.status_chips = None  # Will hold the chip row
 
     def build(self):
         header = ft.Container(
@@ -132,17 +130,9 @@ class JobOrderListContent:
             ),
         )
         
-        # Status Chips (like parts page)
-        self.status_chips = ft.Row(spacing=8, scroll=ft.ScrollMode.AUTO)
-        self._load_status_chips()
-        
-        # Control bar with search and chips
+        # Control bar with search only
         control_bar = ft.Container(
-            content=ft.Column([
-                ft.Row([self.search_field, refresh_button], spacing=10),
-                ft.Container(height=12),
-                self.status_chips,
-            ], spacing=0),
+            content=ft.Row([self.search_field, refresh_button], spacing=10),
             padding=ft.padding.all(20),
             bgcolor="#F5F7FA",
         )
@@ -225,45 +215,7 @@ class JobOrderListContent:
         
         return main_content
     
-    def _load_status_chips(self):
-        """Load status filter chips"""
-        self.status_chips.controls.clear()
-        
-        # Status list
-        status_list = [
-            {"id": "all", "name": get_text("all_status"), "icon": ft.Icons.VIEW_LIST},
-            {"id": "pending", "name": get_text("pending"), "icon": ft.Icons.HOURGLASS_EMPTY},
-            {"id": "quoting", "name": get_text("quoting"), "icon": ft.Icons.CALCULATE},
-            {"id": "repairing", "name": get_text("repairing"), "icon": ft.Icons.BUILD},
-            {"id": "finished", "name": get_text("finished"), "icon": ft.Icons.CHECK_CIRCLE},
-            {"id": "closed", "name": get_text("closed"), "icon": ft.Icons.LOCK},
-            {"id": "cancelled", "name": get_text("cancelled"), "icon": ft.Icons.CANCEL},
-        ]
-        
-        for status in status_list:
-            is_active = self.current_status_filter == status["id"]
-            chip = ft.Container(
-                content=ft.Row([
-                    ft.Icon(status["icon"], size=14, color=ft.Colors.WHITE if is_active else "#64748B"),
-                    ft.Text(status["name"], size=12, weight=ft.FontWeight.W_500,
-                           color=ft.Colors.WHITE if is_active else "#64748B"),
-                ], spacing=6),
-                bgcolor=self.primary_color if is_active else ft.Colors.GREY_200,
-                border_radius=20,
-                padding=ft.padding.symmetric(horizontal=12, vertical=6),
-                ink=True,
-                on_click=lambda e, sid=status["id"]: self.filter_by_status(sid),
-            )
-            self.status_chips.controls.append(chip)
-        
-        self.page.update()
-    
-    def filter_by_status(self, status_id):
-        """Filter by status chip click"""
-        self.current_status_filter = status_id
-        self.current_page = 1
-        self._load_status_chips()  # Refresh chips to show active state
-        self.apply_filters()
+
     
     def _create_table_header(self):
         return ft.Container(
@@ -272,7 +224,6 @@ class JobOrderListContent:
                 ft.Container(content=ft.Text(get_text("customer_name"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=200, alignment=ft.Alignment(-1, 0), padding=ft.padding.only(left=10)),
                 ft.Container(content=ft.Text(get_text("plate_number"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=130, alignment=ft.Alignment(-1, 0), padding=ft.padding.only(left=10)),
                 ft.Container(content=ft.Text(get_text("receive_date"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=120, alignment=ft.Alignment(0, 0)),
-                ft.Container(content=ft.Text(get_text("status"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=100, alignment=ft.Alignment(0, 0)),
                 ft.Container(content=ft.Text(get_text("actions"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=200, alignment=ft.Alignment(0, 0)),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
             padding=ft.padding.symmetric(vertical=14, horizontal=10),
@@ -286,7 +237,6 @@ class JobOrderListContent:
         customer_name = order.get("customer_name", "-")
         plate_number = order.get("plate_number", "-")
         receive_date = order.get("receive_date", "")
-        status = order.get("status", "pending")
         
         if receive_date:
             try:
@@ -297,20 +247,6 @@ class JobOrderListContent:
             receive_date = "-"
         
         row_bg = ft.Colors.GREY_50 if index % 2 == 0 else ft.Colors.WHITE
-        
-        # Status badge
-        status_color = self.status_colors.get(status, "#607D8B")
-        status_text = self.status_texts.get(status, status)
-        
-        status_badge = ft.Container(
-            content=ft.Row([
-                ft.Icon(self.status_icons.get(status, ft.Icons.CIRCLE), size=12, color=ft.Colors.WHITE),
-                ft.Text(status_text, size=11, color=ft.Colors.WHITE),
-            ], spacing=4),
-            bgcolor=status_color,
-            border_radius=12,
-            padding=ft.padding.symmetric(horizontal=8, vertical=4),
-        )
         
         view_btn = ft.Container(
             content=ft.Row([ft.Icon(ft.Icons.VISIBILITY_OUTLINED, size=16, color=self.primary_color), ft.Text(get_text("view"), size=12, color=self.primary_color)], spacing=4),
@@ -326,16 +262,9 @@ class JobOrderListContent:
             border_radius=6,
         )
         
-        status_btn = ft.Container(
-            content=ft.Row([ft.Icon(ft.Icons.UPDATE, size=16, color="#64748B"), ft.Text(get_text("status"), size=12, color="#64748B")], spacing=4),
-            on_click=lambda e, oid=order_id: self.show_status_dialog(oid),
-            padding=ft.padding.symmetric(horizontal=8, vertical=4),
-            border_radius=6,
-        )
-        
-        invoice_btn = ft.Container(
-            content=ft.Row([ft.Icon(ft.Icons.RECEIPT, size=16, color=ft.Colors.GREEN_600), ft.Text(get_text("invoice"), size=12, color=ft.Colors.GREEN_600)], spacing=4),
-            on_click=lambda e, oid=order_id: self.create_invoice(oid),
+        delete_btn = ft.Container(
+            content=ft.Row([ft.Icon(ft.Icons.DELETE_OUTLINE, size=16, color=ft.Colors.RED_600), ft.Text(get_text("delete"), size=12, color=ft.Colors.RED_600)], spacing=4),
+            on_click=lambda e, oid=order_id, jno=job_no: self.confirm_delete(oid, jno),
             padding=ft.padding.symmetric(horizontal=8, vertical=4),
             border_radius=6,
         )
@@ -346,8 +275,7 @@ class JobOrderListContent:
                 ft.Container(content=ft.Text(customer_name, size=13, color="#1E293B", max_lines=1), width=200, alignment=ft.Alignment(-1, 0), padding=ft.padding.only(left=10)),
                 ft.Container(content=ft.Text(plate_number, size=12, color="#64748B", max_lines=1), width=130, alignment=ft.Alignment(-1, 0), padding=ft.padding.only(left=10)),
                 ft.Container(content=ft.Text(receive_date, size=12, color="#64748B"), width=120, alignment=ft.Alignment(0, 0)),
-                ft.Container(content=status_badge, width=100, alignment=ft.Alignment(0, 0)),
-                ft.Container(content=ft.Row([view_btn, print_btn, status_btn, invoice_btn], spacing=4), width=200, alignment=ft.Alignment(0, 0)),
+                ft.Container(content=ft.Row([view_btn, print_btn, delete_btn], spacing=4), width=200, alignment=ft.Alignment(0, 0)),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
             padding=ft.padding.symmetric(vertical=12, horizontal=10),
             bgcolor=row_bg,
@@ -482,13 +410,9 @@ class JobOrderListContent:
         self.page.update()
     
     def apply_filters(self):
-        selected_status = self.current_status_filter if self.current_status_filter else "all"
         keyword = self.search_field.value.lower() if self.search_field and self.search_field.value else ""
         
         filtered = self.job_orders.copy()
-        
-        if selected_status and selected_status != "all":
-            filtered = [o for o in filtered if o.get("status") == selected_status]
         
         if keyword:
             filtered = [
@@ -515,30 +439,47 @@ class JobOrderListContent:
         )
         self._open_dialog(dialog)
     
-    def show_status_dialog(self, order_id):
-        order = next((o for o in self.job_orders if o.get("id") == order_id), None)
-        if not order:
-            return
-        
-        def on_update(status):
+    def confirm_delete(self, order_id, job_no):
+        """Show confirmation dialog before deleting a job order."""
+        def do_delete(e):
+            self._close_dialog()
             try:
-                self.client.update_job_order(order_id, status=status)
-                self._close_dialog()
+                self.client.delete_job_order(order_id)
                 self.load_orders()
-                self.show_snack_bar(get_text("status_updated"), is_error=False)
+                self.show_snack_bar(f"{get_text('deleted_successfully')} ({job_no})", is_error=False)
             except Exception as ex:
-                self.show_snack_bar(f"Error: {str(ex)}", is_error=True)
-        
-        dialog = show_status_update_dialog(
-            order,
-            self.primary_color,
-            on_update,
-            self._close_dialog
+                self.show_snack_bar(f"{get_text('error')}: {str(ex)}", is_error=True)
+
+        dialog = ft.AlertDialog(
+            modal=True,
+            title=ft.Row([
+                ft.Icon(ft.Icons.WARNING_AMBER_ROUNDED, color=ft.Colors.RED_600, size=24),
+                ft.Text(get_text("confirm_delete"), size=16, weight=ft.FontWeight.BOLD),
+            ], spacing=8),
+            content=ft.Text(
+                f"{get_text('delete_job_order_confirm')} {job_no}?",
+                size=14,
+                color="#475569",
+            ),
+            actions=[
+                ft.TextButton(
+                    get_text("cancel"),
+                    on_click=self._close_dialog,
+                    style=ft.ButtonStyle(color="#64748B"),
+                ),
+                ft.ElevatedButton(
+                    get_text("delete"),
+                    on_click=do_delete,
+                    style=ft.ButtonStyle(
+                        bgcolor=ft.Colors.RED_600,
+                        color=ft.Colors.WHITE,
+                        shape=ft.RoundedRectangleBorder(radius=8),
+                    ),
+                ),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
         )
         self._open_dialog(dialog)
-    
-    def create_invoice(self, job_order_id):
-        self.navigate("invoice_create", job_order_id=job_order_id)
     
     def print_job_order(self, order_id):
         try:

@@ -4,7 +4,41 @@ from i18n import get_text
 from datetime import datetime
 
 
-def show_add_promotion_dialog(primary_color, client, on_close, on_success, show_snackbar):
+def db_to_display_date(date_val):
+    if not date_val:
+        return ""
+    try:
+        if isinstance(date_val, datetime):
+            return date_val.strftime("%d-%m-%Y")
+        from datetime import date
+        if isinstance(date_val, date):
+            return date_val.strftime("%d-%m-%Y")
+        
+        # If it is a string
+        date_str = str(date_val).split(" ")[0]
+        dt = datetime.strptime(date_str, "%Y-%m-%d")
+        return dt.strftime("%d-%m-%Y")
+    except Exception as e:
+        print(f"Error formatting date {date_val}: {e}")
+        return str(date_val)
+
+def display_to_db_date(date_str):
+    if not date_str:
+        return None
+    try:
+        dt = datetime.strptime(date_str, "%d-%m-%Y")
+        return dt.strftime("%Y-%m-%d")
+    except Exception as e:
+        print(f"Error parsing date {date_str}: {e}")
+        # Try fallback if it's already YYYY-MM-DD
+        try:
+            dt = datetime.strptime(date_str, "%Y-%m-%d")
+            return dt.strftime("%Y-%m-%d")
+        except:
+            return None
+
+
+def show_add_promotion_dialog(page, primary_color, client, on_close, on_success, show_snackbar):
     """Show add promotion dialog"""
     
     name = ft.TextField(
@@ -54,26 +88,131 @@ def show_add_promotion_dialog(primary_color, client, on_close, on_success, show_
         expand=True,
     )
     
+    ignore_start_focus = False
+    ignore_end_focus = False
+
+    def clear_start_date(e):
+        nonlocal ignore_start_focus
+        ignore_start_focus = True
+        start_date.value = ""
+        dialog.update()
+
+    def clear_end_date(e):
+        nonlocal ignore_end_focus
+        ignore_end_focus = True
+        end_date.value = ""
+        dialog.update()
+
+    def _pick_start_date(e):
+        nonlocal ignore_start_focus
+        if ignore_start_focus:
+            ignore_start_focus = False
+            return
+            
+        def on_date_selected(e_picker):
+            nonlocal ignore_start_focus
+            ignore_start_focus = True
+            if e_picker.control.value:
+                start_date.value = e_picker.control.value.strftime("%d-%m-%Y")
+                start_date.error_text = None
+                dialog.update()
+        
+        def on_dismiss(e_picker):
+            nonlocal ignore_start_focus
+            ignore_start_focus = True
+        
+        initial_val = None
+        if start_date.value:
+            try:
+                initial_val = datetime.strptime(start_date.value, "%d-%m-%Y")
+            except:
+                pass
+                
+        date_picker = ft.DatePicker(
+            on_change=on_date_selected,
+            on_dismiss=on_dismiss,
+            value=initial_val,
+            first_date=datetime(2020, 1, 1),
+            last_date=datetime(2100, 12, 31),
+        )
+        page.overlay.append(date_picker)
+        date_picker.open = True
+        page.update()
+
+    def _pick_end_date(e):
+        nonlocal ignore_end_focus
+        if ignore_end_focus:
+            ignore_end_focus = False
+            return
+            
+        def on_date_selected(e_picker):
+            nonlocal ignore_end_focus
+            ignore_end_focus = True
+            if e_picker.control.value:
+                end_date.value = e_picker.control.value.strftime("%d-%m-%Y")
+                end_date.error_text = None
+                dialog.update()
+        
+        def on_dismiss(e_picker):
+            nonlocal ignore_end_focus
+            ignore_end_focus = True
+        
+        initial_val = None
+        if end_date.value:
+            try:
+                initial_val = datetime.strptime(end_date.value, "%d-%m-%Y")
+            except:
+                pass
+                
+        date_picker = ft.DatePicker(
+            on_change=on_date_selected,
+            on_dismiss=on_dismiss,
+            value=initial_val,
+            first_date=datetime(2020, 1, 1),
+            last_date=datetime(2100, 12, 31),
+        )
+        page.overlay.append(date_picker)
+        date_picker.open = True
+        page.update()
+
     start_date = ft.TextField(
         label=get_text("start_date"),
-        hint_text="YYYY-MM-DD",
+        hint_text="DD-MM-YYYY",
         border_radius=10,
         bgcolor=ft.Colors.WHITE,
         filled=True,
         prefix_icon=ft.Icons.CALENDAR_TODAY,
+        suffix=ft.IconButton(
+            icon=ft.Icons.CLOSE,
+            icon_size=16,
+            icon_color=ft.Colors.GREY_600,
+            on_click=clear_start_date,
+            tooltip=get_text("clear") or "Clear"
+        ),
         content_padding=ft.padding.symmetric(horizontal=12, vertical=10),
         expand=True,
+        read_only=True,
+        on_focus=_pick_start_date,
     )
     
     end_date = ft.TextField(
         label=get_text("end_date"),
-        hint_text="YYYY-MM-DD",
+        hint_text="DD-MM-YYYY",
         border_radius=10,
         bgcolor=ft.Colors.WHITE,
         filled=True,
         prefix_icon=ft.Icons.CALENDAR_MONTH,
+        suffix=ft.IconButton(
+            icon=ft.Icons.CLOSE,
+            icon_size=16,
+            icon_color=ft.Colors.GREY_600,
+            on_click=clear_end_date,
+            tooltip=get_text("clear") or "Clear"
+        ),
         content_padding=ft.padding.symmetric(horizontal=12, vertical=10),
         expand=True,
+        read_only=True,
+        on_focus=_pick_end_date,
     )
     
     status = ft.Dropdown(
@@ -313,14 +452,41 @@ def show_add_promotion_dialog(primary_color, client, on_close, on_success, show_
             dialog.update()
             return
         
+        start_date.error_text = None
+        end_date.error_text = None
+        dialog.update()
+
+        formatted_start = None
+        if start_date.value:
+            formatted_start = display_to_db_date(start_date.value)
+            if not formatted_start:
+                start_date.error_text = get_text("invalid_date_format")
+                dialog.update()
+                return
+
+        formatted_end = None
+        if end_date.value:
+            formatted_end = display_to_db_date(end_date.value)
+            if not formatted_end:
+                end_date.error_text = get_text("invalid_date_format")
+                dialog.update()
+                return
+
+        if formatted_start and formatted_end:
+            if formatted_start > formatted_end:
+                start_date.error_text = get_text("start_date_error")
+                end_date.error_text = get_text("end_date_error")
+                dialog.update()
+                return
+
         try:
             result = client.add_promotion(
                 name=name.value,
                 discount_type=discount_type.value,
                 value=float(value.value),
                 min_amount=float(min_amount.value) if min_amount.value else 0,
-                start_date=start_date.value if start_date.value else None,
-                end_date=end_date.value if end_date.value else None,
+                start_date=formatted_start,
+                end_date=formatted_end,
                 status=status.value
             )
             
@@ -415,7 +581,7 @@ def show_add_promotion_dialog(primary_color, client, on_close, on_success, show_
     return dialog
 
 
-def show_edit_promotion_dialog(primary_color, client, promo, on_close, on_success, show_snackbar):
+def show_edit_promotion_dialog(page, primary_color, client, promo, on_close, on_success, show_snackbar):
     """Show edit promotion dialog with parts/services selection (same as add dialog)"""
     
     name = ft.TextField(
@@ -464,30 +630,135 @@ def show_edit_promotion_dialog(primary_color, client, promo, on_close, on_succes
         expand=True,
     )
     
+    ignore_start_focus = False
+    ignore_end_focus = False
+
+    def clear_start_date(e):
+        nonlocal ignore_start_focus
+        ignore_start_focus = True
+        start_date.value = ""
+        dialog.update()
+
+    def clear_end_date(e):
+        nonlocal ignore_end_focus
+        ignore_end_focus = True
+        end_date.value = ""
+        dialog.update()
+
+    def _pick_start_date(e):
+        nonlocal ignore_start_focus
+        if ignore_start_focus:
+            ignore_start_focus = False
+            return
+            
+        def on_date_selected(e_picker):
+            nonlocal ignore_start_focus
+            ignore_start_focus = True
+            if e_picker.control.value:
+                start_date.value = e_picker.control.value.strftime("%d-%m-%Y")
+                start_date.error_text = None
+                dialog.update()
+        
+        def on_dismiss(e_picker):
+            nonlocal ignore_start_focus
+            ignore_start_focus = True
+        
+        initial_val = None
+        if start_date.value:
+            try:
+                initial_val = datetime.strptime(start_date.value, "%d-%m-%Y")
+            except:
+                pass
+                
+        date_picker = ft.DatePicker(
+            on_change=on_date_selected,
+            on_dismiss=on_dismiss,
+            value=initial_val,
+            first_date=datetime(2020, 1, 1),
+            last_date=datetime(2100, 12, 31),
+        )
+        page.overlay.append(date_picker)
+        date_picker.open = True
+        page.update()
+
+    def _pick_end_date(e):
+        nonlocal ignore_end_focus
+        if ignore_end_focus:
+            ignore_end_focus = False
+            return
+            
+        def on_date_selected(e_picker):
+            nonlocal ignore_end_focus
+            ignore_end_focus = True
+            if e_picker.control.value:
+                end_date.value = e_picker.control.value.strftime("%d-%m-%Y")
+                end_date.error_text = None
+                dialog.update()
+        
+        def on_dismiss(e_picker):
+            nonlocal ignore_end_focus
+            ignore_end_focus = True
+        
+        initial_val = None
+        if end_date.value:
+            try:
+                initial_val = datetime.strptime(end_date.value, "%d-%m-%Y")
+            except:
+                pass
+                
+        date_picker = ft.DatePicker(
+            on_change=on_date_selected,
+            on_dismiss=on_dismiss,
+            value=initial_val,
+            first_date=datetime(2020, 1, 1),
+            last_date=datetime(2100, 12, 31),
+        )
+        page.overlay.append(date_picker)
+        date_picker.open = True
+        page.update()
+
     start_date_val = promo.get('start_date')
     start_date = ft.TextField(
         label=get_text("start_date"),
-        value=str(start_date_val) if start_date_val else "",
-        hint_text="YYYY-MM-DD",
+        value=db_to_display_date(start_date_val),
+        hint_text="DD-MM-YYYY",
         border_radius=10,
         bgcolor=ft.Colors.WHITE,
         filled=True,
         prefix_icon=ft.Icons.CALENDAR_TODAY,
+        suffix=ft.IconButton(
+            icon=ft.Icons.CLOSE,
+            icon_size=16,
+            icon_color=ft.Colors.GREY_600,
+            on_click=clear_start_date,
+            tooltip=get_text("clear") or "Clear"
+        ),
         content_padding=ft.padding.symmetric(horizontal=12, vertical=10),
         expand=True,
+        read_only=True,
+        on_focus=_pick_start_date,
     )
     
     end_date_val = promo.get('end_date')
     end_date = ft.TextField(
         label=get_text("end_date"),
-        value=str(end_date_val) if end_date_val else "",
-        hint_text="YYYY-MM-DD",
+        value=db_to_display_date(end_date_val),
+        hint_text="DD-MM-YYYY",
         border_radius=10,
         bgcolor=ft.Colors.WHITE,
         filled=True,
         prefix_icon=ft.Icons.CALENDAR_MONTH,
+        suffix=ft.IconButton(
+            icon=ft.Icons.CLOSE,
+            icon_size=16,
+            icon_color=ft.Colors.GREY_600,
+            on_click=clear_end_date,
+            tooltip=get_text("clear") or "Clear"
+        ),
         content_padding=ft.padding.symmetric(horizontal=12, vertical=10),
         expand=True,
+        read_only=True,
+        on_focus=_pick_end_date,
     )
     
     status = ft.Dropdown(
@@ -779,6 +1050,33 @@ def show_edit_promotion_dialog(primary_color, client, promo, on_close, on_succes
             dialog.update()
             return
         
+        start_date.error_text = None
+        end_date.error_text = None
+        dialog.update()
+
+        formatted_start = None
+        if start_date.value:
+            formatted_start = display_to_db_date(start_date.value)
+            if not formatted_start:
+                start_date.error_text = get_text("invalid_date_format")
+                dialog.update()
+                return
+
+        formatted_end = None
+        if end_date.value:
+            formatted_end = display_to_db_date(end_date.value)
+            if not formatted_end:
+                end_date.error_text = get_text("invalid_date_format")
+                dialog.update()
+                return
+
+        if formatted_start and formatted_end:
+            if formatted_start > formatted_end:
+                start_date.error_text = get_text("start_date_error")
+                end_date.error_text = get_text("end_date_error")
+                dialog.update()
+                return
+
         try:
             # Clear existing items first
             client.clear_promotion_parts(promo['id'])
@@ -790,8 +1088,8 @@ def show_edit_promotion_dialog(primary_color, client, promo, on_close, on_succes
                 'discount_type': discount_type.value,
                 'value': float(value.value),
                 'min_amount': float(min_amount.value) if min_amount.value else 0,
-                'start_date': start_date.value if start_date.value else None,
-                'end_date': end_date.value if end_date.value else None,
+                'start_date': formatted_start,
+                'end_date': formatted_end,
                 'status': status.value,
             })
             
@@ -993,12 +1291,8 @@ def show_detail_promotion_dialog(primary_color, client, promotion_id, promotion_
     # Format dates
     start_date = promotion.get('start_date')
     end_date = promotion.get('end_date')
-    start_display = start_date if start_date else "-"
-    end_display = end_date if end_date else "-"
-    if isinstance(start_date, str) and len(start_date) > 10:
-        start_display = start_date[:10]
-    if isinstance(end_date, str) and len(end_date) > 10:
-        end_display = end_date[:10]
+    start_display = db_to_display_date(start_date) or "-"
+    end_display = db_to_display_date(end_date) or "-"
     
     parts_items = []
     services_items = []

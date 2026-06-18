@@ -138,23 +138,30 @@ def show_create_quotation_dialog(primary_color, parts_list, services_list, pendi
             dialog_ref.update()
     
     def add_item(item_type, ref_id, name, price):
-        nonlocal temp_id_counter
-        temp_id_counter += 1
         qty = int(qty_field.value) if qty_field.value and qty_field.value.isdigit() else 1
         try:
             price = float(price)
         except (TypeError, ValueError):
             price = 0
-        total = qty * price
-        temp_items.append({
-            "temp_id": temp_id_counter,
-            "item_type": item_type,
-            "ref_id": ref_id,
-            "name": name,
-            "qty": qty,
-            "unit_price": price,
-            "total": total
-        })
+            
+        # Check if item already exists in temp_items and update quantity
+        existing = next((item for item in temp_items if item.get("item_type") == item_type and item.get("ref_id") == ref_id), None)
+        if existing:
+            existing["qty"] += qty
+            existing["total"] = existing["qty"] * existing["unit_price"]
+        else:
+            nonlocal temp_id_counter
+            temp_id_counter += 1
+            temp_items.append({
+                "temp_id": temp_id_counter,
+                "item_type": item_type,
+                "ref_id": ref_id,
+                "name": name,
+                "qty": qty,
+                "unit_price": price,
+                "total": qty * price
+            })
+            
         display_items()
         if dialog_ref:
             dialog_ref.update()

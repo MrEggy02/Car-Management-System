@@ -90,7 +90,7 @@ def debug_users():
     from database import get_db
     db = get_db()
     cursor = db.cursor(dictionary=True)
-    cursor.execute("SELECT id, username, password, role FROM users")
+    cursor.execute("SELECT id, username, password, role FROM employees WHERE can_login = TRUE")
     users = cursor.fetchall()
     cursor.close()
     db.close()

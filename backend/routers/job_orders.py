@@ -34,6 +34,7 @@ def get_job_orders(
                     jo.closed_at,
                     c.name as customer_name,
                     c.phone as customer_phone,
+                    c.address,
                     v.plate_number,
                     b.name as brand,
                     v.model,
@@ -67,6 +68,7 @@ def get_job_orders(
                     jo.closed_at,
                     c.name as customer_name,
                     c.phone as customer_phone,
+                    c.address,
                     v.plate_number,
                     b.name as brand,
                     v.model,
@@ -106,6 +108,8 @@ def get_job_orders(
                 order['created_by_name'] = "-"
             if not order.get('closed_by_name'):
                 order['closed_by_name'] = "-"
+            if not order.get('address'):
+                order['address'] = "-"
         
         return job_orders
     except Exception as e:
@@ -147,6 +151,7 @@ def get_job_orders_with_details(
                 jo.closed_at,
                 c.name as customer_name,
                 c.phone as customer_phone,
+                c.address,
                 v.plate_number,
                 b.name as brand,
                 v.model,
@@ -193,6 +198,8 @@ def get_job_orders_with_details(
                 order['created_by_name'] = "-"
             if not order.get('closed_by_name'):
                 order['closed_by_name'] = "-"
+            if not order.get('address'):
+                order['address'] = "-"
         
         return job_orders
     except Exception as e:
@@ -590,10 +597,10 @@ def get_invoice_info_by_job_order(
                     qi.unit_price,
                     qi.total,
                     qi.service_id,
-                    COALESCE(s.name, 'ບໍລິການທີ່ບໍ່ຮູ້ຈັກ') as item_name
+                    COALESCE(s.name, qi.custom_name, 'ບໍລິການທີ່ບໍ່ຮູ້ຈັກ') as item_name
                 FROM quotation_items qi
                 LEFT JOIN services s ON qi.service_id = s.id
-                WHERE qi.quotation_id = %s AND qi.service_id IS NOT NULL
+                WHERE qi.quotation_id = %s AND qi.part_id IS NULL
                 ORDER BY qi.id
             """, (quotation['id'],))
             quotation_services = cursor.fetchall()

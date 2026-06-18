@@ -298,11 +298,11 @@ class EmployeesContent:
                 self.client.add_employee(name, phone, role, status, can_login, username, password)
                 self._close_dialog()
                 self.load_data()
-                self.show_snackbar(f"✅ {get_text('add_success')}")
+                self.show_success_popup(f"✅ {get_text('add_success')}")
             except Exception as err:
                 print(f"Error saving: {err}")
                 traceback.print_exc()
-                self.show_snackbar(f"{get_text('error')}: {err}")
+                self.show_error_popup(f"{get_text('error')}: {err}")
         
         dialog = create_add_dialog(on_save, self._close_dialog)
         self._open_dialog(dialog)
@@ -310,7 +310,7 @@ class EmployeesContent:
     def edit_employee(self, emp_id):
         emp = next((e for e in self.employees_data if e.get('id') == emp_id), None)
         if not emp:
-            self.show_snackbar(f"❌ {get_text('error')}")
+            self.show_error_popup(f"❌ {get_text('error')}")
             return
         
         def on_save(update_data):
@@ -318,11 +318,11 @@ class EmployeesContent:
                 self.client.update_employee(emp_id, update_data)
                 self._close_dialog()
                 self.load_data()
-                self.show_snackbar(f"✅ {get_text('edit_success')}")
+                self.show_success_popup(f"✅ {get_text('edit_success')}")
             except Exception as err:
                 print(f"Error in save_edit: {err}")
                 traceback.print_exc()
-                self.show_snackbar(f"{get_text('error')}: {err}")
+                self.show_error_popup(f"{get_text('error')}: {err}")
         
         dialog = create_edit_dialog(emp, on_save, self._close_dialog)
         self._open_dialog(dialog)
@@ -336,15 +336,121 @@ class EmployeesContent:
                 self.client.delete_employee(emp_id)
                 self._close_dialog()
                 self.load_data()
-                self.show_snackbar(f"{get_text('delete_success')}")
+                self.show_success_popup(f"{get_text('delete_success')}")
             except Exception as err:
                 print(f"Error in delete: {err}")
                 traceback.print_exc()
-                self.show_snackbar(f"{get_text('error')}: {err}")
+                self.show_error_popup(f"{get_text('error')}: {err}")
         
         dialog = create_delete_dialog(emp_name, on_confirm, self._close_dialog)
         self._open_dialog(dialog)
     
+    def show_success_popup(self, message):
+        def close_popup(e):
+            popup.open = False
+            self.page.update()
+
+        popup = ft.AlertDialog(
+            modal=True,
+            shape=ft.RoundedRectangleBorder(radius=16),
+            bgcolor=ft.Colors.WHITE,
+            title=ft.Container(
+                content=ft.Row(
+                    [
+                        ft.Container(
+                            content=ft.Icon(ft.Icons.CHECK_CIRCLE, size=24, color=ft.Colors.WHITE),
+                            bgcolor=ft.Colors.GREEN_600,
+                            border_radius=12,
+                            padding=ft.padding.all(8),
+                        ),
+                        ft.Text(
+                            get_text("success"),
+                            size=18,
+                            weight=ft.FontWeight.BOLD,
+                            color="#1E293B",
+                        ),
+                    ],
+                    spacing=12,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                ),
+                padding=ft.padding.symmetric(horizontal=20, vertical=16),
+                border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
+            ),
+            content=ft.Container(
+                content=ft.Text(message, size=15, color="#1E293B"),
+                padding=ft.padding.all(24),
+                width=350,
+            ),
+            actions=[
+                ft.ElevatedButton(
+                    get_text("ok"),
+                    on_click=close_popup,
+                    style=ft.ButtonStyle(
+                        bgcolor=self.primary_color,
+                        color=ft.Colors.WHITE,
+                        shape=ft.RoundedRectangleBorder(radius=8)
+                    )
+                )
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+        self.page.overlay.append(popup)
+        popup.open = True
+        self.page.update()
+
+    def show_error_popup(self, message):
+        def close_popup(e):
+            popup.open = False
+            self.page.update()
+
+        popup = ft.AlertDialog(
+            modal=True,
+            shape=ft.RoundedRectangleBorder(radius=16),
+            bgcolor=ft.Colors.WHITE,
+            title=ft.Container(
+                content=ft.Row(
+                    [
+                        ft.Container(
+                            content=ft.Icon(ft.Icons.ERROR_OUTLINE, size=24, color=ft.Colors.WHITE),
+                            bgcolor=ft.Colors.RED_600,
+                            border_radius=12,
+                            padding=ft.padding.all(8),
+                        ),
+                        ft.Text(
+                            get_text("error"),
+                            size=18,
+                            weight=ft.FontWeight.BOLD,
+                            color="#1E293B",
+                        ),
+                    ],
+                    spacing=12,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                ),
+                padding=ft.padding.symmetric(horizontal=20, vertical=16),
+                border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
+            ),
+            content=ft.Container(
+                content=ft.Text(message, size=15, color="#1E293B"),
+                padding=ft.padding.all(24),
+                width=350,
+            ),
+            actions=[
+                ft.ElevatedButton(
+                    get_text("ok"),
+                    on_click=close_popup,
+                    style=ft.ButtonStyle(
+                        bgcolor=self.primary_color,
+                        color=ft.Colors.WHITE,
+                        shape=ft.RoundedRectangleBorder(radius=8)
+                    )
+                )
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+        self.page.overlay.append(popup)
+        popup.open = True
+        self.page.update()
+        
     def show_snackbar(self, message):
         snack = ft.SnackBar(content=ft.Text(message), bgcolor=ft.Colors.GREY_800, duration=3000)
         self.page.snack_bar = snack

@@ -271,7 +271,7 @@ def get_invoice_info_by_job_order(
         if quotation:
             total_discount = quotation.get('discount_amount', 0)
             
-            # Get only services from quotation_items
+            # Get only services from quotation_items (including custom services)
             cursor.execute("""
                 SELECT 
                     qi.id,
@@ -279,10 +279,10 @@ def get_invoice_info_by_job_order(
                     qi.unit_price,
                     qi.total,
                     qi.service_id,
-                    COALESCE(s.name, 'ບໍລິການທີ່ບໍ່ຮູ້ຈັກ') as item_name
+                    COALESCE(s.name, qi.custom_name, 'ບໍລິການທີ່ບໍ່ຮູ້ຈັກ') as item_name
                 FROM quotation_items qi
                 LEFT JOIN services s ON qi.service_id = s.id
-                WHERE qi.quotation_id = %s AND qi.service_id IS NOT NULL
+                WHERE qi.quotation_id = %s AND qi.part_id IS NULL
                 ORDER BY qi.id
             """, (quotation['id'],))
             quotation_services = cursor.fetchall()

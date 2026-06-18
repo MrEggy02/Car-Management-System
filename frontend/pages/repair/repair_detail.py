@@ -4,6 +4,7 @@ import asyncio
 import flet as ft
 from flet import Alignment
 from typing import Dict, Callable
+from datetime import datetime, date
 
 from i18n import get_text
 
@@ -230,6 +231,11 @@ class RepairDetailContent:
         )
         
         # ========== LEFT COLUMN ==========
+        # Build elapsed-time duration display
+        duration_ctrl = self._build_duration_display(
+            data.get("start_date", ""), data.get("end_date", ""), status
+        )
+
         # Repair Info Card
         repair_info_card = ft.Container(
             content=ft.Column([
@@ -247,6 +253,14 @@ class RepairDetailContent:
                     ft.Container(self._create_info_row(get_text("start_date"), start_date), expand=True),
                     ft.Container(self._create_info_row(get_text("end_date"), end_date), expand=True),
                 ], spacing=20),
+                ft.Container(
+                    content=ft.Row([
+                        ft.Text(get_text("duration_label"), size=12, color="#64748B", width=110),
+                        duration_ctrl,
+                    ], spacing=12),
+                    padding=ft.padding.symmetric(vertical=5),
+                    border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_50)),
+                ),
             ], spacing=0),
             padding=ft.padding.all(16),
             bgcolor=ft.Colors.WHITE,
@@ -454,6 +468,29 @@ class RepairDetailContent:
                     padding=ft.padding.symmetric(horizontal=12, vertical=6),
                 ),
             )
+
+        pull_parts_btn = None
+        if status != "completed" and self.repair_data.get('quotation_items'):
+            has_parts = any(item.get('item_type') == 'part' for item in self.repair_data.get('quotation_items', []))
+            if has_parts:
+                pull_parts_btn = ft.ElevatedButton(
+                    content=ft.Row([
+                        ft.Icon(ft.Icons.DOWNLOAD, size=14, color=ft.Colors.WHITE),
+                        ft.Text(get_text("pull_quotation_parts"), size=12, color=ft.Colors.WHITE, weight=ft.FontWeight.W_600),
+                    ], spacing=6),
+                    on_click=self.confirm_pull_quotation_parts,
+                    style=ft.ButtonStyle(
+                        bgcolor=ft.Colors.GREEN_600,
+                        shape=ft.RoundedRectangleBorder(radius=8),
+                        padding=ft.padding.symmetric(horizontal=12, vertical=6),
+                    ),
+                )
+
+        action_buttons = []
+        if pull_parts_btn:
+            action_buttons.append(pull_parts_btn)
+        if add_part_btn:
+            action_buttons.append(add_part_btn)
         
         parts_card = ft.Container(
             content=ft.Column([
@@ -484,7 +521,7 @@ class RepairDetailContent:
                 ft.Divider(height=1, color=ft.Colors.GREY_200),
                 parts_used_list,
                 ft.Container(height=6),
-                ft.Row([add_part_btn], alignment=ft.MainAxisAlignment.END) if add_part_btn else ft.Container(),
+                ft.Row(action_buttons, alignment=ft.MainAxisAlignment.END, spacing=10) if action_buttons else ft.Container(),
             ], spacing=0),
             padding=ft.padding.all(16),
             bgcolor=ft.Colors.WHITE,
@@ -735,25 +772,149 @@ class RepairDetailContent:
         except Exception as ex:
             self.show_snack_bar(f"Error: {str(ex)}", is_error=True)
     
+    def _build_duration_display(self, start_date_str: str, end_date_str: str, status: str) -> ft.Control:
+        """Build a colored duration indicator for the detail info card."""
+        try:
+            if not start_date_str:
+                return ft.Text("-", size=13, color="#94A3B8")
+
+            start_d = datetime.strptime(str(start_date_str)[:10], "%Y-%m-%d").date()
+
+            if status == "completed" and end_date_str:
+                end_d = datetime.strptime(str(end_date_str)[:10], "%Y-%m-%d").date()
+                days = (end_d - start_d).days
+                return ft.Row([
+                    ft.Icon(ft.Icons.CHECK_CIRCLE, size=14, color="#4CAF50"),
+                    ft.Text(
+                        get_text("duration_completed").format(days),
+                        size=13, color="#4CAF50", weight=ft.FontWeight.W_600,
+                    ),
+                ], spacing=4)
+
+            days = (date.today() - start_d).days
+            if days < 3:
+                color, icon = "#10B981", ft.Icons.TIMER
+            elif days < 7:
+                color, icon = "#F59E0B", ft.Icons.TIMER
+            else:
+                color, icon = "#EF4444", ft.Icons.TIMER_OFF
+
+            return ft.Row([
+                ft.Icon(icon, size=14, color=color),
+                ft.Text(
+                    get_text("days_running").format(days),
+                    size=13, color=color, weight=ft.FontWeight.W_600,
+                ),
+            ], spacing=4)
+        except Exception:
+            return ft.Text("-", size=13, color="#94A3B8")
+
     def show_update_status_dialog(self, e):
         current_status = self.repair_data.get("status", "waiting")
-        
-        status_dropdown = ft.Dropdown(
-            label=get_text("select_status"),
-            value=current_status,
-            options=[
-                ft.dropdown.Option("waiting", get_text("waiting")),
-                ft.dropdown.Option("working", get_text("working")),
-                ft.dropdown.Option("paused", get_text("paused")),
-                ft.dropdown.Option("completed", get_text("completed")),
-            ],
-            expand=True,
-            border_radius=12,
-            bgcolor=ft.Colors.WHITE,
-            filled=True,
-            content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
-        )
-        
+
+        if current_status == "completed":
+            self.show_snack_bar(get_text("cannot_update_completed_status"), is_error=True)
+            return
+
+        steps = [
+            ("waiting",   get_text("waiting"),   "#FF9800", ft.Icons.HOURGLASS_EMPTY),
+            ("working",   get_text("working"),   "#2196F3", ft.Icons.BUILD),
+            ("paused",    get_text("paused"),    "#9C27B0", ft.Icons.PAUSE),
+            ("completed", get_text("completed"), "#4CAF50", ft.Icons.CHECK_CIRCLE),
+        ]
+
+        # Mutable state via dict — Flet 0.84 compatible (no ft.Ref generics)
+        state = {"selected": current_status}
+        step_row = ft.Row(spacing=8)
+
+        def _make_step_btn(key, label, color, icon, is_selected):
+            return ft.Container(
+                content=ft.Column(
+                    [
+                        ft.Container(
+                            content=ft.Icon(icon, size=20, color=ft.Colors.WHITE),
+                            bgcolor=color,
+                            border_radius=10,
+                            padding=ft.padding.all(8),
+                        ),
+                        ft.Text(
+                            label, size=11, color="#1E293B",
+                            weight=ft.FontWeight.W_600,
+                            text_align=ft.TextAlign.CENTER,
+                        ),
+                    ],
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=4,
+                ),
+                padding=ft.padding.all(10),
+                border_radius=12,
+                bgcolor=(
+                    ft.Colors.with_opacity(0.12, color) if is_selected
+                    else ft.Colors.WHITE
+                ),
+                border=(
+                    ft.border.all(2, color) if is_selected
+                    else ft.border.all(1, ft.Colors.GREY_200)
+                ),
+                ink=True,
+                on_click=lambda e, k=key, c=color: _on_step_click(k, c),
+                width=90,
+                alignment=ft.Alignment(0, 0),
+            )
+
+        def _rebuild_steps(selected_key):
+            step_row.controls.clear()
+            for k, lbl, col, ico in steps:
+                step_row.controls.append(_make_step_btn(k, lbl, col, ico, k == selected_key))
+
+        def _on_step_click(k, c):
+            state["selected"] = k
+            _rebuild_steps(k)
+            self.page.update()
+
+        _rebuild_steps(current_status)
+
+        def confirm_update(e):
+            new_status = state["selected"]
+            if new_status == current_status:
+                self._close_dialog(dialog)
+                return
+
+            if new_status == "completed":
+                confirm_dialog = ft.AlertDialog(
+                    modal=True,
+                    shape=ft.RoundedRectangleBorder(radius=16),
+                    bgcolor=ft.Colors.WHITE,
+                    title=ft.Container(
+                        content=ft.Row([
+                            ft.Container(
+                                content=ft.Icon(ft.Icons.WARNING, size=22, color=ft.Colors.WHITE),
+                                bgcolor="#F59E0B", border_radius=10, padding=ft.padding.all(8),
+                            ),
+                            ft.Text(get_text("confirm_complete_repair"), size=18,
+                                    weight=ft.FontWeight.BOLD, color="#1E293B"),
+                        ], spacing=10),
+                        padding=ft.padding.all(16),
+                        border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
+                    ),
+                    content=ft.Container(
+                        content=ft.Text(get_text("confirm_complete_repair_msg"), size=14, color="#64748B"),
+                        padding=ft.padding.all(20), width=360,
+                    ),
+                    actions=[
+                        ft.TextButton(get_text("cancel"), on_click=lambda e: self._close_dialog(confirm_dialog),
+                                      style=ft.ButtonStyle(color="#64748B")),
+                        ft.ElevatedButton(get_text("confirm"),
+                            on_click=lambda e: self._do_update_status(new_status, dialog, confirm_dialog),
+                            style=ft.ButtonStyle(bgcolor="#4CAF50", color=ft.Colors.WHITE,
+                                                 shape=ft.RoundedRectangleBorder(radius=8))),
+                    ],
+                    actions_alignment=ft.MainAxisAlignment.END,
+                )
+                self._open_dialog(confirm_dialog)
+            else:
+                self._do_update_status(new_status, dialog)
+
         dialog = ft.AlertDialog(
             modal=True,
             shape=ft.RoundedRectangleBorder(radius=16),
@@ -762,67 +923,54 @@ class RepairDetailContent:
                 content=ft.Row(
                     [
                         ft.Container(
-                            content=ft.Icon(ft.Icons.EDIT, size=24, color=ft.Colors.WHITE),
-                            bgcolor=self.primary_color,
-                            border_radius=12,
-                            padding=ft.padding.all(8),
+                            content=ft.Icon(ft.Icons.EDIT, size=22, color=ft.Colors.WHITE),
+                            bgcolor=self.primary_color, border_radius=10, padding=ft.padding.all(8),
                         ),
-                        ft.Text(
-                            get_text("update_repair_status"),
-                            size=18,
-                            weight=ft.FontWeight.BOLD,
-                            color="#1E293B",
-                        ),
+                        ft.Text(get_text("update_repair_status"), size=18,
+                                weight=ft.FontWeight.BOLD, color="#1E293B"),
                     ],
-                    spacing=12,
-                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
-                padding=ft.padding.symmetric(horizontal=20, vertical=16),
+                padding=ft.padding.all(16),
                 border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
             ),
             content=ft.Container(
                 content=ft.Column([
-                    ft.Container(
-                        content=ft.Row([
-                            ft.Text(get_text("current_status") + ":", size=13, color="#64748B"),
-                            ft.Container(
-                                content=ft.Text(get_text(current_status), size=13, weight=ft.FontWeight.W_600),
-                                bgcolor=ft.Colors.GREY_100,
-                                border_radius=8,
-                                padding=ft.padding.symmetric(horizontal=12, vertical=4),
-                            ),
-                        ], spacing=8),
-                        padding=ft.padding.only(bottom=12),
-                    ),
-                    status_dropdown,
-                ]),
-                padding=ft.padding.all(24),
-                width=400,
+                    ft.Text(get_text("select_new_status"), size=13, color="#64748B"),
+                    ft.Container(height=10),
+                    step_row,
+                ], spacing=0),
+                padding=ft.padding.all(20), width=420,
             ),
             actions=[
-                ft.TextButton(get_text("cancel"), on_click=lambda e: self._close_dialog(dialog), style=ft.ButtonStyle(color="#64748B")),
-                ft.ElevatedButton(get_text("update"), on_click=lambda e: self._confirm_update_status(status_dropdown.value, dialog), style=ft.ButtonStyle(bgcolor=self.primary_color, color=ft.Colors.WHITE, shape=ft.RoundedRectangleBorder(radius=8))),
+                ft.TextButton(get_text("cancel"), on_click=lambda e: self._close_dialog(dialog),
+                              style=ft.ButtonStyle(color="#64748B")),
+                ft.ElevatedButton(get_text("update"), on_click=confirm_update,
+                    style=ft.ButtonStyle(bgcolor=self.primary_color, color=ft.Colors.WHITE,
+                                         shape=ft.RoundedRectangleBorder(radius=8))),
             ],
             actions_alignment=ft.MainAxisAlignment.END,
         )
-        
+
         self._open_dialog(dialog)
-    
-    def _confirm_update_status(self, new_status, dialog):
-        current_status = self.repair_data.get("status", "waiting")
-        if new_status and new_status != current_status:
-            try:
-                self.client.update_repair_status(self.repair_id, new_status)
-                dialog.open = False
-                self.current_dialog = None
-                self.load_repair_data()
-                self._refresh_content()
-                self.show_snack_bar(f"✅ {get_text('status_updated_to')} {get_text(new_status)}", is_error=False)
-            except Exception as ex:
-                self.show_snack_bar(f"Error: {str(ex)}", is_error=True)
-        else:
-            dialog.open = False
+
+    def _do_update_status(self, new_status: str, *dialogs):
+        try:
+            self.client.update_repair_status(self.repair_id, new_status)
+            for d in dialogs:
+                if d:
+                    d.open = False
+            self.current_dialog = None
             self.page.update()
+            self.load_repair_data()
+            self.load_parts()
+            self._refresh_content()
+            self.show_snack_bar(
+                f"✅ {get_text('status_updated_to')} {get_text(new_status)}",
+                is_error=False,
+            )
+        except Exception as ex:
+            self.show_snack_bar(f"Error: {str(ex)}", is_error=True)
     
     def _open_dialog(self, dialog):
         try:
@@ -852,3 +1000,57 @@ class RepairDetailContent:
             duration=3000,
         )
         self.page.update()
+
+    def confirm_pull_quotation_parts(self, e):
+        confirm_dialog = ft.AlertDialog(
+            modal=True,
+            shape=ft.RoundedRectangleBorder(radius=16),
+            bgcolor=ft.Colors.WHITE,
+            title=ft.Container(
+                content=ft.Row(
+                    [
+                        ft.Container(
+                            content=ft.Icon(ft.Icons.DOWNLOAD, size=22, color=ft.Colors.WHITE),
+                            bgcolor=ft.Colors.GREEN_600, border_radius=10, padding=ft.padding.all(8),
+                        ),
+                        ft.Text(get_text("confirm_pull_parts"), size=18,
+                                weight=ft.FontWeight.BOLD, color="#1E293B"),
+                    ],
+                    spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                ),
+                padding=ft.padding.all(16),
+                border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
+            ),
+            content=ft.Container(
+                content=ft.Text(get_text("confirm_pull_parts_msg"), size=13, color="#64748B"),
+                padding=ft.padding.all(20), width=420,
+            ),
+            actions=[
+                ft.TextButton(get_text("cancel"), on_click=lambda e: self._close_dialog(confirm_dialog),
+                              style=ft.ButtonStyle(color="#64748B")),
+                ft.ElevatedButton(get_text("confirm"),
+                    on_click=lambda e: self._do_pull_quotation_parts(confirm_dialog),
+                    style=ft.ButtonStyle(bgcolor=ft.Colors.GREEN_600, color=ft.Colors.WHITE,
+                                         shape=ft.RoundedRectangleBorder(radius=8))),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+        self._open_dialog(confirm_dialog)
+
+    def _do_pull_quotation_parts(self, dialog):
+        try:
+            self._close_dialog(dialog)
+            self.page.update()
+            
+            result = self.client.pull_quotation_parts(self.repair_id)
+            if result:
+                self.load_repair_data()
+                self.load_parts()
+                self._refresh_content()
+                self.show_snack_bar(f"✅ {get_text('pull_parts_success')}", is_error=False)
+        except Exception as ex:
+            error_msg = str(ex)
+            if "already been pulled" in error_msg.lower() or "no parts are listed" in error_msg.lower():
+                self.show_snack_bar(get_text("no_new_parts_to_pull"), is_error=True)
+            else:
+                self.show_snack_bar(f"Error: {error_msg}", is_error=True)

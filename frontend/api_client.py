@@ -540,17 +540,24 @@ class APIClient:
         """Get all items for a quotation"""
         return self._request("GET", f"/quotations/{quotation_id}/items")
 
-    def create_quotation(self, job_order_id: int, valid_until: str = None, notes: str = "") -> Dict:
-        data = {"job_order_id": job_order_id, "notes": notes}
-        if valid_until:
-            data["valid_until"] = valid_until
+    def create_quotation(self, job_order_id: int, promotion_id: int = None) -> Dict:
+        data = {"job_order_id": job_order_id}
+        if promotion_id:
+            data["promotion_id"] = promotion_id
         return self._request("POST", "/quotations", data=data)
 
-    def add_quotation_item(self, quotation_id: int, item_type: str, ref_id: int, qty: int = 1) -> Dict:
+    def add_quotation_item(self, quotation_id: int, item_type: str, ref_id: int, qty: int = 1, discount_amount: float = 0, custom_name: str = None, unit_price: float = None) -> Dict:
+        data = {"item_type": item_type, "qty": qty, "discount_amount": discount_amount}
+        if ref_id is not None:
+            data["ref_id"] = ref_id
+        if custom_name is not None:
+            data["custom_name"] = custom_name
+        if unit_price is not None:
+            data["unit_price"] = unit_price
         return self._request(
             "POST",
             f"/quotations/{quotation_id}/items",
-            data={"item_type": item_type, "ref_id": ref_id, "qty": qty},
+            data=data,
         )
 
     def update_quotation_item(self, quotation_id: int, item_id: int, qty: int, discount_amount: float = 0) -> Dict:
@@ -573,6 +580,14 @@ class APIClient:
 
     def delete_quotation(self, quotation_id: int) -> Dict:
         return self._request("DELETE", f"/quotations/{quotation_id}")
+
+    def update_quotation_promotion(self, quotation_id: int, promotion_id: int, discount_amount: float) -> Dict:
+        """Apply a promotion discount to a quotation and persist promotion_id"""
+        return self._request(
+            "PUT",
+            f"/quotations/{quotation_id}/promotion",
+            data={"promotion_id": promotion_id, "discount_amount": discount_amount},
+        )
 
     # ========== Process 5: Repair Management ==========
     def get_repair_orders(self, job_order_id: int = None, status: str = None) -> List[Dict]:
@@ -614,6 +629,9 @@ class APIClient:
 
     def delete_part_usage(self, repair_id: int, usage_id: int) -> Dict:
         return self._request("DELETE", f"/repair-orders/{repair_id}/parts-usage/{usage_id}")
+
+    def pull_quotation_parts(self, repair_id: int) -> Dict:
+        return self._request("POST", f"/repair-orders/{repair_id}/pull-quotation-parts")
 
     # ========== Process 6: Invoice Management ==========
     def get_invoices(self, job_order_id: int = None, payment_status: str = None) -> List[Dict]:

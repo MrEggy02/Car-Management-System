@@ -155,9 +155,9 @@ class PromotionsContent:
             return "-"
         try:
             if isinstance(date_str, datetime):
-                return date_str.strftime('%d/%m/%Y')
+                return date_str.strftime('%d-%m-%Y')
             date_obj = datetime.strptime(str(date_str), '%Y-%m-%d')
-            return date_obj.strftime('%d/%m/%Y')
+            return date_obj.strftime('%d-%m-%Y')
         except:
             return str(date_str)[:10]
     
@@ -466,6 +466,7 @@ class PromotionsContent:
     
     def show_add_dialog(self):
         dialog = show_add_promotion_dialog(
+            self.page,
             self.primary_color,
             self.client,
             self._close_dialog,
@@ -481,6 +482,7 @@ class PromotionsContent:
             return
         
         dialog = show_edit_promotion_dialog(
+            self.page,
             self.primary_color,
             self.client,
             promo,

@@ -3,7 +3,6 @@ from fastapi import APIRouter, HTTPException, Depends, Form
 from database import get_db
 from auth import authenticate_user
 from typing import Optional
-from datetime import datetime, timedelta
 
 router = APIRouter()
 
@@ -24,13 +23,15 @@ def get_quotations(
                        c.name as customer_name,
                        v.plate_number,
                        b.name as brand,
-                       e.name as created_by_name
+                       e.name as created_by_name,
+                       app.name as approved_by_name
                 FROM quotations q
                 LEFT JOIN job_orders jo ON q.job_order_id = jo.id
                 LEFT JOIN customers c ON jo.customer_id = c.id
                 LEFT JOIN vehicles v ON jo.vehicle_id = v.id
                 LEFT JOIN brands b ON v.brand_id = b.id
                 LEFT JOIN employees e ON q.created_by = e.id
+                LEFT JOIN employees app ON q.approved_by = app.id
                 WHERE q.job_order_id = %s
                 ORDER BY q.id DESC
             """, (job_order_id,))
@@ -41,13 +42,15 @@ def get_quotations(
                        c.name as customer_name,
                        v.plate_number,
                        b.name as brand,
-                       e.name as created_by_name
+                       e.name as created_by_name,
+                       app.name as approved_by_name
                 FROM quotations q
                 LEFT JOIN job_orders jo ON q.job_order_id = jo.id
                 LEFT JOIN customers c ON jo.customer_id = c.id
                 LEFT JOIN vehicles v ON jo.vehicle_id = v.id
                 LEFT JOIN brands b ON v.brand_id = b.id
                 LEFT JOIN employees e ON q.created_by = e.id
+                LEFT JOIN employees app ON q.approved_by = app.id
                 ORDER BY q.id DESC
             """)
         
@@ -97,13 +100,15 @@ def get_quotation(quotation_id: int, user: dict = Depends(authenticate_user)):
                    v.model,
                    v.year,
                    v.color,
-                   e.name as created_by_name
+                   e.name as created_by_name,
+                   app.name as approved_by_name
             FROM quotations q
             LEFT JOIN job_orders jo ON q.job_order_id = jo.id
             LEFT JOIN customers c ON jo.customer_id = c.id
             LEFT JOIN vehicles v ON jo.vehicle_id = v.id
             LEFT JOIN brands b ON v.brand_id = b.id
             LEFT JOIN employees e ON q.created_by = e.id
+            LEFT JOIN employees app ON q.approved_by = app.id
             WHERE q.id = %s
         """, (quotation_id,))
         
@@ -113,35 +118,44 @@ def get_quotation(quotation_id: int, user: dict = Depends(authenticate_user)):
         
         if quotation.get('created_at'):
             quotation['created_at'] = str(quotation['created_at'])
-        if quotation.get('valid_until'):
-            quotation['valid_until'] = str(quotation['valid_until'])
         if quotation.get('brand') is None:
             quotation['brand'] = ""
         
         # Convert decimal to float
-        if quotation.get('sub_total'):
-            quotation['sub_total'] = float(quotation['sub_total'])
-        if quotation.get('discount_amount'):
-            quotation['discount_amount'] = float(quotation['discount_amount'])
-        if quotation.get('net_total'):
-            quotation['net_total'] = float(quotation['net_total'])
+        for field in ('sub_total', 'discount_amount', 'net_total'):
+            if quotation.get(field) is not None:
+                quotation[field] = float(quotation[field])
         
-        # Get quotation items
+        # Get quotation items — JOIN parts/services to get name and price
         cursor.execute("""
-            SELECT id, item_type, ref_id, name, qty, unit_price, discount_amount, total
-            FROM quotation_items
-            WHERE quotation_id = %s
-            ORDER BY item_type, id
+            SELECT
+                qi.id,
+                qi.quotation_id,
+                qi.part_id,
+                qi.service_id,
+                qi.qty,
+                qi.unit_price,
+                qi.discount_amount,
+                qi.total,
+                CASE
+                    WHEN qi.part_id IS NOT NULL THEN 'part'
+                    WHEN qi.service_id IS NOT NULL THEN 'service'
+                    ELSE 'custom'
+                END AS item_type,
+                COALESCE(qi.part_id, qi.service_id) AS ref_id,
+                COALESCE(p.name, s.name, qi.custom_name) AS name
+            FROM quotation_items qi
+            LEFT JOIN parts p ON qi.part_id = p.id
+            LEFT JOIN services s ON qi.service_id = s.id
+            WHERE qi.quotation_id = %s
+            ORDER BY qi.id
         """, (quotation_id,))
         
         items = cursor.fetchall()
         for item in items:
-            if item.get('unit_price'):
-                item['unit_price'] = float(item['unit_price'])
-            if item.get('total'):
-                item['total'] = float(item['total'])
-            if item.get('discount_amount'):
-                item['discount_amount'] = float(item['discount_amount'])
+            for field in ('unit_price', 'total', 'discount_amount'):
+                if item.get(field) is not None:
+                    item[field] = float(item[field])
         
         quotation['items'] = items
         
@@ -166,17 +180,32 @@ def get_quotation_items(
     cursor = db.cursor(dictionary=True)
     try:
         cursor.execute("""
-            SELECT id, item_type, ref_id, name, qty, unit_price, discount_amount, total
-            FROM quotation_items
-            WHERE quotation_id = %s
-            ORDER BY item_type, id
+            SELECT
+                qi.id,
+                qi.part_id,
+                qi.service_id,
+                qi.qty,
+                qi.unit_price,
+                qi.discount_amount,
+                qi.total,
+                CASE
+                    WHEN qi.part_id IS NOT NULL THEN 'part'
+                    WHEN qi.service_id IS NOT NULL THEN 'service'
+                    ELSE 'custom'
+                END AS item_type,
+                COALESCE(qi.part_id, qi.service_id) AS ref_id,
+                COALESCE(p.name, s.name, qi.custom_name) AS name
+            FROM quotation_items qi
+            LEFT JOIN parts p ON qi.part_id = p.id
+            LEFT JOIN services s ON qi.service_id = s.id
+            WHERE qi.quotation_id = %s
+            ORDER BY qi.id
         """, (quotation_id,))
         items = cursor.fetchall()
         for item in items:
-            if item.get('unit_price'):
-                item['unit_price'] = float(item['unit_price'])
-            if item.get('total'):
-                item['total'] = float(item['total'])
+            for field in ('unit_price', 'total', 'discount_amount'):
+                if item.get(field) is not None:
+                    item[field] = float(item[field])
         return items
     except Exception as e:
         print(f"Error getting quotation items: {e}")
@@ -191,22 +220,18 @@ def get_quotation_items(
 @router.post("/quotations")
 def create_quotation(
     job_order_id: int = Form(...),
-    valid_until: str = Form(None),
-    notes: str = Form(""),
+    promotion_id: Optional[int] = Form(None),
     user: dict = Depends(authenticate_user)
 ):
     """Create a new quotation"""
     db = get_db()
     cursor = db.cursor()
     try:
-        if not valid_until:
-            valid_until = (datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d')
-        
         cursor.execute("""
             INSERT INTO quotations 
-            (job_order_id, status, valid_until, notes, created_by, sub_total, discount_amount, net_total)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-        """, (job_order_id, 'draft', valid_until, notes, user.get('id'), 0, 0, 0))
+            (job_order_id, promotion_id, status, created_by, sub_total, discount_amount, net_total)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """, (job_order_id, promotion_id, 'draft', user.get('id'), 0, 0, 0))
         
         db.commit()
         quotation_id = cursor.lastrowid
@@ -234,11 +259,14 @@ def create_quotation(
 def add_quotation_item(
     quotation_id: int,
     item_type: str = Form(...),
-    ref_id: int = Form(...),
+    ref_id: Optional[int] = Form(None),
     qty: int = Form(1),
+    discount_amount: float = Form(0),
+    custom_name: Optional[str] = Form(None),
+    unit_price: Optional[float] = Form(None),
     user: dict = Depends(authenticate_user)
 ):
-    """Add item to quotation (part or service)"""
+    """Add item to quotation (part, service, or custom)"""
     db = get_db()
     cursor = db.cursor(dictionary=True)
     try:
@@ -250,33 +278,42 @@ def add_quotation_item(
         if quote['status'] != 'draft':
             raise HTTPException(status_code=400, detail="Can only modify draft quotations")
         
-        # Get item details based on type
-        name = ""
-        unit_price = 0
-        
+        # Fetch item price based on type
+        part_id, service_id = None, None
         if item_type == 'part':
-            cursor.execute("SELECT name, sell_price FROM parts WHERE id = %s", (ref_id,))
+            if not ref_id:
+                raise HTTPException(status_code=400, detail="ref_id is required for parts")
+            cursor.execute("SELECT sell_price FROM parts WHERE id = %s", (ref_id,))
             part = cursor.fetchone()
-            if part:
-                name = part['name']
-                unit_price = float(part['sell_price'])
+            if not part:
+                raise HTTPException(status_code=404, detail="Part not found")
+            unit_price = float(part['sell_price'])
+            part_id = ref_id
         elif item_type == 'service':
-            cursor.execute("SELECT name, price FROM services WHERE id = %s", (ref_id,))
+            if not ref_id:
+                raise HTTPException(status_code=400, detail="ref_id is required for services")
+            cursor.execute("SELECT price FROM services WHERE id = %s", (ref_id,))
             service = cursor.fetchone()
-            if service:
-                name = service['name']
-                unit_price = float(service['price'])
+            if not service:
+                raise HTTPException(status_code=404, detail="Service not found")
+            unit_price = float(service['price'])
+            service_id = ref_id
+        elif item_type == 'custom':
+            if unit_price is None:
+                raise HTTPException(status_code=400, detail="Price is required for custom items")
+            if not custom_name:
+                raise HTTPException(status_code=400, detail="Name is required for custom items")
+            unit_price = float(unit_price)
+        else:
+            raise HTTPException(status_code=400, detail="item_type must be 'part', 'service', or 'custom'")
         
-        if not name:
-            raise HTTPException(status_code=404, detail=f"{item_type} not found")
-        
-        total = qty * unit_price
+        total = qty * unit_price  # gross total before per-item discount
         
         cursor.execute("""
             INSERT INTO quotation_items 
-            (quotation_id, item_type, ref_id, name, qty, unit_price, discount_amount, total)
+            (quotation_id, part_id, service_id, qty, unit_price, discount_amount, total, custom_name)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-        """, (quotation_id, item_type, ref_id, name, qty, unit_price, 0, total))
+        """, (quotation_id, part_id, service_id, qty, unit_price, discount_amount, total, custom_name))
         
         db.commit()
         
@@ -330,6 +367,8 @@ def update_quotation_item(
         
         unit_price = float(item['unit_price'])
         total = (qty * unit_price) - discount_amount
+        if total < 0:
+            total = 0
         
         cursor.execute("""
             UPDATE quotation_items 
@@ -449,6 +488,39 @@ def calculate_quotation_total(
         db.close()
 
 
+@router.put("/quotations/{quotation_id}/promotion")
+def update_quotation_promotion(
+    quotation_id: int,
+    promotion_id: int = Form(...),
+    discount_amount: float = Form(0),
+    user: dict = Depends(authenticate_user)
+):
+    """Apply a promotion to a quotation: set promotion_id and discount_amount, then recalculate totals"""
+    db = get_db()
+    cursor = db.cursor()
+    try:
+        cursor.execute("""
+            UPDATE quotations
+            SET promotion_id = %s, discount_amount = %s
+            WHERE id = %s
+        """, (promotion_id, discount_amount, quotation_id))
+        db.commit()
+
+        # Recalculate net total after promotion discount is stored
+        calculate_quotation_total(quotation_id, user)
+
+        return {"message": f"Promotion {promotion_id} applied. Discount: {discount_amount}"}
+    except Exception as e:
+        db.rollback()
+        print(f"Error applying promotion: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        db.close()
+
+
 @router.put("/quotations/{quotation_id}/discount")
 def update_quotation_discount(
     quotation_id: int,
@@ -500,7 +572,18 @@ def update_quotation_status(
     db = get_db()
     cursor = db.cursor()
     try:
-        cursor.execute("UPDATE quotations SET status = %s WHERE id = %s", (status, quotation_id))
+        if status == 'approved':
+            cursor.execute("""
+                UPDATE quotations 
+                SET status = %s, approved_by = %s 
+                WHERE id = %s
+            """, (status, user.get('id'), quotation_id))
+        else:
+            cursor.execute("""
+                UPDATE quotations 
+                SET status = %s, approved_by = NULL 
+                WHERE id = %s
+            """, (status, quotation_id))
         db.commit()
         
         # If status is 'approved', update the job order status

@@ -319,7 +319,7 @@ class PartsDialogs:
                     supplier_id=selected_supplier_id[0] if selected_supplier_id[0] else None,
                 )
                 self._close_dialog()
-                self.parent.load_data()
+                self.parent.load_data(force=True)
                 self.parent.show_snackbar(f"✅ {get_text('add_success')}")
             except Exception as err:
                 print(f"Error saving: {err}")
@@ -550,7 +550,7 @@ class PartsDialogs:
                 
                 self.parent.client.update_part(part.get('id'), update_data)
                 self._close_dialog()
-                self.parent.load_data()
+                self.parent.load_data(force=True)
                 self.parent.show_snackbar(f"✅ {get_text('edit_success')}")
             except Exception as err:
                 print(f"Error in save_edit: {err}")
@@ -640,7 +640,7 @@ class PartsDialogs:
             try:
                 self.parent.client.delete_part(part_id)
                 self._close_dialog()
-                self.parent.load_data()
+                self.parent.load_data(force=True)
                 self.parent.show_snackbar(f"✅ {get_text('delete_success')}")
             except Exception as err:
                 print(f"Error in delete: {err}")

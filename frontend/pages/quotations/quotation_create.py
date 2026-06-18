@@ -61,7 +61,8 @@ class QuotationCreateContent:
         
         # State
         self.current_tab = "parts"
-        self.current_category = "all"
+        self.current_category_id = None
+        self.part_categories = []
         
     def build(self):
         # --- Header ---
@@ -124,7 +125,7 @@ class QuotationCreateContent:
         
         search_row = ft.Row([self.job_search_field, self.job_clear_button], spacing=8, vertical_alignment=ft.CrossAxisAlignment.CENTER)
         
-        self.job_results_list = ft.Column(spacing=6, scroll=ft.ScrollMode.AUTO, height=200)
+        self.job_results_list = ft.Column(spacing=6, scroll=ft.ScrollMode.AUTO, height=150)
         self.job_results_container = ft.Container(
             content=self.job_results_list,
             border=ft.border.all(1, ft.Colors.GREY_200),
@@ -227,19 +228,19 @@ class QuotationCreateContent:
         # ==================== SELECTED ITEMS TABLE ====================
         table_header = ft.Container(
             content=ft.Row([
-                ft.Container(content=ft.Text("#", size=12, weight=ft.FontWeight.BOLD, color="#64748B"), width=45, alignment=ft.Alignment(0, 0)),
-                ft.Container(content=ft.Text(get_text("item_name"), size=12, weight=ft.FontWeight.BOLD, color="#64748B"), width=150, alignment=ft.Alignment(-1, 0)),
-                ft.Container(content=ft.Text(get_text("quantity_short"), size=12, weight=ft.FontWeight.BOLD, color="#64748B"), width=100, alignment=ft.Alignment(0, 0)),
-                ft.Container(content=ft.Text(get_text("price_kip_short"), size=12, weight=ft.FontWeight.BOLD, color="#64748B"), width=120, alignment=ft.Alignment(1, 0)),
-                ft.Container(content=ft.Text(get_text("total_kip_short"), size=12, weight=ft.FontWeight.BOLD, color="#64748B"), width=120, alignment=ft.Alignment(1, 0)),
-                ft.Container(content=ft.Text("", size=12), width=45),
+                ft.Container(content=ft.Text("#", size=12, weight=ft.FontWeight.BOLD, color="#64748B"), width=35, alignment=ft.Alignment(0, 0)),
+                ft.Container(content=ft.Text(get_text("item_name"), size=12, weight=ft.FontWeight.BOLD, color="#64748B"), expand=True, alignment=ft.Alignment(-1, 0)),
+                ft.Container(content=ft.Text(get_text("quantity_short"), size=12, weight=ft.FontWeight.BOLD, color="#64748B"), width=65, alignment=ft.Alignment(0, 0)),
+                ft.Container(content=ft.Text(get_text("price_kip_short"), size=12, weight=ft.FontWeight.BOLD, color="#64748B"), width=110, alignment=ft.Alignment(1, 0)),
+                ft.Container(content=ft.Text(get_text("total_kip_short"), size=12, weight=ft.FontWeight.BOLD, color="#64748B"), width=110, alignment=ft.Alignment(1, 0)),
+                ft.Container(content=ft.Text("", size=12), width=40),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
-            padding=ft.padding.symmetric(vertical=12, horizontal=12),
+            padding=ft.padding.symmetric(vertical=10, horizontal=10),
             bgcolor=ft.Colors.GREY_100,
             border_radius=8,
         )
         
-        self.items_table_body = ft.Column(spacing=0, scroll=ft.ScrollMode.AUTO, height=250)
+        self.items_table_body = ft.Column(spacing=0, scroll=ft.ScrollMode.AUTO, height=180)
         selected_items_table = ft.Column([table_header, ft.Divider(height=1, color=ft.Colors.GREY_200), self.items_table_body], spacing=0)
         
         selected_section = ft.Column([
@@ -265,14 +266,25 @@ class QuotationCreateContent:
         
         self.qty_field = ft.TextField(label=get_text("quantity"), value="1", width=100, border_radius=12, bgcolor=ft.Colors.GREY_100, filled=True, input_filter=ft.NumbersOnlyInputFilter(), text_align=ft.TextAlign.CENTER, content_padding=ft.padding.symmetric(horizontal=12, vertical=12))
         
-        self.results_list = ft.Column(spacing=10, scroll=ft.ScrollMode.AUTO, height=320)
+        self.results_list = ft.Column(spacing=10, scroll=ft.ScrollMode.AUTO, height=240)
         welcome_container = ft.Container(content=ft.Column([ft.Icon(ft.Icons.SEARCH, size=48, color="#CBD5E1"), ft.Text(get_text("type_to_search"), size=14, color="#94A3B8"), ft.Text(get_text("search_parts_or_services"), size=12, color="#CBD5E1")], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=8), alignment=ft.Alignment(0, 0), padding=ft.padding.all(40))
         self.results_list.controls.append(welcome_container)
         
         results_container = ft.Container(content=self.results_list, border=ft.border.all(1, ft.Colors.GREY_200), border_radius=12, padding=ft.padding.all(10), bgcolor=ft.Colors.GREY_50, expand=True)
         
         select_items_section = ft.Column([
-            ft.Row([ft.Icon(ft.Icons.SHOPPING_CART, size=18, color=self.primary_color), ft.Text(get_text("select_items"), size=15, weight=ft.FontWeight.BOLD, color="#1E293B")], spacing=8),
+            ft.Row([
+                ft.Icon(ft.Icons.SHOPPING_CART, size=18, color=self.primary_color),
+                ft.Text(get_text("select_items"), size=15, weight=ft.FontWeight.BOLD, color="#1E293B"),
+                ft.Container(expand=True),
+                ft.TextButton(
+                    content=ft.Row([
+                        ft.Icon(ft.Icons.ADD, size=16, color=self.primary_color),
+                        ft.Text(get_text("add_custom_service"), size=13, color=self.primary_color, weight=ft.FontWeight.W_600)
+                    ], spacing=4),
+                    on_click=self.show_add_custom_service_dialog
+                )
+            ], spacing=8, vertical_alignment=ft.CrossAxisAlignment.CENTER),
             ft.Divider(height=1, color=ft.Colors.GREY_200),
             ft.Container(height=12),
             ft.Row([self.parts_tab, self.services_tab], spacing=12),
@@ -285,15 +297,15 @@ class QuotationCreateContent:
         ], spacing=0, expand=True)
         
         # ==================== BIG CARD ====================
-        left_column = ft.Container(content=ft.Column([job_section, ft.Container(height=20), promotion_section, ft.Container(height=20), selected_section], spacing=0, expand=True, scroll=ft.ScrollMode.AUTO), width=640)
-        right_column = ft.Container(content=select_items_section, width=560, expand=True)
+        left_column = ft.Container(content=ft.Column([job_section, ft.Container(height=12), promotion_section, ft.Container(height=12), selected_section], spacing=0, expand=True, scroll=ft.ScrollMode.AUTO), col={"sm": 12, "md": 7, "lg": 7})
+        right_column = ft.Container(content=select_items_section, col={"sm": 12, "md": 5, "lg": 5})
         
-        two_columns_row = ft.Row([left_column, ft.VerticalDivider(width=1, color=ft.Colors.GREY_300), right_column], spacing=10, vertical_alignment=ft.CrossAxisAlignment.START, scroll=ft.ScrollMode.AUTO)
+        two_columns_row = ft.ResponsiveRow([left_column, right_column], spacing=20, vertical_alignment=ft.CrossAxisAlignment.START)
         
-        big_card = ft.Container(content=two_columns_row, padding=ft.padding.symmetric(horizontal=24, vertical=20), bgcolor=ft.Colors.WHITE, border_radius=16)
+        big_card = ft.Container(content=two_columns_row, padding=ft.padding.symmetric(horizontal=16, vertical=16), bgcolor=ft.Colors.WHITE, border_radius=16)
         
-        scrollable_content = ft.Column([big_card], spacing=0, expand=True, scroll=ft.ScrollMode.AUTO)
-        content_area = ft.Container(content=scrollable_content, expand=True, padding=ft.padding.all(20), bgcolor="#F0F2F5")
+        scrollable_content = ft.Column([big_card], spacing=0, expand=True, scroll=ft.ScrollMode.AUTO, horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
+        content_area = ft.Container(content=scrollable_content, expand=True, padding=ft.padding.all(12), bgcolor="#F0F2F5")
         
         main_content = ft.Container(content=ft.Column([header, content_area], spacing=0, expand=True), expand=True)
         
@@ -367,54 +379,74 @@ class QuotationCreateContent:
             
             self.available_promotions.append(promo)
             
+            # Calculate eligible subtotal for display
+            promo_part_ids = set(promo.get('parts', []))
+            promo_service_ids = set(promo.get('services', []))
+            if not promo_part_ids and not promo_service_ids:
+                applicable_subtotal = subtotal
+            else:
+                applicable_subtotal = sum(
+                    item.get("total", 0) for item in self.temp_items
+                    if (item["item_type"] == "part" and item["ref_id"] in promo_part_ids)
+                    or (item["item_type"] == "service" and item["ref_id"] in promo_service_ids)
+                )
+            
             # Calculate discount for display
+            discount_amount = self._calculate_promotion_discount(promo)
+            
             if promo['discount_type'] == 'percent':
-                discount_amount = subtotal * (promo['value'] / 100)
                 discount_display = f"{int(promo['value'])}%"
             else:
-                discount_amount = promo['value']
                 discount_display = f"{int(promo['value']):,} KIP"
             
-            discount_amount = min(discount_amount, subtotal)
+            is_applied = (self.applied_promotion and self.applied_promotion.get('id') == promo.get('id'))
             
-            # Create promotion card
+            border_color = "#10B981" if is_applied else ft.Colors.GREY_200
+            bg_color = "#F0FDF4" if is_applied else ft.Colors.WHITE
+            
             promo_card = ft.Card(
                 content=ft.Container(
                     content=ft.Column([
                         ft.Row([
-                            ft.Icon(ft.Icons.LOCAL_OFFER, size=20, color="#10B981"),
+                            ft.Icon(ft.Icons.LOCAL_OFFER, size=20, color="#10B981" if is_applied else "#64748B"),
                             ft.Text(promo.get('name', '-'), size=14, weight=ft.FontWeight.BOLD, color="#1E293B", expand=True),
                             ft.Container(
-                                content=ft.Text(f"{discount_display}", size=13, weight=ft.FontWeight.BOLD, color="#10B981"),
-                                bgcolor=ft.Colors.GREEN_50,
+                                content=ft.Text(f"{discount_display}", size=13, weight=ft.FontWeight.BOLD, color="#10B981" if is_applied else "#64748B"),
+                                bgcolor="#D1FAE5" if is_applied else ft.Colors.GREY_100,
                                 border_radius=12,
                                 padding=ft.padding.symmetric(horizontal=10, vertical=4),
                             ),
                         ], spacing=8),
                         ft.Container(height=4),
-                        ft.Text(f"{get_text('you_save')}: {int(discount_amount):,} KIP", size=12, color="#64748B"),
-                        ft.Text(f"{get_text('min_amount_required')}: {int(min_amount):,} KIP" if min_amount > 0 else "", size=11, color="#F59E0B"),
+                        ft.Text(f"{get_text('you_save')}: {int(discount_amount):,} KIP", size=12, color="#10B981" if is_applied else "#64748B", weight=ft.FontWeight.W_600 if is_applied else ft.FontWeight.NORMAL),
+                        ft.Text(f"{get_text('min_amount_required')}: {int(min_amount):,} KIP" if min_amount > 0 else "", size=11, color="#F59E0B") if min_amount > 0 else ft.Container(),
                         ft.Container(height=4),
                         ft.Row([
                             ft.Container(expand=True),
-                            ft.ElevatedButton(
-                                content=ft.Text(get_text("apply"), size=12, color=ft.Colors.WHITE),
-                                on_click=lambda e, p=promo: self.apply_promotion(p),
-                                style=ft.ButtonStyle(
-                                    bgcolor=self.primary_color,
-                                    shape=ft.RoundedRectangleBorder(radius=6),
-                                    elevation=0,
-                                    padding=ft.padding.symmetric(horizontal=16, vertical=6),
-                                ),
-                            ),
+                            ft.Container(
+                                content=ft.Row([
+                                    ft.Icon(ft.Icons.CHECK_CIRCLE if is_applied else ft.Icons.INFO_OUTLINE, size=14, color="#10B981" if is_applied else "#64748B"),
+                                    ft.Text(get_text("applied_best") if is_applied else get_text("available"), size=12, color="#10B981" if is_applied else "#64748B", weight=ft.FontWeight.BOLD if is_applied else ft.FontWeight.NORMAL)
+                                ], spacing=4),
+                                padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                            )
                         ]),
                     ], spacing=4),
                     padding=ft.padding.all(12),
                 ),
                 elevation=0,
+                margin=ft.margin.all(0),
+            )
+            
+            promo_container = ft.Container(
+                content=promo_card,
+                bgcolor=bg_color,
+                border=ft.border.all(1, border_color),
+                border_radius=12,
+                padding=ft.padding.all(2),
                 margin=ft.margin.only(bottom=8),
             )
-            self.promotion_list_container.controls.append(promo_card)
+            self.promotion_list_container.controls.append(promo_container)
         
         if not self.available_promotions:
             self.promotion_list_container.controls.append(
@@ -437,20 +469,35 @@ class QuotationCreateContent:
         self.promotion_parts = promo.get('parts', [])
         self.promotion_services = promo.get('services', [])
         
-        # Calculate discount
-        subtotal = sum(item.get("total", 0) for item in self.temp_items)
+        promo_part_ids = set(self.promotion_parts)
+        promo_service_ids = set(self.promotion_services)
+        
+        # Full subtotal used for min_amount eligibility check
+        full_subtotal = sum(item.get("total", 0) for item in self.temp_items)
         min_amount = promo.get('min_amount', 0)
         
-        if subtotal < min_amount:
+        # Eligible subtotal: only the items actually covered by this promotion
+        if not promo_part_ids and not promo_service_ids:
+            # Global promotion — applies to every item
+            applicable_subtotal = full_subtotal
+        else:
+            # Targeted promotion — only matching parts/services
+            applicable_subtotal = sum(
+                item.get("total", 0) for item in self.temp_items
+                if (item["item_type"] == "part" and item["ref_id"] in promo_part_ids)
+                or (item["item_type"] == "service" and item["ref_id"] in promo_service_ids)
+            )
+        
+        if full_subtotal < min_amount:
             self.promotion_discount_amount = 0
-            self.promotion_discount_text.value = f"⚠️ {get_text('add_more_to_get_discount')} (+{int(min_amount - subtotal):,} KIP)"
+            self.promotion_discount_text.value = f"⚠️ {get_text('add_more_to_get_discount')} (+{int(min_amount - full_subtotal):,} KIP)"
             self.promotion_discount_text.color = "#F59E0B"
         else:
             if promo['discount_type'] == 'percent':
-                discount_amount = subtotal * (promo['value'] / 100)
+                discount_amount = applicable_subtotal * (promo['value'] / 100)
             else:
                 discount_amount = promo['value']
-            discount_amount = min(discount_amount, subtotal)
+            discount_amount = min(discount_amount, applicable_subtotal)
             self.promotion_discount_amount = discount_amount
             
             if promo['discount_type'] == 'percent':
@@ -497,7 +544,95 @@ class QuotationCreateContent:
         self.load_pending_orders()
         self.load_promotions()
     
+    def _calculate_promotion_discount(self, promo):
+        """Calculate the discount amount for a promotion based on current temp_items.
+        Returns the discount amount (float) if applicable, else 0."""
+        if not self.temp_items:
+            return 0
+        
+        selected_part_ids = [item.get("ref_id") for item in self.temp_items if item.get("item_type") == "part"]
+        selected_service_ids = [item.get("ref_id") for item in self.temp_items if item.get("item_type") == "service"]
+        
+        promo_parts = promo.get('parts', [])
+        promo_services = promo.get('services', [])
+        
+        is_applicable = False
+        if not promo_parts and not promo_services:
+            is_applicable = True
+        else:
+            if selected_part_ids:
+                for pid in selected_part_ids:
+                    if pid in promo_parts:
+                        is_applicable = True
+                        break
+            if not is_applicable and selected_service_ids:
+                for sid in selected_service_ids:
+                    if sid in promo_services:
+                        is_applicable = True
+                        break
+        
+        if not is_applicable:
+            return 0
+        
+        # Check min amount
+        subtotal = sum(item.get("total", 0) for item in self.temp_items)
+        min_amount = promo.get('min_amount', 0)
+        if subtotal < min_amount:
+            return 0
+        
+        # Calculate eligible subtotal
+        if not promo_parts and not promo_services:
+            applicable_subtotal = subtotal
+        else:
+            applicable_subtotal = sum(
+                item.get("total", 0) for item in self.temp_items
+                if (item["item_type"] == "part" and item["ref_id"] in promo_parts)
+                or (item["item_type"] == "service" and item["ref_id"] in promo_services)
+            )
+        
+        # Calculate discount
+        if promo.get('discount_type') == 'percent':
+            discount_amount = applicable_subtotal * (promo.get('value', 0) / 100)
+        else:
+            discount_amount = promo.get('value', 0)
+            
+        return min(discount_amount, applicable_subtotal)
+
+    def auto_apply_best_promotion(self):
+        """Automatically find and apply the promotion with the highest discount."""
+        if not self.temp_items or not self.promotions_list:
+            self.applied_promotion = None
+            self.selected_promotion_id = None
+            self.promotion_discount_amount = 0
+            self.promotion_parts = []
+            self.promotion_services = []
+            return
+
+        best_promo = None
+        best_discount = 0
+
+        for promo in self.promotions_list:
+            discount = self._calculate_promotion_discount(promo)
+            if discount > best_discount:
+                best_discount = discount
+                best_promo = promo
+
+        if best_promo and best_discount > 0:
+            self.applied_promotion = best_promo
+            self.selected_promotion_id = best_promo.get('id')
+            self.promotion_discount_amount = best_discount
+            self.promotion_parts = best_promo.get('parts', [])
+            self.promotion_services = best_promo.get('services', [])
+        else:
+            self.applied_promotion = None
+            self.selected_promotion_id = None
+            self.promotion_discount_amount = 0
+            self.promotion_parts = []
+            self.promotion_services = []
+
     def _update_selected_items_table(self):
+        self.auto_apply_best_promotion()
+        
         self.items_table_body.controls.clear()
         
         if not self.temp_items:
@@ -524,25 +659,25 @@ class QuotationCreateContent:
             
             row = ft.Container(
                 content=ft.Row([
-                    ft.Container(content=ft.Text(str(idx + 1), size=13, color="#64748B"), width=45, alignment=ft.Alignment(0, 0)),
-                    ft.Container(content=ft.Text(item.get("name", "-"), size=13, weight=ft.FontWeight.W_500, color="#1E293B", max_lines=1), width=180, alignment=ft.Alignment(-1, 0)),
-                    ft.Container(content=ft.Text(str(item.get("qty", 1)), size=13, color="#1E293B"), width=70, alignment=ft.Alignment(0, 0)),
-                    ft.Container(content=ft.Text(f"{int(item.get('unit_price', 0)):,}", size=13, color="#64748B"), width=120, alignment=ft.Alignment(1, 0)),
-                    ft.Container(content=ft.Text(f"{int(item.get('total', 0)):,}", size=13, weight=ft.FontWeight.W_600, color="#10B981"), width=130, alignment=ft.Alignment(1, 0)),
-                    ft.Container(content=remove_btn, width=45, alignment=ft.Alignment(0, 0)),
-                ], spacing=8, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                padding=ft.padding.symmetric(vertical=10, horizontal=12),
+                    ft.Container(content=ft.Text(str(idx + 1), size=13, color="#64748B"), width=35, alignment=ft.Alignment(0, 0)),
+                    ft.Container(content=ft.Text(item.get("name", "-"), size=13, weight=ft.FontWeight.W_500, color="#1E293B", max_lines=1), expand=True, alignment=ft.Alignment(-1, 0)),
+                    ft.Container(content=ft.Text(str(item.get("qty", 1)), size=13, color="#1E293B"), width=65, alignment=ft.Alignment(0, 0)),
+                    ft.Container(content=ft.Text(f"{int(item.get('unit_price', 0)):,}", size=13, color="#64748B"), width=110, alignment=ft.Alignment(1, 0)),
+                    ft.Container(content=ft.Text(f"{int(item.get('total', 0)):,}", size=13, weight=ft.FontWeight.W_600, color="#10B981"), width=110, alignment=ft.Alignment(1, 0)),
+                    ft.Container(content=remove_btn, width=40, alignment=ft.Alignment(0, 0)),
+                ], spacing=6, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                padding=ft.padding.symmetric(vertical=8, horizontal=10),
                 bgcolor=bg_color,
             )
             self.items_table_body.controls.append(row)
             subtotal += item.get("total", 0)
         
-        subtotal_row = ft.Container(content=ft.Row([ft.Container(expand=True), ft.Text(get_text("subtotal") + ":", size=12, weight=ft.FontWeight.W_500, color="#64748B"), ft.Text(f"{int(subtotal):,} KIP", size=13, weight=ft.FontWeight.W_600, color="#1E293B")], spacing=8), padding=ft.padding.symmetric(vertical=8, horizontal=12), bgcolor=ft.Colors.GREY_100)
+        subtotal_row = ft.Container(content=ft.Row([ft.Container(expand=True), ft.Text(get_text("subtotal") + ":", size=12, weight=ft.FontWeight.W_500, color="#64748B"), ft.Text(f"{int(subtotal):,} KIP", size=13, weight=ft.FontWeight.W_600, color="#1E293B")], spacing=8), padding=ft.padding.symmetric(vertical=8, horizontal=10), bgcolor=ft.Colors.GREY_100)
         self.items_table_body.controls.append(subtotal_row)
         
         final_total = subtotal
         if self.applied_promotion and self.promotion_discount_amount > 0:
-            discount_row = ft.Container(content=ft.Row([ft.Container(expand=True), ft.Text(f"{get_text('promotion_discount')} ({self.applied_promotion.get('name', '')}):", size=12, color="#64748B"), ft.Text(f"-{int(self.promotion_discount_amount):,} KIP", size=13, weight=ft.FontWeight.W_600, color="#10B981")], spacing=8), padding=ft.padding.symmetric(vertical=5, horizontal=12), bgcolor=ft.Colors.GREEN_50)
+            discount_row = ft.Container(content=ft.Row([ft.Container(expand=True), ft.Text(f"{get_text('promotion_discount')} ({self.applied_promotion.get('name', '')}):", size=12, color="#64748B"), ft.Text(f"-{int(self.promotion_discount_amount):,} KIP", size=13, weight=ft.FontWeight.W_600, color="#10B981")], spacing=8), padding=ft.padding.symmetric(vertical=5, horizontal=10), bgcolor=ft.Colors.GREEN_50)
             self.items_table_body.controls.append(discount_row)
             final_total = subtotal - self.promotion_discount_amount
         
@@ -566,33 +701,56 @@ class QuotationCreateContent:
     
     def load_parts_and_services(self):
         try:
+            self.part_categories = self.client.get_part_categories() or []
             self.parts_list = self.client.get_parts() or []
             self.services_list = self.client.get_services() or []
             self.load_category_chips()
+            self.search_items()
             self.page.update()
         except Exception as ex:
             print(f"Error loading parts/services: {ex}")
     
     def load_category_chips(self):
-        categories = [
-            {"id": "all", "name": get_text("all_items"), "icon": ft.Icons.VIEW_LIST},
-            {"id": "engine", "name": get_text("engine"), "icon": ft.Icons.SETTINGS},
-            {"id": "brake", "name": get_text("brake"), "icon": ft.Icons.WARNING},
-            {"id": "electrical", "name": get_text("electrical"), "icon": ft.Icons.FLASH_ON},
-            {"id": "suspension", "name": get_text("suspension"), "icon": ft.Icons.SETTINGS_APPLICATIONS},
-        ]
         self.category_chips.controls.clear()
-        for cat in categories:
-            is_active = self.current_category == cat["id"]
-            chip = ft.Container(content=ft.Row([ft.Icon(cat["icon"], size=14, color=ft.Colors.WHITE if is_active else "#64748B"), ft.Text(cat["name"], size=12, weight=ft.FontWeight.W_500, color=ft.Colors.WHITE if is_active else "#64748B")], spacing=6), bgcolor=self.primary_color if is_active else ft.Colors.GREY_200, border_radius=20, padding=ft.padding.symmetric(horizontal=12, vertical=5), ink=True, on_click=lambda e, cid=cat["id"]: self.filter_by_category(cid))
-            self.category_chips.controls.append(chip)
+        
+        # Add "All" chip
+        is_all_active = self.current_category_id is None
+        all_chip = ft.Container(
+            content=ft.Row([
+                ft.Icon(ft.Icons.VIEW_LIST, size=14, color=ft.Colors.WHITE if is_all_active else "#64748B"),
+                ft.Text(get_text("all_items"), size=12, weight=ft.FontWeight.W_500, color=ft.Colors.WHITE if is_all_active else "#64748B")
+            ], spacing=6),
+            bgcolor=self.primary_color if is_all_active else ft.Colors.GREY_200,
+            border_radius=20,
+            padding=ft.padding.symmetric(horizontal=12, vertical=5),
+            ink=True,
+            on_click=lambda e: self.filter_by_category(None),
+        )
+        self.category_chips.controls.append(all_chip)
+        
+        # Add dynamic category chips from DB
+        for cat in self.part_categories:
+            if cat.get('status') == 'active':
+                cat_id = cat.get('id')
+                is_active = self.current_category_id == cat_id
+                chip = ft.Container(
+                    content=ft.Row([
+                        ft.Icon(ft.Icons.CATEGORY, size=14, color=ft.Colors.WHITE if is_active else "#64748B"),
+                        ft.Text(cat.get('name', '-'), size=12, weight=ft.FontWeight.W_500, color=ft.Colors.WHITE if is_active else "#64748B")
+                    ], spacing=6),
+                    bgcolor=self.primary_color if is_active else ft.Colors.GREY_200,
+                    border_radius=20,
+                    padding=ft.padding.symmetric(horizontal=12, vertical=5),
+                    ink=True,
+                    on_click=lambda e, cid=cat_id: self.filter_by_category(cid),
+                )
+                self.category_chips.controls.append(chip)
         self.page.update()
     
     def filter_by_category(self, category_id):
-        self.current_category = category_id
+        self.current_category_id = category_id
         self.load_category_chips()
-        if self.search_field.value:
-            self.search_items()
+        self.search_items()
     
     def load_promotions(self):
         try:
@@ -723,13 +881,7 @@ class QuotationCreateContent:
     # Search Items Handlers
     # ----------------------------------------------------------------------
     def on_search_change(self, e):
-        if self.search_field.value:
-            self.search_items()
-        else:
-            self.results_list.controls.clear()
-            welcome_container = ft.Container(content=ft.Column([ft.Icon(ft.Icons.SEARCH, size=48, color="#CBD5E1"), ft.Text(get_text("type_to_search"), size=14, color="#94A3B8"), ft.Text(get_text("search_parts_or_services"), size=12, color="#CBD5E1")], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=8), alignment=ft.Alignment(0, 0), padding=ft.padding.all(40))
-            self.results_list.controls.append(welcome_container)
-            self.page.update()
+        self.search_items()
     
     def on_parts_click(self, e):
         self.current_tab = "parts"
@@ -738,12 +890,7 @@ class QuotationCreateContent:
         self.services_tab.bgcolor = ft.Colors.GREY_200
         self.services_tab.content.color = "#64748B"
         self.search_field.hint_text = get_text("search_parts")
-        if self.search_field.value:
-            self.search_items()
-        else:
-            self.results_list.controls.clear()
-            welcome_container = ft.Container(content=ft.Column([ft.Icon(ft.Icons.SEARCH, size=48, color="#CBD5E1"), ft.Text(get_text("type_to_search"), size=14, color="#94A3B8"), ft.Text(get_text("search_parts_only"), size=12, color="#CBD5E1")], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=8), alignment=ft.Alignment(0, 0), padding=ft.padding.all(40))
-            self.results_list.controls.append(welcome_container)
+        self.search_items()
         self.load_category_chips()
         self.category_chips.visible = True
         self.page.update()
@@ -755,12 +902,7 @@ class QuotationCreateContent:
         self.parts_tab.bgcolor = ft.Colors.GREY_200
         self.parts_tab.content.color = "#64748B"
         self.search_field.hint_text = get_text("search_services")
-        if self.search_field.value:
-            self.search_items()
-        else:
-            self.results_list.controls.clear()
-            welcome_container = ft.Container(content=ft.Column([ft.Icon(ft.Icons.SEARCH, size=48, color="#CBD5E1"), ft.Text(get_text("type_to_search"), size=14, color="#94A3B8"), ft.Text(get_text("search_services_only"), size=12, color="#CBD5E1")], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=8), alignment=ft.Alignment(0, 0), padding=ft.padding.all(40))
-            self.results_list.controls.append(welcome_container)
+        self.search_items()
         self.category_chips.controls.clear()
         self.category_chips.visible = False
         self.page.update()
@@ -774,6 +916,8 @@ class QuotationCreateContent:
             results = self.parts_list
             if keyword:
                 results = [p for p in results if keyword in p.get("name", "").lower()]
+            if self.current_category_id is not None:
+                results = [p for p in results if p.get("category_id") == self.current_category_id]
             
             if not results:
                 empty_container = ft.Container(
@@ -786,9 +930,6 @@ class QuotationCreateContent:
                 )
                 self.results_list.controls.append(empty_container)
             else:
-                if self.current_category != "all":
-                    results = [p for p in results if p.get("category", "").lower() == self.current_category]
-                
                 for part in results[:30]:
                     stock = part.get('stock_qty', 0)
                     min_stock = part.get('min_stock', 5)
@@ -874,18 +1015,24 @@ class QuotationCreateContent:
             self.show_snackbar(get_text("invalid_item_missing_id"), True)
             return
         
-        self.temp_id_counter += 1
         qty = int(self.qty_field.value) if self.qty_field.value and self.qty_field.value.isdigit() else 1
         
-        self.temp_items.append({
-            "temp_id": self.temp_id_counter,
-            "item_type": item_type,
-            "ref_id": ref_id,
-            "name": name,
-            "qty": qty,
-            "unit_price": price,
-            "total": qty * price
-        })
+        # Check if item already exists in temp_items and update quantity
+        existing = next((item for item in self.temp_items if item.get("item_type") == item_type and item.get("ref_id") == ref_id), None)
+        if existing:
+            existing["qty"] += qty
+            existing["total"] = existing["qty"] * existing["unit_price"]
+        else:
+            self.temp_id_counter += 1
+            self.temp_items.append({
+                "temp_id": self.temp_id_counter,
+                "item_type": item_type,
+                "ref_id": ref_id,
+                "name": name,
+                "qty": qty,
+                "unit_price": price,
+                "total": qty * price
+            })
         
         self._update_selected_items_table()
         self.show_snackbar(f"✓ {get_text('added')}: {name}", False)
@@ -899,6 +1046,44 @@ class QuotationCreateContent:
     # ----------------------------------------------------------------------
     # Actions
     # ----------------------------------------------------------------------
+    def _calc_per_item_discounts(self):
+        """Distribute total promotion discount proportionally across eligible items.
+        Returns a dict mapping temp_id -> discount_amount for that item."""
+        if not self.applied_promotion or self.promotion_discount_amount <= 0:
+            return {}
+        
+        promo_part_ids = set(self.promotion_parts)
+        promo_service_ids = set(self.promotion_services)
+        
+        if not promo_part_ids and not promo_service_ids:
+            # Global promotion: all items are eligible
+            eligible_items = self.temp_items
+        else:
+            # Targeted promotion: only matching items get the discount
+            eligible_items = [
+                item for item in self.temp_items
+                if (item["item_type"] == "part" and item["ref_id"] in promo_part_ids)
+                or (item["item_type"] == "service" and item["ref_id"] in promo_service_ids)
+            ]
+        
+        eligible_subtotal = sum(item.get("total", 0) for item in eligible_items)
+        if eligible_subtotal == 0:
+            return {}
+        
+        discounts = {}
+        total_discount = self.promotion_discount_amount
+        accumulated = 0.0
+        for i, item in enumerate(eligible_items):
+            if i == len(eligible_items) - 1:
+                # Last item gets the remainder to avoid rounding drift
+                item_discount = total_discount - accumulated
+            else:
+                item_discount = round((item.get("total", 0) / eligible_subtotal) * total_discount, 2)
+            accumulated += item_discount
+            discounts[item["temp_id"]] = item_discount
+        
+        return discounts
+    
     def save_quotation(self, e=None):
         if not self.selected_job_id:
             self.show_snackbar(get_text("select_job_order_first"), True)
@@ -908,18 +1093,50 @@ class QuotationCreateContent:
             return
         
         try:
-            result = self.client.create_quotation(self.selected_job_id)
+            # 1. Create the quotation (with promotion_id if one is selected)
+            result = self.client.create_quotation(
+                self.selected_job_id,
+                promotion_id=self.selected_promotion_id if self.applied_promotion else None,
+            )
             if result and result.get("id"):
                 qid = result.get("id")
+                
+                # 2. Compute per-item discount shares so each item carries its portion
+                item_discounts = self._calc_per_item_discounts()
+                
+                # 3. Add all items with their individual discount amounts
                 for item in self.temp_items:
-                    self.client.add_quotation_item(qid, item["item_type"], item["ref_id"], item["qty"])
+                    item_discount = item_discounts.get(item["temp_id"], 0)
+                    if item["item_type"] == "custom":
+                        self.client.add_quotation_item(
+                            qid,
+                            item_type="custom",
+                            ref_id=None,
+                            qty=item["qty"],
+                            discount_amount=item_discount,
+                            custom_name=item["name"],
+                            unit_price=item["unit_price"],
+                        )
+                    else:
+                        self.client.add_quotation_item(
+                            qid,
+                            item["item_type"],
+                            item["ref_id"],
+                            item["qty"],
+                            item_discount,
+                        )
                 
-                # Apply promotion discount if selected
+                # 4. Apply promotion to quotation header (sets promotion_id + discount_amount → triggers recalculation)
                 if self.applied_promotion and self.promotion_discount_amount > 0:
-                    # Here you can add promotion_id to quotation
-                    pass
+                    self.client.update_quotation_promotion(
+                        qid,
+                        promotion_id=self.selected_promotion_id,
+                        discount_amount=self.promotion_discount_amount,
+                    )
+                else:
+                    # No promotion — still recalculate totals
+                    self.client.calculate_quotation_total(qid)
                 
-                self.client.calculate_quotation_total(qid)
                 self.show_snackbar(f"✅ {get_text('quotation_saved_successfully')}", False)
                 self.navigate("quotation_list")
             else:
@@ -930,4 +1147,61 @@ class QuotationCreateContent:
     
     def show_snackbar(self, msg, is_error=False):
         self.page.snack_bar = ft.SnackBar(content=ft.Text(msg, size=13), bgcolor="#EF4444" if is_error else "#10B981", open=True, duration=3000)
+        self.page.update()
+
+    def show_add_custom_service_dialog(self, e=None):
+        name_input = ft.TextField(label=get_text("service_name") or "Service Name", border_radius=10, bgcolor=ft.Colors.WHITE)
+        price_input = ft.TextField(label=get_text("price") or "Price (KIP)", border_radius=10, bgcolor=ft.Colors.WHITE, input_filter=ft.NumbersOnlyInputFilter())
+        qty_input = ft.TextField(label=get_text("quantity") or "Quantity", value="1", border_radius=10, bgcolor=ft.Colors.WHITE, input_filter=ft.NumbersOnlyInputFilter())
+        
+        def on_confirm(evt):
+            if not name_input.value:
+                name_input.error_text = get_text("required_field")
+                name_input.update()
+                return
+            if not price_input.value:
+                price_input.error_text = get_text("required_field")
+                price_input.update()
+                return
+            
+            qty = int(qty_input.value) if qty_input.value and qty_input.value.isdigit() else 1
+            price = float(price_input.value) if price_input.value else 0.0
+            
+            self.temp_id_counter += 1
+            self.temp_items.append({
+                "temp_id": self.temp_id_counter,
+                "item_type": "custom",
+                "ref_id": None,
+                "name": name_input.value,
+                "qty": qty,
+                "unit_price": price,
+                "total": qty * price
+            })
+            
+            self._update_selected_items_table()
+            dialog.open = False
+            self.page.update()
+            self.show_snackbar(f"✓ {get_text('added')}: {name_input.value}", False)
+            
+        def on_close(evt):
+            dialog.open = False
+            self.page.update()
+            
+        dialog = ft.AlertDialog(
+            title=ft.Text(get_text("add_custom_service") or "Add Custom Service", weight=ft.FontWeight.BOLD),
+            content=ft.Column([
+                name_input,
+                ft.Container(height=6),
+                price_input,
+                ft.Container(height=6),
+                qty_input
+            ], spacing=0, tight=True, width=300),
+            actions=[
+                ft.TextButton(get_text("cancel") or "Cancel", on_click=on_close),
+                ft.ElevatedButton(get_text("confirm") or "Confirm", bgcolor=self.primary_color, color=ft.Colors.WHITE, on_click=on_confirm)
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+        self.page.overlay.append(dialog)
+        dialog.open = True
         self.page.update()

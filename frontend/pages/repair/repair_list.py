@@ -2,7 +2,7 @@
 import flet as ft
 from flet import Alignment
 from typing import Dict, Callable
-from datetime import datetime
+from datetime import datetime, date
 
 from i18n import get_text
 
@@ -23,37 +23,54 @@ class RepairListContent:
         self.total_pages = 1
         self.search_field = None
         self.status_filter = None
+        self.date_from_field = None
+        self.date_to_field = None
         self.table_rows = None
         self.pagination_container = None
-        
+        self.kpi_container = None
+        self._mechanics_cache = None
+
     def build(self):
         header = self._build_header()
+        self.kpi_container = ft.Container(
+            content=ft.Row([], spacing=12),
+            padding=ft.padding.symmetric(vertical=8, horizontal=0),
+        )
         search_bar = self._build_search_bar()
         table = self._build_table()
-        self.pagination_container = ft.Container(padding=ft.padding.symmetric(vertical=12, horizontal=20))
-        
-        # Main scrollable content area - vertical scroll
+        self.pagination_container = ft.Container(
+            padding=ft.padding.symmetric(vertical=12, horizontal=20)
+        )
+
         content_area = ft.Container(
-            content=ft.Column([
-                search_bar,
-                table,
-                self.pagination_container,
-            ], expand=True, scroll=ft.ScrollMode.AUTO),
+            content=ft.Column(
+                [
+                    self.kpi_container,
+                    search_bar,
+                    table,
+                    self.pagination_container,
+                ],
+                expand=True,
+                scroll=ft.ScrollMode.AUTO,
+            ),
             expand=True,
             padding=ft.padding.all(24),
             bgcolor="#F5F7FA",
         )
-        
+
         main_content = ft.Container(
-            content=ft.Column([header, content_area], scroll=ft.ScrollMode.AUTO),
+            content=ft.Column(
+                [header, content_area], scroll=ft.ScrollMode.AUTO
+            ),
             expand=True,
             bgcolor="#F5F7FA",
         )
-        
+
         self.load_repair_orders()
-        
+
         return main_content
-    
+
+    # ─────────────────────────── HEADER ───────────────────────────
     def _build_header(self):
         return ft.Container(
             content=ft.Row(
@@ -71,10 +88,18 @@ class RepairListContent:
                     ),
                     ft.Container(expand=True),
                     ft.ElevatedButton(
-                        content=ft.Row([
-                            ft.Icon(ft.Icons.ADD, size=18, color=ft.Colors.WHITE),
-                            ft.Text(get_text("new_repair"), size=14, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500),
-                        ], spacing=6),
+                        content=ft.Row(
+                            [
+                                ft.Icon(ft.Icons.ADD, size=18, color=ft.Colors.WHITE),
+                                ft.Text(
+                                    get_text("new_repair"),
+                                    size=14,
+                                    color=ft.Colors.WHITE,
+                                    weight=ft.FontWeight.W_500,
+                                ),
+                            ],
+                            spacing=6,
+                        ),
                         on_click=lambda e: self.navigate("repair_create"),
                         style=ft.ButtonStyle(
                             bgcolor=ft.Colors.with_opacity(0.2, ft.Colors.WHITE),
@@ -95,7 +120,113 @@ class RepairListContent:
             ),
             border_radius=ft.BorderRadius.only(bottom_left=20, bottom_right=20),
         )
-    
+
+    # ─────────────────────────── KPI CARDS ───────────────────────────
+    def _build_kpi_cards(self):
+        statuses = [
+            ("waiting",   "#FF9800", ft.Icons.HOURGLASS_EMPTY),
+            ("working",   "#2196F3", ft.Icons.BUILD),
+            ("paused",    "#9C27B0", ft.Icons.PAUSE),
+            ("completed", "#4CAF50", ft.Icons.CHECK_CIRCLE),
+        ]
+        status_texts = {
+            "waiting":   get_text("waiting"),
+            "working":   get_text("working"),
+            "paused":    get_text("paused"),
+            "completed": get_text("completed"),
+        }
+        counts = {s: 0 for s, _, __ in statuses}
+        for r in self.repair_orders:
+            st = r.get("status", "waiting")
+            if st in counts:
+                counts[st] += 1
+
+        cards = []
+        for status, color, icon in statuses:
+            count = counts[status]
+            label = status_texts[status]
+            is_active = (
+                self.status_filter is not None
+                and self.status_filter.value == status
+            )
+            card = ft.Container(
+                content=ft.Row(
+                    [
+                        ft.Container(
+                            content=ft.Icon(icon, size=22, color=ft.Colors.WHITE),
+                            bgcolor=color,
+                            border_radius=10,
+                            padding=ft.padding.all(8),
+                        ),
+                        ft.Column(
+                            [
+                                ft.Text(str(count), size=22, weight=ft.FontWeight.BOLD, color="#1E293B"),
+                                ft.Text(label, size=11, color="#64748B"),
+                            ],
+                            spacing=1,
+                        ),
+                    ],
+                    spacing=10,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                ),
+                padding=ft.padding.symmetric(horizontal=14, vertical=10),
+                bgcolor=ft.Colors.WHITE,
+                border_radius=12,
+                border=ft.border.all(2, color) if is_active else ft.border.all(1, "#E2E8F0"),
+                expand=True,
+                ink=True,
+                on_click=lambda e, s=status: self._kpi_filter(s),
+                shadow=ft.BoxShadow(
+                    blur_radius=4,
+                    color=ft.Colors.with_opacity(0.06, ft.Colors.BLACK),
+                ),
+            )
+            cards.append(card)
+
+        total = len(self.repair_orders)
+        is_all = self.status_filter is None or self.status_filter.value == "all"
+        all_card = ft.Container(
+            content=ft.Row(
+                [
+                    ft.Container(
+                        content=ft.Icon(ft.Icons.LIST_ALT, size=22, color=ft.Colors.WHITE),
+                        bgcolor="#607D8B",
+                        border_radius=10,
+                        padding=ft.padding.all(8),
+                    ),
+                    ft.Column(
+                        [
+                            ft.Text(str(total), size=22, weight=ft.FontWeight.BOLD, color="#1E293B"),
+                            ft.Text(get_text("all_status"), size=11, color="#64748B"),
+                        ],
+                        spacing=1,
+                    ),
+                ],
+                spacing=10,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            ),
+            padding=ft.padding.symmetric(horizontal=14, vertical=10),
+            bgcolor=ft.Colors.WHITE,
+            border_radius=12,
+            border=ft.border.all(2, "#607D8B") if is_all else ft.border.all(1, "#E2E8F0"),
+            expand=True,
+            ink=True,
+            on_click=lambda e: self._kpi_filter("all"),
+            shadow=ft.BoxShadow(
+                blur_radius=4,
+                color=ft.Colors.with_opacity(0.06, ft.Colors.BLACK),
+            ),
+        )
+
+        return ft.Row([all_card] + cards, spacing=12, expand=True)
+
+    def _kpi_filter(self, status: str):
+        if self.status_filter:
+            self.status_filter.value = status
+        self.current_page = 1
+        self.filter_repairs(None)
+
+    # ─────────────────────────── SEARCH BAR ───────────────────────────
     def _build_search_bar(self):
         self.status_filter = ft.Dropdown(
             hint_text=get_text("filter_by_status"),
@@ -103,18 +234,17 @@ class RepairListContent:
             bgcolor=ft.Colors.WHITE,
             filled=True,
             options=[
-                ft.dropdown.Option("all", get_text("all_status")),
-                ft.dropdown.Option("waiting", get_text("waiting")),
-                ft.dropdown.Option("working", get_text("working")),
-                ft.dropdown.Option("paused", get_text("paused")),
+                ft.dropdown.Option("all",       get_text("all_status")),
+                ft.dropdown.Option("waiting",   get_text("waiting")),
+                ft.dropdown.Option("working",   get_text("working")),
+                ft.dropdown.Option("paused",    get_text("paused")),
                 ft.dropdown.Option("completed", get_text("completed")),
             ],
             value="all",
             expand=True,
         )
-        
         self.status_filter.on_change = self.filter_repairs
-        
+
         self.search_field = ft.TextField(
             hint_text=get_text("search_repair"),
             border_radius=12,
@@ -123,11 +253,11 @@ class RepairListContent:
             prefix_icon=ft.Icons.SEARCH,
             content_padding=ft.padding.symmetric(horizontal=16, vertical=14),
             expand=True,
-            on_change=self.search_repairs,
             border_color=ft.Colors.GREY_200,
             focused_border_color=self.primary_color,
         )
-        
+        self.search_field.on_change = self.search_repairs
+
         refresh_button = ft.IconButton(
             icon=ft.Icons.REFRESH,
             icon_size=22,
@@ -138,344 +268,440 @@ class RepairListContent:
                 side=ft.BorderSide(1, ft.Colors.GREY_300),
             ),
         )
-        
+
+        self.date_from_field = ft.TextField(
+            hint_text=get_text("date_from") + " (YYYY-MM-DD)",
+            border_radius=12,
+            bgcolor=ft.Colors.WHITE,
+            filled=True,
+            prefix_icon=ft.Icons.CALENDAR_TODAY,
+            content_padding=ft.padding.symmetric(horizontal=12, vertical=12),
+            expand=True,
+            border_color=ft.Colors.GREY_200,
+            focused_border_color=self.primary_color,
+        )
+        self.date_from_field.on_change = self.search_repairs
+
+        self.date_to_field = ft.TextField(
+            hint_text=get_text("date_to") + " (YYYY-MM-DD)",
+            border_radius=12,
+            bgcolor=ft.Colors.WHITE,
+            filled=True,
+            prefix_icon=ft.Icons.CALENDAR_TODAY,
+            content_padding=ft.padding.symmetric(horizontal=12, vertical=12),
+            expand=True,
+            border_color=ft.Colors.GREY_200,
+            focused_border_color=self.primary_color,
+        )
+        self.date_to_field.on_change = self.search_repairs
+
         return ft.Container(
-            content=ft.Row([self.status_filter, self.search_field, refresh_button], spacing=10),
+            content=ft.Column(
+                [
+                    ft.Row([self.status_filter, self.search_field, refresh_button], spacing=10),
+                    ft.Row([self.date_from_field, self.date_to_field], spacing=10),
+                ],
+                spacing=8,
+            ),
             margin=ft.margin.only(bottom=16),
         )
-    
+
+    # ─────────────────────────── TABLE ───────────────────────────
     def _build_table(self):
-        # Table header
+        def _header_cell(text, width, align=-1):
+            return ft.Container(
+                content=ft.Text(text, size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
+                width=width,
+                alignment=ft.Alignment(align, 0),
+                padding=ft.padding.only(left=10) if align == -1 else None,
+            )
+
         table_header = ft.Container(
-            content=ft.Row([
-                ft.Container(
-                    content=ft.Text(get_text("repair_no"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=100,
-                    alignment=ft.Alignment(-1, 0),
-                    padding=ft.padding.only(left=10),
-                ),
-                ft.Container(
-                    content=ft.Text(get_text("job_number"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=100,
-                    alignment=ft.Alignment(-1, 0),
-                    padding=ft.padding.only(left=10),
-                ),
-                ft.Container(
-                    content=ft.Text(get_text("customer_name"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=150,
-                    alignment=ft.Alignment(-1, 0),
-                    padding=ft.padding.only(left=10),
-                ),
-                ft.Container(
-                    content=ft.Text(get_text("plate_number"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=80,
-                    alignment=ft.Alignment(-1, 0),
-                    padding=ft.padding.only(left=10),
-                ),
-                ft.Container(
-                    content=ft.Text(get_text("mechanic"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=130,
-                    alignment=ft.Alignment(-1, 0),
-                    padding=ft.padding.only(left=10),
-                ),
-                ft.Container(
-                    content=ft.Text(get_text("status"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=100,
-                    alignment=ft.Alignment(0, 0),
-                ),
-                ft.Container(
-                    content=ft.Text(get_text("start_date"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=110,
-                    alignment=ft.Alignment(0, 0),
-                ),
-                ft.Container(
-                    content=ft.Text(get_text("actions"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=120,
-                    alignment=ft.Alignment(0, 0),
-                ),
-            ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
+            content=ft.Row(
+                [
+                    _header_cell(get_text("repair_no"), 100),
+                    _header_cell(get_text("job_number"), 100),
+                    _header_cell(get_text("customer_name"), 140),
+                    _header_cell(get_text("plate_number"), 80),
+                    _header_cell(get_text("vehicle"), 120),
+                    _header_cell(get_text("mechanic"), 140),
+                    _header_cell(get_text("status"), 110, 0),
+                    _header_cell(get_text("days_open"), 100, 0),
+                    _header_cell(get_text("actions"), 120, 0),
+                ],
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            ),
             padding=ft.padding.symmetric(vertical=14, horizontal=10),
             bgcolor=ft.Colors.GREY_100,
             border_radius=ft.BorderRadius.only(top_left=12, top_right=12),
         )
-        
-        # Table body
+
         self.table_rows = ft.Column(spacing=0, scroll=ft.ScrollMode.AUTO, expand=True)
-        
-        # Wrap table in Column with horizontal scroll (using Row with scroll)
-        table_content = ft.Column([
-            table_header,
-            ft.Divider(height=1, color=ft.Colors.GREY_300),
-            self.table_rows,
-        ], spacing=0)
-        
-        # Use Container with fixed width to enable horizontal scroll
+
+        table_content = ft.Column(
+            [table_header, ft.Divider(height=1, color=ft.Colors.GREY_300), self.table_rows],
+            spacing=0,
+        )
+
         table_scroll = ft.Container(
             content=table_content,
             border=ft.border.all(1, ft.Colors.GREY_200),
             border_radius=12,
             bgcolor=ft.Colors.WHITE,
-            width=970,  # Fixed width wider than parent to enable horizontal scroll
+            width=1110,
         )
-        
-        # Wrap in Row with horizontal scroll
-        scrollable_table = ft.Row(
-            [table_scroll],
-            scroll=ft.ScrollMode.AUTO,  # Horizontal scroll on Row
-            expand=True,
-        )
-        
+
         return ft.Container(
-            content=scrollable_table,
+            content=ft.Row([table_scroll], scroll=ft.ScrollMode.AUTO, expand=True),
             margin=ft.margin.only(left=20, right=20),
             expand=True,
         )
-    
+
+    # ─────────────────────────── DATA LOADING ───────────────────────────
     def load_repair_orders(self):
         self.table_rows.controls.clear()
         self.page.update()
-        
         try:
             repair_orders = self.client.get_repair_orders()
             self.repair_orders = repair_orders
             self.filtered_orders = repair_orders.copy()
+            self.kpi_container.content = self._build_kpi_cards()
             self.display_repairs()
         except Exception as ex:
             print(f"Error loading repair orders: {ex}")
             self.table_rows.controls.append(
                 ft.Container(
-                    content=ft.Column([
-                        ft.Icon(ft.Icons.ERROR_OUTLINE, size=48, color=ft.Colors.RED_400),
-                        ft.Text(f"Error: {str(ex)}", size=14, color=ft.Colors.RED_600),
-                    ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                    content=ft.Column(
+                        [
+                            ft.Icon(ft.Icons.ERROR_OUTLINE, size=48, color=ft.Colors.RED_400),
+                            ft.Text(f"Error: {str(ex)}", size=14, color=ft.Colors.RED_600),
+                        ],
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    ),
                     padding=ft.padding.all(40),
                 )
             )
             self.page.update()
-    
+
+    # ─────────────────────────── FILTERING ───────────────────────────
     def filter_repairs(self, e):
-        status = self.status_filter.value
+        status = self.status_filter.value if self.status_filter else "all"
         if status and status != "all":
             self.filtered_orders = [r for r in self.repair_orders if r.get("status") == status]
         else:
             self.filtered_orders = self.repair_orders.copy()
-        self.current_page = 1
-        self.display_repairs()
-    
-    def search_repairs(self, e):
-        keyword = self.search_field.value.lower() if self.search_field.value else ""
+
+        keyword = (
+            self.search_field.value.lower()
+            if self.search_field and self.search_field.value
+            else ""
+        )
         if keyword:
-            self.filtered_orders = []
-            for r in self.repair_orders:
-                repair_id = r.get('id', 0)
-                repair_no = f"R{repair_id:04d}" if isinstance(repair_id, int) else f"R{str(repair_id)}"
-                
-                if (keyword in repair_no.lower() or
-                    keyword in r.get("job_no", "").lower() or
-                    keyword in r.get("customer_name", "").lower() or
-                    keyword in r.get("plate_number", "").lower() or
-                    keyword in r.get("mechanic_name", "").lower()):
-                    self.filtered_orders.append(r)
-        else:
-            self.filtered_orders = self.repair_orders.copy()
-        
-        if self.status_filter.value != "all":
-            self.filtered_orders = [r for r in self.filtered_orders if r.get("status") == self.status_filter.value]
-        
+            self.filtered_orders = [r for r in self.filtered_orders if self._matches_keyword(r, keyword)]
+
+        self._apply_date_filter()
+        self.current_page = 1
+        self.kpi_container.content = self._build_kpi_cards()
+        self.display_repairs()
+
+    def search_repairs(self, e):
+        keyword = (
+            self.search_field.value.lower()
+            if self.search_field and self.search_field.value
+            else ""
+        )
+        status = self.status_filter.value if self.status_filter else "all"
+
+        self.filtered_orders = [r for r in self.repair_orders if self._matches_keyword(r, keyword)]
+        if status and status != "all":
+            self.filtered_orders = [r for r in self.filtered_orders if r.get("status") == status]
+
+        self._apply_date_filter()
         self.current_page = 1
         self.display_repairs()
-    
+
+    def _matches_keyword(self, r: dict, keyword: str) -> bool:
+        if not keyword:
+            return True
+        repair_id = r.get("id", 0)
+        repair_no = f"R{repair_id:04d}" if isinstance(repair_id, int) else f"R{str(repair_id)}"
+        return (
+            keyword in repair_no.lower()
+            or keyword in r.get("job_no", "").lower()
+            or keyword in r.get("customer_name", "").lower()
+            or keyword in r.get("plate_number", "").lower()
+            or keyword in r.get("mechanic_name", "").lower()
+            or keyword in (r.get("brand", "") or "").lower()
+            or keyword in (r.get("model", "") or "").lower()
+        )
+
+    def _apply_date_filter(self):
+        date_from_str = self.date_from_field.value.strip() if self.date_from_field and self.date_from_field.value else ""
+        date_to_str   = self.date_to_field.value.strip()   if self.date_to_field   and self.date_to_field.value   else ""
+        try:
+            date_from = datetime.strptime(date_from_str, "%Y-%m-%d").date() if date_from_str else None
+        except ValueError:
+            date_from = None
+        try:
+            date_to = datetime.strptime(date_to_str, "%Y-%m-%d").date() if date_to_str else None
+        except ValueError:
+            date_to = None
+        if not date_from and not date_to:
+            return
+        result = []
+        for r in self.filtered_orders:
+            sd_str = r.get("start_date", "")
+            if not sd_str:
+                continue
+            try:
+                sd = datetime.strptime(str(sd_str)[:10], "%Y-%m-%d").date()
+            except ValueError:
+                continue
+            if date_from and sd < date_from:
+                continue
+            if date_to and sd > date_to:
+                continue
+            result.append(r)
+        self.filtered_orders = result
+
+    # ─────────────────────────── DISPLAY ───────────────────────────
     def display_repairs(self):
         self.table_rows.controls.clear()
-        
         total_items = len(self.filtered_orders)
         self.total_pages = max(1, (total_items + self.items_per_page - 1) // self.items_per_page)
-        
         if self.current_page > self.total_pages:
             self.current_page = self.total_pages
         if self.current_page < 1:
             self.current_page = 1
-        
+
         start_idx = (self.current_page - 1) * self.items_per_page
         end_idx = min(start_idx + self.items_per_page, total_items)
         page_items = self.filtered_orders[start_idx:end_idx]
-        
+
         if page_items:
             for i, order in enumerate(page_items):
                 self.table_rows.controls.append(self._create_repair_row(order, start_idx + i))
         else:
             self.table_rows.controls.append(
                 ft.Container(
-                    content=ft.Column([
-                        ft.Icon(ft.Icons.CONSTRUCTION, size=48, color=ft.Colors.GREY_400),
-                        ft.Text(get_text("no_repair_orders"), size=16, color=ft.Colors.GREY_500),
-                    ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                    content=ft.Column(
+                        [
+                            ft.Icon(ft.Icons.CONSTRUCTION, size=48, color=ft.Colors.GREY_400),
+                            ft.Text(get_text("no_repair_orders"), size=16, color=ft.Colors.GREY_500),
+                        ],
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    ),
                     padding=ft.padding.all(40),
                 )
             )
-        
+
         self.update_pagination()
         self.page.update()
-    
+
+    # ─────────────────────────── ROW BUILDER ───────────────────────────
     def _create_repair_row(self, order: Dict, index: int):
-        repair_id = order.get("id")
-        repair_no = f"R{repair_id:04d}" if isinstance(repair_id, int) else f"R{str(repair_id)}"
-        job_no = order.get("job_no", "-")
+        repair_id     = order.get("id")
+        repair_no     = f"R{repair_id:04d}" if isinstance(repair_id, int) else f"R{str(repair_id)}"
+        job_no        = order.get("job_no", "-")
         customer_name = order.get("customer_name", "-")
-        plate_number = order.get("plate_number", "-")
-        mechanic_name = order.get("mechanic_name", "-")
-        status = order.get("status", "waiting")
-        start_date = order.get("start_date", "")
-        if start_date:
-            start_date = start_date[:10] if " " in start_date else start_date[:10]
-        else:
-            start_date = "-"
-        
+        plate_number  = order.get("plate_number", "-")
+        brand         = order.get("brand") or ""
+        model         = order.get("model") or ""
+        vehicle_text  = f"{brand} {model}".strip() or "-"
+        mechanic_name = order.get("mechanic_name") or ""
+        status        = order.get("status", "waiting")
+        start_date_str = order.get("start_date", "")
+        end_date_str   = order.get("end_date", "")
+
         row_bg = ft.Colors.GREY_50 if index % 2 == 0 else ft.Colors.WHITE
-        
+
         status_colors = {
-            "waiting": "#FF9800",
-            "working": "#2196F3",
-            "paused": "#9C27B0",
-            "completed": "#4CAF50"
+            "waiting":   "#FF9800",
+            "working":   "#2196F3",
+            "paused":    "#9C27B0",
+            "completed": "#4CAF50",
         }
         status_texts = {
-            "waiting": get_text("waiting"),
-            "working": get_text("working"),
-            "paused": get_text("paused"),
-            "completed": get_text("completed")
+            "waiting":   get_text("waiting"),
+            "working":   get_text("working"),
+            "paused":    get_text("paused"),
+            "completed": get_text("completed"),
         }
-        
-        # Check if status is completed - no dropdown icon, not clickable
+
         is_completed = status == "completed"
-        
-        if is_completed:
-            # Simple badge without dropdown arrow
-            status_badge = ft.Container(
-                content=ft.Row([
-                    ft.Icon(ft.Icons.CIRCLE, size=8, color=ft.Colors.WHITE),
-                    ft.Text(status_texts.get(status, status), size=11, color=ft.Colors.WHITE),
-                ], spacing=4),
-                bgcolor=status_colors.get(status, "#607D8B"),
-                border_radius=12,
-                padding=ft.padding.symmetric(horizontal=10, vertical=4),
-                # No on_click event for completed status
-            )
-        else:
-            # Clickable badge with dropdown arrow
-            status_badge = ft.Container(
-                content=ft.Row([
-                    ft.Icon(ft.Icons.CIRCLE, size=8, color=ft.Colors.WHITE),
-                    ft.Text(status_texts.get(status, status), size=11, color=ft.Colors.WHITE),
-                    ft.Icon(ft.Icons.ARROW_DROP_DOWN, size=16, color=ft.Colors.WHITE),
-                ], spacing=4),
-                bgcolor=status_colors.get(status, "#607D8B"),
-                border_radius=12,
-                padding=ft.padding.symmetric(horizontal=10, vertical=4),
-                on_click=lambda e, rid=repair_id, cur_status=status: self.show_update_status_dialog(rid, cur_status),
-            )
-        
+        badge_children = [
+            ft.Icon(ft.Icons.CIRCLE, size=8, color=ft.Colors.WHITE),
+            ft.Text(status_texts.get(status, status), size=11, color=ft.Colors.WHITE),
+        ]
+        if not is_completed:
+            badge_children.append(ft.Icon(ft.Icons.ARROW_DROP_DOWN, size=16, color=ft.Colors.WHITE))
+
+        status_badge = ft.Container(
+            content=ft.Row(badge_children, spacing=4),
+            bgcolor=status_colors.get(status, "#607D8B"),
+            border_radius=12,
+            padding=ft.padding.symmetric(horizontal=10, vertical=4),
+            on_click=(
+                None if is_completed
+                else lambda e, rid=repair_id, cur=status: self.show_update_status_dialog(rid, cur)
+            ),
+        )
+
+        duration_badge = self._build_duration_badge(start_date_str, end_date_str, status)
+        mechanic_cell  = self._build_mechanic_cell(mechanic_name, repair_id)
+
         view_btn = ft.Container(
-            content=ft.Row([
-                ft.Icon(ft.Icons.VISIBILITY_OUTLINED, size=16, color=self.primary_color),
-                ft.Text(get_text("view"), size=12, color=self.primary_color),
-            ], spacing=4),
+            content=ft.Row(
+                [
+                    ft.Icon(ft.Icons.VISIBILITY_OUTLINED, size=16, color=self.primary_color),
+                    ft.Text(get_text("view"), size=12, color=self.primary_color),
+                ],
+                spacing=4,
+            ),
             on_click=lambda e, rid=repair_id: self.view_repair_detail(rid),
             padding=ft.padding.symmetric(horizontal=8, vertical=4),
             border_radius=6,
         )
-        
+
+        def _cell(content, width, align=-1, left_pad=True):
+            return ft.Container(
+                content=content,
+                width=width,
+                alignment=ft.Alignment(align, 0),
+                padding=ft.padding.only(left=10) if (left_pad and align == -1) else None,
+            )
+
         row = ft.Container(
-            content=ft.Row([
-                ft.Container(
-                    content=ft.Text(repair_no, size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
-                    width=100,
-                    alignment=ft.Alignment(-1, 0),
-                    padding=ft.padding.only(left=10),
-                ),
-                ft.Container(
-                    content=ft.Text(job_no, size=13, color="#1E293B"),
-                    width=100,
-                    alignment=ft.Alignment(-1, 0),
-                    padding=ft.padding.only(left=10),
-                ),
-                ft.Container(
-                    content=ft.Text(customer_name, size=13, color="#1E293B", max_lines=1),
-                    width=150,
-                    alignment=ft.Alignment(-1, 0),
-                    padding=ft.padding.only(left=10),
-                    tooltip=customer_name,
-                ),
-                ft.Container(
-                    content=ft.Text(plate_number, size=12, color="#64748B", max_lines=1),
-                    width=80,
-                    alignment=ft.Alignment(-1, 0),
-                    padding=ft.padding.only(left=10),
-                ),
-                ft.Container(
-                    content=ft.Text(mechanic_name, size=12, color="#64748B", max_lines=1),
-                    width=130,
-                    alignment=ft.Alignment(-1, 0),
-                    padding=ft.padding.only(left=10),
-                ),
-                ft.Container(
-                    content=status_badge,
-                    width=100,
-                    alignment=ft.Alignment(0, 0),
-                ),
-                ft.Container(
-                    content=ft.Text(start_date, size=12, color="#64748B"),
-                    width=110,
-                    alignment=ft.Alignment(0, 0),
-                ),
-                ft.Container(
-                    content=view_btn,
-                    width=120,
-                    alignment=ft.Alignment(0, 0),
-                ),
-            ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
+            content=ft.Row(
+                [
+                    _cell(ft.Text(repair_no, size=13, weight=ft.FontWeight.W_500, color="#1E293B"), 100),
+                    _cell(ft.Text(job_no, size=13, color="#1E293B"), 100),
+                    _cell(ft.Container(content=ft.Text(customer_name, size=13, color="#1E293B", max_lines=1), tooltip=customer_name), 140),
+                    _cell(ft.Text(plate_number, size=12, color="#64748B", max_lines=1), 80),
+                    _cell(ft.Container(content=ft.Text(vehicle_text, size=12, color="#64748B", max_lines=1), tooltip=vehicle_text), 120),
+                    _cell(mechanic_cell, 140),
+                    _cell(status_badge, 110, 0, False),
+                    _cell(duration_badge, 100, 0, False),
+                    _cell(view_btn, 120, 0, False),
+                ],
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            ),
             padding=ft.padding.symmetric(vertical=12, horizontal=10),
             bgcolor=row_bg,
         )
-        
-        return ft.Column([
-            row,
-            ft.Divider(height=1, color=ft.Colors.GREY_200),
-        ], spacing=0)
-    
+
+        return ft.Column([row, ft.Divider(height=1, color=ft.Colors.GREY_200)], spacing=0)
+
+    # ── Duration badge ──
+    def _build_duration_badge(self, start_date_str: str, end_date_str: str, status: str) -> ft.Control:
+        try:
+            if not start_date_str:
+                return ft.Text("-", size=12, color="#94A3B8")
+            start_d = datetime.strptime(str(start_date_str)[:10], "%Y-%m-%d").date()
+
+            if status == "completed" and end_date_str:
+                end_d = datetime.strptime(str(end_date_str)[:10], "%Y-%m-%d").date()
+                days = (end_d - start_d).days
+                return ft.Container(
+                    content=ft.Row(
+                        [
+                            ft.Icon(ft.Icons.CHECK_CIRCLE, size=12, color="#4CAF50"),
+                            ft.Text(f"{days}d", size=11, color="#4CAF50", weight=ft.FontWeight.W_600),
+                        ],
+                        spacing=3,
+                    ),
+                    tooltip=get_text("duration_completed").format(days),
+                )
+
+            days = (date.today() - start_d).days
+            color = "#10B981" if days < 3 else "#F59E0B" if days < 7 else "#EF4444"
+            return ft.Container(
+                content=ft.Row(
+                    [
+                        ft.Icon(ft.Icons.TIMER, size=12, color=color),
+                        ft.Text(f"{days}d", size=11, color=color, weight=ft.FontWeight.W_600),
+                    ],
+                    spacing=3,
+                ),
+                tooltip=get_text("days_running").format(days),
+            )
+        except Exception:
+            return ft.Text("-", size=12, color="#94A3B8")
+
+    # ── Mechanic cell ──
+    def _build_mechanic_cell(self, mechanic_name: str, repair_id: int) -> ft.Control:
+        if mechanic_name and mechanic_name != "-":
+            return ft.Text(mechanic_name, size=12, color="#64748B", max_lines=1)
+
+        return ft.Column(
+            [
+                ft.Row(
+                    [
+                        ft.Icon(ft.Icons.WARNING, size=13, color="#F59E0B"),
+                        ft.Text(get_text("no_mechanic_assigned"), size=10, color="#F59E0B"),
+                    ],
+                    spacing=2,
+                ),
+                ft.Container(
+                    content=ft.Text(
+                        get_text("assign"),
+                        size=10,
+                        color=self.primary_color,
+                        weight=ft.FontWeight.W_600,
+                    ),
+                    on_click=lambda e, rid=repair_id: self.show_assign_mechanic_dialog(rid),
+                    border_radius=4,
+                    padding=ft.padding.symmetric(horizontal=4, vertical=2),
+                    border=ft.border.all(1, self.primary_color),
+                    ink=True,
+                ),
+            ],
+            spacing=2,
+        )
+
+    # ─────────────────────────── PAGINATION ───────────────────────────
     def update_pagination(self):
         prev_disabled = self.current_page <= 1
         next_disabled = self.current_page >= self.total_pages
-        
+
         self.pagination_container.content = ft.Row(
             [
                 ft.Text(
-                    f"{get_text('showing')} {len(self.filtered_orders)} {get_text('of')} {len(self.repair_orders)} {get_text('results')}",
+                    f"{get_text('showing')} {len(self.filtered_orders)} "
+                    f"{get_text('of')} {len(self.repair_orders)} "
+                    f"{get_text('results')}",
                     size=12,
                     color="#64748B",
                 ),
                 ft.Container(expand=True),
                 ft.Container(
-                    content=ft.Row([
-                        ft.IconButton(
-                            icon=ft.Icons.CHEVRON_LEFT,
-                            icon_size=20,
-                            on_click=self.prev_page,
-                            disabled=prev_disabled,
-                            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
-                        ),
-                        ft.Container(
-                            content=ft.Text(f"{self.current_page}/{self.total_pages}", size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
-                            padding=ft.padding.symmetric(horizontal=15),
-                        ),
-                        ft.IconButton(
-                            icon=ft.Icons.CHEVRON_RIGHT,
-                            icon_size=20,
-                            on_click=self.next_page,
-                            disabled=next_disabled,
-                            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
-                        ),
-                    ]),
+                    content=ft.Row(
+                        [
+                            ft.IconButton(
+                                icon=ft.Icons.CHEVRON_LEFT,
+                                icon_size=20,
+                                on_click=self.prev_page,
+                                disabled=prev_disabled,
+                                style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
+                            ),
+                            ft.Container(
+                                content=ft.Text(
+                                    f"{self.current_page}/{self.total_pages}",
+                                    size=13,
+                                    weight=ft.FontWeight.W_500,
+                                    color="#1E293B",
+                                ),
+                                padding=ft.padding.symmetric(horizontal=15),
+                            ),
+                            ft.IconButton(
+                                icon=ft.Icons.CHEVRON_RIGHT,
+                                icon_size=20,
+                                on_click=self.next_page,
+                                disabled=next_disabled,
+                                style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
+                            ),
+                        ]
+                    ),
                     bgcolor=ft.Colors.WHITE,
                     border_radius=10,
                     padding=ft.padding.symmetric(horizontal=8, vertical=4),
@@ -484,54 +710,131 @@ class RepairListContent:
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
         )
         self.page.update()
-    
+
     def prev_page(self, e=None):
         if self.current_page > 1:
             self.current_page -= 1
             self.display_repairs()
-    
+
     def next_page(self, e=None):
         if self.current_page < self.total_pages:
             self.current_page += 1
             self.display_repairs()
-    
+
+    # ─────────────────────────── NAVIGATION ───────────────────────────
     def view_repair_detail(self, repair_id: int):
-        """Navigate to repair detail page"""
         self.navigate("repair_detail", repair_id=repair_id)
-    
+
+    # ─────────────────────────── STATUS STEPPER DIALOG ───────────────────────────
     def show_update_status_dialog(self, repair_id: int, current_status: str):
-        # Don't show dialog if status is completed
         if current_status == "completed":
             self.show_snack_bar(get_text("cannot_update_completed_status"), is_error=True)
             return
-        
-        status_dropdown = ft.Dropdown(
-            label=get_text("select_status"),
-            value=current_status,
-            options=[
-                ft.dropdown.Option("waiting", get_text("waiting")),
-                ft.dropdown.Option("working", get_text("working")),
-                ft.dropdown.Option("paused", get_text("paused")),
-                ft.dropdown.Option("completed", get_text("completed")),
-            ],
-            width=250,
-            border_radius=12,
-        )
-        
-        def update_status(e):
-            new_status = status_dropdown.value
-            if new_status and new_status != current_status:
-                try:
-                    self.client.update_repair_status(repair_id, new_status)
-                    self.close_dialog(dialog)
-                    self.load_repair_orders()
-                    self.show_snack_bar(f"✅ {get_text('status_updated_to')} {get_text(new_status)}", is_error=False)
-                except Exception as ex:
-                    self.show_snack_bar(f"Error: {str(ex)}", is_error=True)
-            else:
-                dialog.open = False
+
+        steps = [
+            ("waiting",   get_text("waiting"),   "#FF9800", ft.Icons.HOURGLASS_EMPTY),
+            ("working",   get_text("working"),   "#2196F3", ft.Icons.BUILD),
+            ("paused",    get_text("paused"),    "#9C27B0", ft.Icons.PAUSE),
+            ("completed", get_text("completed"), "#4CAF50", ft.Icons.CHECK_CIRCLE),
+        ]
+
+        # Mutable state via dict (Flet 0.84 compatible — no ft.Ref generics)
+        state = {"selected": current_status}
+        step_row = ft.Row(spacing=8)
+
+        def _make_step_btn(key, label, color, icon, is_selected):
+            return ft.Container(
+                content=ft.Column(
+                    [
+                        ft.Container(
+                            content=ft.Icon(icon, size=20, color=ft.Colors.WHITE),
+                            bgcolor=color,
+                            border_radius=10,
+                            padding=ft.padding.all(8),
+                        ),
+                        ft.Text(
+                            label, size=11, color="#1E293B",
+                            weight=ft.FontWeight.W_600,
+                            text_align=ft.TextAlign.CENTER,
+                        ),
+                    ],
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=4,
+                ),
+                padding=ft.padding.all(10),
+                border_radius=12,
+                bgcolor=(
+                    ft.Colors.with_opacity(0.12, color) if is_selected else ft.Colors.WHITE
+                ),
+                border=(
+                    ft.border.all(2, color) if is_selected
+                    else ft.border.all(1, ft.Colors.GREY_200)
+                ),
+                ink=True,
+                on_click=lambda e, k=key, c=color: _on_step_click(k, c),
+                width=90,
+                alignment=ft.Alignment(0, 0),
+            )
+
+        def _rebuild_steps(selected_key):
+            step_row.controls.clear()
+            for k, lbl, col, ico in steps:
+                step_row.controls.append(_make_step_btn(k, lbl, col, ico, k == selected_key))
+
+        def _on_step_click(k, c):
+            state["selected"] = k
+            _rebuild_steps(k)
+            self.page.update()
+
+        _rebuild_steps(current_status)
+
+        def confirm_update(e):
+            new_status = state["selected"]
+            if new_status == current_status:
+                self.close_dialog(dialog)
+                return
+            if new_status == "completed":
+                confirm_dialog = ft.AlertDialog(
+                    modal=True,
+                    shape=ft.RoundedRectangleBorder(radius=16),
+                    bgcolor=ft.Colors.WHITE,
+                    title=ft.Container(
+                        content=ft.Row(
+                            [
+                                ft.Container(
+                                    content=ft.Icon(ft.Icons.WARNING, size=22, color=ft.Colors.WHITE),
+                                    bgcolor="#F59E0B",
+                                    border_radius=10,
+                                    padding=ft.padding.all(8),
+                                ),
+                                ft.Text(get_text("confirm_complete_repair"), size=18, weight=ft.FontWeight.BOLD, color="#1E293B"),
+                            ],
+                            spacing=10,
+                        ),
+                        padding=ft.padding.all(16),
+                        border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
+                    ),
+                    content=ft.Container(
+                        content=ft.Text(get_text("confirm_complete_repair_msg"), size=14, color="#64748B"),
+                        padding=ft.padding.all(20),
+                        width=360,
+                    ),
+                    actions=[
+                        ft.TextButton(get_text("cancel"), on_click=lambda e: self.close_dialog(confirm_dialog)),
+                        ft.ElevatedButton(
+                            get_text("confirm"),
+                            on_click=lambda e: self._do_update_status(repair_id, new_status, dialog, confirm_dialog),
+                            style=ft.ButtonStyle(bgcolor="#4CAF50", color=ft.Colors.WHITE, shape=ft.RoundedRectangleBorder(radius=8)),
+                        ),
+                    ],
+                    actions_alignment=ft.MainAxisAlignment.END,
+                )
+                self.page.overlay.append(confirm_dialog)
+                confirm_dialog.open = True
                 self.page.update()
-        
+            else:
+                self._do_update_status(repair_id, new_status, dialog)
+
         dialog = ft.AlertDialog(
             modal=True,
             shape=ft.RoundedRectangleBorder(radius=16),
@@ -540,48 +843,191 @@ class RepairListContent:
                 content=ft.Row(
                     [
                         ft.Container(
-                            content=ft.Icon(ft.Icons.EDIT, size=24, color=ft.Colors.WHITE),
+                            content=ft.Icon(ft.Icons.EDIT, size=22, color=ft.Colors.WHITE),
                             bgcolor=self.primary_color,
-                            border_radius=12,
+                            border_radius=10,
                             padding=ft.padding.all(8),
                         ),
-                        ft.Text(
-                            get_text("update_repair_status"),
-                            size=20,
-                            weight=ft.FontWeight.BOLD,
-                            color="#1E293B",
-                        ),
+                        ft.Text(get_text("update_repair_status"), size=18, weight=ft.FontWeight.BOLD, color="#1E293B"),
                     ],
-                    spacing=12,
+                    spacing=10,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
-                padding=ft.padding.all(20),
+                padding=ft.padding.all(16),
                 border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
             ),
             content=ft.Container(
-                content=ft.Column([
-                    ft.Text(f"{get_text('current_status')}: {get_text(current_status)}", size=14, color="#64748B"),
-                    ft.Container(height=16),
-                    status_dropdown,
-                ]),
-                padding=ft.padding.all(24),
-                width=350,
+                content=ft.Column(
+                    [
+                        ft.Text(get_text("select_new_status"), size=13, color="#64748B"),
+                        ft.Container(height=10),
+                        step_row,
+                    ],
+                    spacing=0,
+                ),
+                padding=ft.padding.all(20),
+                width=420,
             ),
             actions=[
                 ft.TextButton(get_text("cancel"), on_click=lambda e: self.close_dialog(dialog)),
-                ft.ElevatedButton(get_text("update"), on_click=update_status, style=ft.ButtonStyle(bgcolor=self.primary_color, color=ft.Colors.WHITE)),
+                ft.ElevatedButton(
+                    get_text("update"),
+                    on_click=confirm_update,
+                    style=ft.ButtonStyle(
+                        bgcolor=self.primary_color,
+                        color=ft.Colors.WHITE,
+                        shape=ft.RoundedRectangleBorder(radius=8),
+                    ),
+                ),
             ],
             actions_alignment=ft.MainAxisAlignment.END,
         )
-        
         self.page.overlay.append(dialog)
         dialog.open = True
         self.page.update()
-    
+
+    def _do_update_status(self, repair_id, new_status, *dialogs):
+        try:
+            self.client.update_repair_status(repair_id, new_status)
+            for d in dialogs:
+                if d:
+                    d.open = False
+            self.page.update()
+            self.load_repair_orders()
+            self.show_snack_bar(
+                f"✅ {get_text('status_updated_to')} {get_text(new_status)}", is_error=False
+            )
+        except Exception as ex:
+            self.show_snack_bar(f"Error: {str(ex)}", is_error=True)
+
+    # ─────────────────────────── ASSIGN MECHANIC DIALOG ───────────────────────────
+    def show_assign_mechanic_dialog(self, repair_id: int):
+        if self._mechanics_cache is None:
+            try:
+                self._mechanics_cache = self.client.get_mechanics() or []
+            except Exception as ex:
+                self.show_snack_bar(f"Error: {str(ex)}", is_error=True)
+                return
+
+        if not self._mechanics_cache:
+            self.show_snack_bar(get_text("no_mechanic_assigned"), is_error=True)
+            return
+
+        # Mutable state via dict
+        state = {"mechanic_id": None}
+        mech_cards = ft.Column(spacing=6, scroll=ft.ScrollMode.AUTO, height=240)
+
+        def build_mechanic_list(selected_id=None):
+            mech_cards.controls.clear()
+            for m in self._mechanics_cache:
+                mid   = m.get("id")
+                name  = m.get("fullname", m.get("name", "-"))
+                phone = m.get("phone", "-")
+                is_sel = mid == selected_id
+
+                def on_select(e, _id=mid):
+                    state["mechanic_id"] = _id
+                    build_mechanic_list(_id)
+                    self.page.update()
+
+                card = ft.Container(
+                    content=ft.Row(
+                        [
+                            ft.Container(
+                                content=ft.Icon(
+                                    ft.Icons.PERSON, size=20,
+                                    color=self.primary_color if is_sel else "#64748B",
+                                ),
+                                bgcolor=ft.Colors.with_opacity(0.1, self.primary_color) if is_sel else ft.Colors.GREY_100,
+                                border_radius=10,
+                                padding=ft.padding.all(8),
+                            ),
+                            ft.Column(
+                                [
+                                    ft.Text(name, size=13, weight=ft.FontWeight.W_600, color="#1E293B"),
+                                    ft.Text(phone, size=11, color="#64748B"),
+                                ],
+                                spacing=2,
+                                expand=True,
+                            ),
+                            ft.Icon(
+                                ft.Icons.CHECK_CIRCLE if is_sel else ft.Icons.CIRCLE,
+                                size=20,
+                                color=self.success_color if is_sel else "#CBD5E1",
+                            ),
+                        ],
+                        spacing=10,
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                    ),
+                    padding=ft.padding.all(10),
+                    bgcolor=ft.Colors.with_opacity(0.05, self.primary_color) if is_sel else ft.Colors.WHITE,
+                    border_radius=10,
+                    border=ft.border.all(1, self.primary_color if is_sel else ft.Colors.GREY_200),
+                    ink=True,
+                    on_click=on_select,
+                )
+                mech_cards.controls.append(card)
+
+        build_mechanic_list()
+
+        def confirm_assign(e):
+            mid = state["mechanic_id"]
+            if not mid:
+                self.show_snack_bar(get_text("please_select_mechanic"), is_error=True)
+                return
+            try:
+                self.client.assign_mechanic(repair_id, mid)
+                self.close_dialog(dialog)
+                self.load_repair_orders()
+                self.show_snack_bar(f"✅ {get_text('mechanic_assigned')}", is_error=False)
+            except Exception as ex:
+                self.show_snack_bar(f"Error: {str(ex)}", is_error=True)
+
+        dialog = ft.AlertDialog(
+            modal=True,
+            shape=ft.RoundedRectangleBorder(radius=16),
+            bgcolor=ft.Colors.WHITE,
+            title=ft.Container(
+                content=ft.Row(
+                    [
+                        ft.Container(
+                            content=ft.Icon(ft.Icons.PERSON_ADD, size=22, color=ft.Colors.WHITE),
+                            bgcolor=self.primary_color,
+                            border_radius=10,
+                            padding=ft.padding.all(8),
+                        ),
+                        ft.Text(get_text("assign_mechanic"), size=18, weight=ft.FontWeight.BOLD, color="#1E293B"),
+                    ],
+                    spacing=10,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                ),
+                padding=ft.padding.all(16),
+                border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
+            ),
+            content=ft.Container(content=mech_cards, padding=ft.padding.all(20), width=380),
+            actions=[
+                ft.TextButton(get_text("cancel"), on_click=lambda e: self.close_dialog(dialog)),
+                ft.ElevatedButton(
+                    get_text("assign"),
+                    on_click=confirm_assign,
+                    style=ft.ButtonStyle(
+                        bgcolor=self.primary_color,
+                        color=ft.Colors.WHITE,
+                        shape=ft.RoundedRectangleBorder(radius=8),
+                    ),
+                ),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+        self.page.overlay.append(dialog)
+        dialog.open = True
+        self.page.update()
+
+    # ─────────────────────────── UTILITIES ───────────────────────────
     def close_dialog(self, dialog):
         dialog.open = False
         self.page.update()
-    
+
     def show_snack_bar(self, message: str, is_error: bool = False):
         self.page.snack_bar = ft.SnackBar(
             content=ft.Text(message, size=13),

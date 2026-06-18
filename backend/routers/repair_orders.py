@@ -372,7 +372,7 @@ def delete_part_usage(
         # Add stock movement log
         cursor.execute("""
             INSERT INTO stock_movement (part_id, type, qty, ref_type, ref_id, date)
-            VALUES (%s, 'IN', %s, 'repair_return', %s, NOW())
+            VALUES (%s, 'IN', %s, 'repair', %s, NOW())
         """, (usage['part_id'], usage['qty'], repair_id))
         
         # Delete usage record
@@ -386,6 +386,131 @@ def delete_part_usage(
     except Exception as e:
         db.rollback()
         print(f"Error deleting part usage: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        db.close()
+
+
+@router.post("/repair-orders/{repair_id}/pull-quotation-parts")
+def pull_quotation_parts(
+    repair_id: int,
+    user: dict = Depends(authenticate_user)
+):
+    """
+    Retrieve spare parts data from approved quotation,
+    deduct inventory stock, record stock movement as 'OUT', 
+    and record in parts_usage.
+    """
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+    try:
+        # 1. Verify repair order exists and get its job_order_id
+        cursor.execute("SELECT id, job_order_id FROM repair_orders WHERE id = %s", (repair_id,))
+        repair = cursor.fetchone()
+        if not repair:
+            raise HTTPException(status_code=404, detail="Repair order not found")
+        
+        job_order_id = repair["job_order_id"]
+        if not job_order_id:
+            raise HTTPException(status_code=400, detail="Repair order is not associated with any Job Order")
+            
+        # 2. Find approved quotation for this job order
+        cursor.execute("SELECT id FROM quotations WHERE job_order_id = %s AND status = 'approved'", (job_order_id,))
+        quotation = cursor.fetchone()
+        if not quotation:
+            raise HTTPException(status_code=404, detail="No approved quotation found for this Job Order")
+            
+        quotation_id = quotation["id"]
+        
+        # 3. Retrieve all quotation items where part_id is not null, aggregating quantities for duplicates
+        cursor.execute("""
+            SELECT qi.part_id, SUM(qi.qty) as qty, p.name as part_name, p.cost_price, p.stock_qty
+            FROM quotation_items qi
+            JOIN parts p ON qi.part_id = p.id
+            WHERE qi.quotation_id = %s AND qi.part_id IS NOT NULL
+            GROUP BY qi.part_id, p.name, p.cost_price, p.stock_qty
+        """, (quotation_id,))
+        quoted_parts = cursor.fetchall()
+        
+        if not quoted_parts:
+            raise HTTPException(status_code=400, detail="No parts are listed in the approved quotation")
+            
+        # 4. Query current parts already recorded in parts_usage for this repair
+        cursor.execute("""
+            SELECT part_id, SUM(qty) as used_qty
+            FROM parts_usage
+            WHERE repair_id = %s
+            GROUP BY part_id
+        """, (repair_id,))
+        already_used_rows = cursor.fetchall()
+        already_used_map = {row["part_id"]: row["used_qty"] for row in already_used_rows}
+        
+        # 5. Process each quoted part and calculate what to withdraw
+        to_withdraw = []
+        for qp in quoted_parts:
+            part_id = qp["part_id"]
+            qty_quoted = qp["qty"]
+            qty_used = already_used_map.get(part_id, 0)
+            qty_to_withdraw = qty_quoted - qty_used
+            
+            if qty_to_withdraw > 0:
+                # Validate stock level
+                if qp["stock_qty"] < qty_to_withdraw:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Insufficient stock for {qp['part_name']}. Required: {qty_to_withdraw}, Available: {qp['stock_qty']}"
+                    )
+                to_withdraw.append({
+                    "part_id": part_id,
+                    "qty": qty_to_withdraw,
+                    "cost_price": qp["cost_price"],
+                    "part_name": qp["part_name"]
+                })
+                
+        if not to_withdraw:
+            raise HTTPException(status_code=400, detail="All parts from quotation have already been pulled")
+            
+        # 6. Execute updates
+        withdrawn_count = 0
+        for item in to_withdraw:
+            part_id = item["part_id"]
+            qty = item["qty"]
+            cost_price = item["cost_price"]
+            
+            # Add to parts_usage
+            cursor.execute("""
+                INSERT INTO parts_usage (repair_id, part_id, qty, cost_price, note)
+                VALUES (%s, %s, %s, %s, 'Pulled from quotation')
+            """, (repair_id, part_id, qty, cost_price))
+            
+            # Deduct stock
+            cursor.execute("""
+                UPDATE parts SET stock_qty = stock_qty - %s WHERE id = %s
+            """, (qty, part_id))
+            
+            # Log stock movement (type='OUT', ref_type='repair')
+            cursor.execute("""
+                INSERT INTO stock_movement (part_id, type, qty, ref_type, ref_id, date)
+                VALUES (%s, 'OUT', %s, 'repair', %s, NOW())
+            """, (part_id, qty, repair_id))
+            
+            withdrawn_count += 1
+            
+        db.commit()
+        return {
+            "message": f"Successfully pulled {withdrawn_count} parts from quotation",
+            "withdrawn_count": withdrawn_count
+        }
+        
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        print(f"Error pulling quotation parts: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         cursor.close()

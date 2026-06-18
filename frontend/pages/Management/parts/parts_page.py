@@ -541,8 +541,8 @@ class PartsContent:
         await asyncio.sleep(0.2)
         self.load_data()
     
-    def load_data(self):
-        if self.is_loading:
+    def load_data(self, force=False):
+        if self.is_loading and not force:
             return
         self.is_loading = True
         
