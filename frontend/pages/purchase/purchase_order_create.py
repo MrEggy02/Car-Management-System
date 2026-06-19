@@ -195,16 +195,6 @@ class PurchaseOrderCreateContent:
         )
         
         self.parts_results = ft.Column(spacing=8, scroll=ft.ScrollMode.AUTO, height=300)
-        welcome_container = ft.Container(
-            content=ft.Column([
-                ft.Icon(ft.Icons.SEARCH, size=40, color="#CBD5E1"),
-                ft.Text(get_text("type_to_search"), size=13, color="#94A3B8"),
-                ft.Text(get_text("search_parts_to_order"), size=11, color="#CBD5E1"),
-            ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=6),
-            alignment=ft.Alignment(0, 0),
-            padding=ft.padding.all(30),
-        )
-        self.parts_results.controls.append(welcome_container)
         
         search_section = ft.Container(
             content=ft.Column([
@@ -299,23 +289,52 @@ class PurchaseOrderCreateContent:
         
         # Initialize items display
         self.update_items_display()
+        # Show all parts initially (no supplier selected yet)
+        self.search_parts(None)
         self.page.update()
     
     def on_supplier_change(self, e):
-        self.selected_supplier_id = int(e.control.value) if e.control.value else None
+        new_supplier_id = int(e.control.value) if e.control.value else None
+        # If items already exist, block manual supplier change
+        if self.items and new_supplier_id != self.selected_supplier_id:
+            # Revert dropdown to the locked supplier
+            if self.supplier_dropdown:
+                self.supplier_dropdown.value = str(self.selected_supplier_id) if self.selected_supplier_id else ""
+            self.show_snack_bar(
+                "ບໍ່ສາມາດປ່ຽນຜູ້ສະໜອງໄດ້ ກະລຸນາລຶບອາໄຫຼ່ທີ່ເລືອກໄວ້ກ່ອນ",
+                is_error=True
+            )
+            self.page.update()
+            return
+        # If supplier changed (no items), clear items and refresh
+        if new_supplier_id != self.selected_supplier_id:
+            self.items = []
+            self.update_items_display()
+        self.selected_supplier_id = new_supplier_id
+        if self.parts_search:
+            self.parts_search.value = ""
         self.search_parts(None)
         self.page.update()
     
     def search_parts(self, e):
-        keyword = self.parts_search.value.lower() if self.parts_search.value else ""
+        keyword = ""
+        if self.parts_search and self.parts_search.value:
+            keyword = self.parts_search.value.lower().strip()
         self.parts_results.controls.clear()
         
-        results = self.parts
+        # If supplier already selected, show only that supplier's parts
+        if self.selected_supplier_id:
+            results = [p for p in self.parts if p.get("supplier_id") == self.selected_supplier_id]
+        else:
+            # No supplier yet — show all parts
+            results = list(self.parts)
+        
+        # Further filter by keyword if provided
         if keyword:
             results = [p for p in results if keyword in p.get("name", "").lower()]
         
         if results:
-            for part in results[:30]:
+            for part in results[:50]:
                 part_id = part.get('id')
                 part_name = part.get('name', '')
                 current_stock = part.get('stock_qty', 0)
@@ -393,7 +412,8 @@ class PurchaseOrderCreateContent:
         )
         
         selected_part = next((p for p in self.parts if p.get('id') == part_id), None)
-        default_cost = selected_part.get('sell_price', 0) if selected_part else 0
+        # Use cost_price (purchase/import price) as the default, not sell_price
+        default_cost = selected_part.get('cost_price', 0) if selected_part else 0
         
         cost_field = ft.TextField(
             label=get_text("unit_cost"),
@@ -437,6 +457,22 @@ class PurchaseOrderCreateContent:
             })
             dialog.open = False
             self.update_items_display()
+            
+            # Auto-select supplier from the added part (if not already set)
+            if not self.selected_supplier_id and selected_part:
+                auto_supplier_id = selected_part.get('supplier_id')
+                if auto_supplier_id:
+                    self.selected_supplier_id = auto_supplier_id
+                    if self.supplier_dropdown:
+                        self.supplier_dropdown.value = str(auto_supplier_id)
+                    if self.parts_search:
+                        self.parts_search.value = ""
+                    self.search_parts(None)
+            
+            # Lock supplier dropdown while items exist
+            if self.supplier_dropdown and self.items:
+                self.supplier_dropdown.disabled = True
+            
             self.show_snack_bar(f"✓ {get_text('added')}: {part_name}", is_error=False)
         
         dialog = ft.AlertDialog(
@@ -550,6 +586,15 @@ class PurchaseOrderCreateContent:
     def remove_item(self, index):
         if 0 <= index < len(self.items):
             removed = self.items.pop(index)
+            # If no items left, unlock supplier dropdown and reset supplier
+            if not self.items:
+                self.selected_supplier_id = None
+                if self.supplier_dropdown:
+                    self.supplier_dropdown.disabled = False
+                    self.supplier_dropdown.value = ""
+                if self.parts_search:
+                    self.parts_search.value = ""
+                self.search_parts(None)
             self.update_items_display()
             self.show_snack_bar(f"{get_text('part_removed')}: {removed['part_name']}", is_error=False)
     

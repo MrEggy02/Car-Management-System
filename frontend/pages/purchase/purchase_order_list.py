@@ -516,6 +516,7 @@ class PurchaseOrderListContent:
             
             receive_items = []
             qty_fields = {}
+            cost_fields = {}
             
             for item in items:
                 part_id = item.get('part_id')
@@ -554,6 +555,17 @@ class PurchaseOrderListContent:
                 )
                 qty_fields[idx] = qty_field
                 
+                cost_field = ft.TextField(
+                    value=str(int(item['unit_cost'])),
+                    width=100,
+                    text_align=ft.TextAlign.RIGHT,
+                    input_filter=ft.NumbersOnlyInputFilter(),
+                    border_radius=8,
+                    bgcolor=ft.Colors.WHITE,
+                    content_padding=ft.padding.symmetric(horizontal=8, vertical=6),
+                )
+                cost_fields[idx] = cost_field
+                
                 def create_qty_handler(idx_item, qty_field_ref, max_qty):
                     def handler(e):
                         try:
@@ -577,9 +589,9 @@ class PurchaseOrderListContent:
                     content=ft.Row([
                         ft.Column([
                             ft.Text(item['part_name'], size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
-                            ft.Text(f"{get_text('unit_cost')}: {int(item['unit_cost']):,} KIP", size=11, color="#64748B"),
                         ], spacing=2, expand=True),
                         ft.Text(f"{item['qty']}", size=13, color="#64748B", width=50, text_align=ft.TextAlign.CENTER),
+                        cost_field,
                         qty_field,
                         ft.Text(f"{get_text('remaining')}: {item['remaining']}", size=11, color="#F59E0B", width=80),
                     ], spacing=12, vertical_alignment=ft.CrossAxisAlignment.CENTER),
@@ -625,6 +637,7 @@ class PurchaseOrderListContent:
                         ft.Row([
                             ft.Text(get_text("item"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", expand=True),
                             ft.Text(get_text("ordered"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=50, text_align=ft.TextAlign.CENTER),
+                            ft.Text(get_text("unit_cost"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=100, text_align=ft.TextAlign.CENTER),
                             ft.Text(get_text("receive_qty"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=80, text_align=ft.TextAlign.CENTER),
                             ft.Text(get_text("remaining"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=80, text_align=ft.TextAlign.CENTER),
                         ], spacing=12),
@@ -632,7 +645,7 @@ class PurchaseOrderListContent:
                         items_column,
                     ]),
                     padding=ft.padding.all(20),
-                    width=550,
+                    width=650,
                     height=450,
                 ),
                 actions=[
@@ -642,7 +655,7 @@ class PurchaseOrderListContent:
                     ),
                     ft.ElevatedButton(
                         get_text("confirm_receive"),
-                        on_click=lambda e: self.confirm_receive(dialog, po_id, receive_items, qty_fields),
+                        on_click=lambda e: self.confirm_receive(dialog, po_id, receive_items, qty_fields, cost_fields),
                         style=ft.ButtonStyle(
                             bgcolor="#10B981",
                             color=ft.Colors.WHITE,
@@ -660,18 +673,24 @@ class PurchaseOrderListContent:
             traceback.print_exc()
             self.show_snack_bar(f"Error: {str(ex)}", is_error=True)
     
-    def confirm_receive(self, dialog, po_id, receive_items, qty_fields):
+    def confirm_receive(self, dialog, po_id, receive_items, qty_fields, cost_fields):
         """Confirm receiving items"""
         received_items_data = []
         has_received = False
         
         for idx, item in enumerate(receive_items):
             qty_field = qty_fields.get(idx)
-            if qty_field:
+            cost_field = cost_fields.get(idx)
+            if qty_field and cost_field:
                 try:
                     qty = int(qty_field.value) if qty_field.value else 0
                 except:
                     qty = 0
+                
+                try:
+                    cost_price = float(cost_field.value) if cost_field.value else 0.0
+                except:
+                    cost_price = 0.0
                 
                 if qty > item['remaining']:
                     qty = item['remaining']
@@ -681,7 +700,8 @@ class PurchaseOrderListContent:
                     has_received = True
                     received_items_data.append({
                         'part_id': item['part_id'],
-                        'received_qty': qty
+                        'received_qty': qty,
+                        'cost_price': cost_price
                     })
         
         if not has_received:

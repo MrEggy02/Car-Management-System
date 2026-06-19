@@ -268,7 +268,7 @@ def receive_purchase_order(
         for item in received_list:
             part_id = item['part_id']
             received_qty = int(item['received_qty'])
-            cost_price = cost_map.get(part_id, 0.0)
+            cost_price = float(item.get('cost_price', cost_map.get(part_id, 0.0)))
             total_amount += cost_price * received_qty
             
         # Generate receipt number (GR-YYYY-XXXX)
@@ -293,7 +293,7 @@ def receive_purchase_order(
             if received_qty <= 0:
                 continue
                 
-            cost_price = cost_map.get(part_id, 0.0)
+            cost_price = float(item.get('cost_price', cost_map.get(part_id, 0.0)))
             total_price = cost_price * received_qty
             
             # 2. Create Receipt Item
