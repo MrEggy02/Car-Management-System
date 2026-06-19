@@ -86,6 +86,8 @@ class ContentManager:
             content = self._get_service_items_report_content()
         elif index == 33:
             content = self._get_promotion_usage_report_content()
+        elif index == 34:
+            content = self._get_goods_receipt_list_content()
         else:
             content = self._get_placeholder(f"📄 {get_text('under_development')}")
         
@@ -482,6 +484,20 @@ class ContentManager:
             self.parent.navigate_to(page_name, **kwargs)
         
         return PromotionUsageReportContent(
+            self.parent.page,
+            self.parent.client,
+            self.parent.user,
+            navigate
+        ).build()
+    
+    def _get_goods_receipt_list_content(self):
+        """Get goods receipt list page (Process 7.3)"""
+        from pages.purchase.goods_receipt_list import GoodsReceiptListContent
+        
+        def navigate(page_name, *args, **kwargs):
+            self.parent.navigate_to(page_name, **kwargs)
+        
+        return GoodsReceiptListContent(
             self.parent.page,
             self.parent.client,
             self.parent.user,

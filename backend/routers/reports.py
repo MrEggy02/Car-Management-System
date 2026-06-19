@@ -64,7 +64,7 @@ def get_revenue_report(
             FROM purchase_orders po
             LEFT JOIN purchase_items pi ON po.id = pi.purchase_id
             WHERE DATE(po.order_date) BETWEEN %s AND %s
-            AND po.status IN ('received', 'ordered')
+            AND po.status IN ('ordering', 'partial', 'completed')
         """, (start_date, end_date))
         purchase_cost_data = cursor.fetchone()
         

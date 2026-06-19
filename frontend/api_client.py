@@ -912,3 +912,11 @@ class APIClient:
         """Get all job orders with customer and vehicle details in ONE query"""
         params = {"status": status} if status else None
         return self._request("GET", "/job-orders-with-details", params=params)
+
+    def get_goods_receipts(self) -> List[Dict]:
+        """Get all goods receipts"""
+        return self._request("GET", "/goods-receipts")
+
+    def get_goods_receipt(self, receipt_id: int) -> Dict:
+        """Get a single goods receipt with details"""
+        return self._request("GET", f"/goods-receipts/{receipt_id}")

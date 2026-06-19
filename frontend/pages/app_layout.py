@@ -507,6 +507,7 @@ class AppLayout:
             "parts_usage_report": 31,
             "service_items_report": 32,
             "promotion_usage_report": 33,
+            "goods_receipt_list": 34,
         }
 
         # Store IDs for pages

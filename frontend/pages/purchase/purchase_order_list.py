@@ -115,6 +115,19 @@ class PurchaseOrderListContent:
                         self.notification_button,
                         ft.ElevatedButton(
                             content=ft.Row([
+                                ft.Icon(ft.Icons.HISTORY, size=18, color=ft.Colors.WHITE),
+                                ft.Text(get_text("goods_receipt_history_title"), size=14, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500),
+                            ], spacing=6),
+                            on_click=lambda e: self.navigate("goods_receipt_list"),
+                            style=ft.ButtonStyle(
+                                bgcolor=ft.Colors.with_opacity(0.2, ft.Colors.WHITE),
+                                shape=ft.RoundedRectangleBorder(radius=10),
+                                elevation=0,
+                                padding=ft.padding.symmetric(horizontal=20, vertical=12),
+                            ),
+                        ),
+                        ft.ElevatedButton(
+                            content=ft.Row([
                                 ft.Icon(ft.Icons.ADD, size=18, color=ft.Colors.WHITE),
                                 ft.Text(get_text("create_purchase_order"), size=14, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500),
                             ], spacing=6),
@@ -163,6 +176,19 @@ class PurchaseOrderListContent:
                         self.notification_button,
                         ft.ElevatedButton(
                             content=ft.Row([
+                                ft.Icon(ft.Icons.HISTORY, size=18, color=ft.Colors.WHITE),
+                                ft.Text(get_text("goods_receipt_history_title"), size=14, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500),
+                            ], spacing=6),
+                            on_click=lambda e: self.navigate("goods_receipt_list"),
+                            style=ft.ButtonStyle(
+                                bgcolor=ft.Colors.with_opacity(0.2, ft.Colors.WHITE),
+                                shape=ft.RoundedRectangleBorder(radius=10),
+                                elevation=0,
+                                padding=ft.padding.symmetric(horizontal=20, vertical=12),
+                            ),
+                        ),
+                        ft.ElevatedButton(
+                            content=ft.Row([
                                 ft.Icon(ft.Icons.ADD, size=18, color=ft.Colors.WHITE),
                                 ft.Text(get_text("create_purchase_order"), size=14, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500),
                             ], spacing=6),
@@ -190,10 +216,10 @@ class PurchaseOrderListContent:
         
         status_list = [
             {"id": "all", "name": get_text("all_status")},
-            {"id": "pending", "name": get_text("pending")},
-            {"id": "ordered", "name": get_text("ordered")},
-            {"id": "received", "name": get_text("received")},
-            {"id": "cancelled", "name": get_text("cancelled")},
+            {"id": "ordering", "name": get_text("ordering") if get_text("ordering") else "Ordering"},
+            {"id": "partial", "name": get_text("partial") if get_text("partial") else "Partial"},
+            {"id": "completed", "name": get_text("completed") if get_text("completed") else "Completed"},
+            {"id": "cancelled", "name": get_text("cancelled") if get_text("cancelled") else "Cancelled"},
         ]
         
         for status in status_list:
@@ -476,9 +502,9 @@ class PurchaseOrderListContent:
             current_status = po_data.get('status')
             print(f"🔍 DEBUG: Current status = {current_status}")
             
-            # ✅ รับได้ทั้ง pending และ ordered
-            if current_status not in ['pending', 'ordered']:
-                self.show_snack_bar(get_text("only_ordered_po_can_be_received"), is_error=True)
+            # ✅ รับได้ทั้ง ordering และ partial
+            if current_status not in ['ordering', 'partial']:
+                self.show_snack_bar(get_text("only_ordering_po_can_be_received"), is_error=True)
                 return
             
             items = po_data.get('items', [])
@@ -855,16 +881,16 @@ class PurchaseOrderListContent:
         row_bg = ft.Colors.GREY_50 if index % 2 == 0 else ft.Colors.WHITE
         
         status_colors = {
-            "pending": "#FF9800",
-            "ordered": "#2196F3",
-            "received": "#4CAF50",
+            "ordering": "#2196F3",
+            "partial": "#FF9800",
+            "completed": "#4CAF50",
             "cancelled": "#F44336"
         }
         status_texts = {
-            "pending": get_text("pending"),
-            "ordered": get_text("ordered"),
-            "received": get_text("received"),
-            "cancelled": get_text("cancelled")
+            "ordering": get_text("ordering") if get_text("ordering") else "Ordering",
+            "partial": get_text("partial") if get_text("partial") else "Partial",
+            "completed": get_text("completed") if get_text("completed") else "Completed",
+            "cancelled": get_text("cancelled") if get_text("cancelled") else "Cancelled"
         }
         
         # Status badge - แสดงสถานะอย่างเดียว (ไม่มี dropdown)
@@ -886,9 +912,9 @@ class PurchaseOrderListContent:
             on_click=lambda e, pid=po_id: self.view_detail(pid),
         )
         
-        # ✅ Receive button (เฉพาะ status = pending หรือ ordered)
+        # ✅ Receive button (เฉพาะ status = ordering หรือ partial)
         receive_btn = None
-        if status in ["pending", "ordered"]:
+        if status in ["ordering", "partial"]:
             receive_btn = ft.IconButton(
                 icon=ft.Icons.INVENTORY_2_OUTLINED,
                 icon_size=18,
@@ -897,9 +923,9 @@ class PurchaseOrderListContent:
                 on_click=lambda e, pid=po_id: self.show_receive_dialog(pid),
             )
         
-        # Cancel button (เฉพาะ status = pending หรือ ordered)
+        # Cancel button (เฉพาะ status = ordering หรือ partial)
         cancel_btn = None
-        if status in ["pending", "ordered"]:
+        if status in ["ordering", "partial"]:
             cancel_btn = ft.IconButton(
                 icon=ft.Icons.CANCEL_OUTLINED,
                 icon_size=18,

@@ -153,16 +153,16 @@ class PurchaseOrderDetailContent:
         items = data.get('items', [])
         
         status_colors = {
-            "pending": "#FF9800",
-            "ordered": "#2196F3",
-            "received": "#4CAF50",
+            "ordering": "#2196F3",
+            "partial": "#FF9800",
+            "completed": "#4CAF50",
             "cancelled": "#F44336"
         }
         status_texts = {
-            "pending": get_text("pending"),
-            "ordered": get_text("ordered"),
-            "received": get_text("received"),
-            "cancelled": get_text("cancelled")
+            "ordering": get_text("ordering") if get_text("ordering") else "Ordering",
+            "partial": get_text("partial") if get_text("partial") else "Partial",
+            "completed": get_text("completed") if get_text("completed") else "Completed",
+            "cancelled": get_text("cancelled") if get_text("cancelled") else "Cancelled"
         }
         
         status_badge = ft.Container(
@@ -241,13 +241,13 @@ class PurchaseOrderDetailContent:
                 
                 if received_qty >= qty:
                     received_color = self.success_color
-                    received_text = get_text("received")
+                    received_text = get_text("completed") if get_text("completed") else "Completed"
                 elif received_qty > 0:
                     received_color = self.warning_color
-                    received_text = get_text("partial")
+                    received_text = get_text("partial") if get_text("partial") else "Partial"
                 else:
                     received_color = "#64748B"
-                    received_text = get_text("pending")
+                    received_text = get_text("ordering") if get_text("ordering") else "Ordering"
                 
                 item_row = ft.Container(
                     content=ft.Row([

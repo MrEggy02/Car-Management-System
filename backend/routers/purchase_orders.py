@@ -22,11 +22,18 @@ def get_purchase_orders(
             SELECT po.*, 
                    s.name as supplier_name,
                    e.name as created_by_name,
-                   r.name as received_by_name
+                   (SELECT emp.name 
+                    FROM goods_receipts gr
+                    LEFT JOIN employees emp ON gr.received_by = emp.id
+                    WHERE gr.purchase_order_id = po.id
+                    ORDER BY gr.id DESC LIMIT 1) as received_by_name,
+                   (SELECT gr.receipt_date
+                    FROM goods_receipts gr
+                    WHERE gr.purchase_order_id = po.id
+                    ORDER BY gr.id DESC LIMIT 1) as received_at
             FROM purchase_orders po
             LEFT JOIN suppliers s ON po.supplier_id = s.id
             LEFT JOIN employees e ON po.created_by = e.id
-            LEFT JOIN employees r ON po.received_by = r.id
             WHERE 1=1
         """
         params = []
@@ -63,16 +70,22 @@ def get_purchase_order(po_id: int, user: dict = Depends(authenticate_user)):
     db = get_db()
     cursor = db.cursor(dictionary=True)
     try:
-        # Get purchase order header
         cursor.execute("""
             SELECT po.*, 
                    s.name as supplier_name,
                    e.name as created_by_name,
-                   r.name as received_by_name
+                   (SELECT emp.name 
+                    FROM goods_receipts gr
+                    LEFT JOIN employees emp ON gr.received_by = emp.id
+                    WHERE gr.purchase_order_id = po.id
+                    ORDER BY gr.id DESC LIMIT 1) as received_by_name,
+                   (SELECT gr.receipt_date
+                    FROM goods_receipts gr
+                    WHERE gr.purchase_order_id = po.id
+                    ORDER BY gr.id DESC LIMIT 1) as received_at
             FROM purchase_orders po
             LEFT JOIN suppliers s ON po.supplier_id = s.id
             LEFT JOIN employees e ON po.created_by = e.id
-            LEFT JOIN employees r ON po.received_by = r.id
             WHERE po.id = %s
         """, (po_id,))
         
@@ -140,7 +153,7 @@ def create_purchase_order(
             INSERT INTO purchase_orders 
             (po_no, supplier_id, order_date, total_amount, status, created_by)
             VALUES (%s, %s, %s, %s, %s, %s)
-        """, (po_no, supplier_id, datetime.now(), total_amount, 'ordered', user.get('id')))
+        """, (po_no, supplier_id, datetime.now(), total_amount, 'ordering', user.get('id')))
         
         db.commit()
         po_id = cursor.lastrowid
@@ -192,9 +205,9 @@ def update_purchase_order_status(
         
         # Validate status transition
         valid_transitions = {
-            'pending': ['ordered', 'cancelled'],
-            'ordered': ['received', 'cancelled'],
-            'received': [],
+            'ordering': ['partial', 'completed', 'cancelled'],
+            'partial': ['completed', 'cancelled'],
+            'completed': [],
             'cancelled': []
         }
         
@@ -225,65 +238,117 @@ def receive_purchase_order(
     user: dict = Depends(authenticate_user)
 ):
     """
-    Receive purchase order and update stock (Process 7.3)
-    Updates: D5 (Parts stock), D15 (Stock_Movement), D17 (Purchase_Orders status)
+    Receive purchase order, record Goods Receipt, and update stock (Process 7.3)
     """
     db = get_db()
+    db.autocommit = False # Begin transaction
     cursor = db.cursor(dictionary=True)
     try:
-        # Check if purchase order exists and is in 'ordered' status
-        cursor.execute("SELECT id, status FROM purchase_orders WHERE id = %s", (po_id,))
+        # Check if purchase order exists and is in 'ordering' or 'partial' status
+        cursor.execute("SELECT id, status, supplier_id FROM purchase_orders WHERE id = %s", (po_id,))
         po = cursor.fetchone()
         if not po:
             raise HTTPException(status_code=404, detail="Purchase order not found")
         
-        if po['status'] not in ['pending', 'ordered']:
+        if po['status'] not in ['ordering', 'partial']:
             raise HTTPException(status_code=400, detail=f"Cannot receive order with status: {po['status']}")
         
         # Parse received items
         received_list = json.loads(received_items)
+        if not received_list:
+            raise HTTPException(status_code=400, detail="No items to receive")
+            
+        # Get cost price from PO items
+        cursor.execute("SELECT part_id, unit_cost FROM purchase_items WHERE purchase_id = %s", (po_id,))
+        po_items = cursor.fetchall()
+        cost_map = {item['part_id']: float(item['unit_cost']) for item in po_items}
+        
+        # Calculate Goods Receipt total amount
+        total_amount = 0
+        for item in received_list:
+            part_id = item['part_id']
+            received_qty = int(item['received_qty'])
+            cost_price = cost_map.get(part_id, 0.0)
+            total_amount += cost_price * received_qty
+            
+        # Generate receipt number (GR-YYYY-XXXX)
+        year = datetime.now().year
+        cursor.execute("SELECT COUNT(*) as count FROM goods_receipts WHERE YEAR(receipt_date) = %s", (year,))
+        count_res = cursor.fetchone()
+        count_num = count_res['count'] + 1 if count_res else 1
+        receipt_no = f"GR-{year}-{count_num:04d}"
+        
+        # 1. Create Receipt (Header)
+        cursor.execute("""
+            INSERT INTO goods_receipts 
+            (receipt_no, purchase_order_id, supplier_id, total_amount, status, received_by)
+            VALUES (%s, %s, %s, %s, 'received', %s)
+        """, (receipt_no, po_id, po.get('supplier_id'), total_amount, user.get('id')))
+        receipt_id = cursor.lastrowid
         
         # Process each received item
         for item in received_list:
             part_id = item['part_id']
-            received_qty = item['received_qty']
+            received_qty = int(item['received_qty'])
+            if received_qty <= 0:
+                continue
+                
+            cost_price = cost_map.get(part_id, 0.0)
+            total_price = cost_price * received_qty
             
-            # Get current stock
-            cursor.execute("SELECT stock_qty FROM parts WHERE id = %s", (part_id,))
-            part = cursor.fetchone()
-            if not part:
-                raise HTTPException(status_code=404, detail=f"Part not found (ID: {part_id})")
-            
-            # Update part stock (D5)
+            # 2. Create Receipt Item
             cursor.execute("""
-                UPDATE parts SET stock_qty = stock_qty + %s WHERE id = %s
-            """, (received_qty, part_id))
+                INSERT INTO goods_receipt_items 
+                (receipt_id, part_id, qty_received, cost_price, total_price)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (receipt_id, part_id, received_qty, cost_price, total_price))
             
-            # Add stock movement log (D15)
+            # 3. Update Part Stock & latest cost price (D5)
+            cursor.execute("""
+                UPDATE parts 
+                SET stock_qty = stock_qty + %s, cost_price = %s 
+                WHERE id = %s
+            """, (received_qty, cost_price, part_id))
+            
+            # 4. Record Stock Movement (D15)
             cursor.execute("""
                 INSERT INTO stock_movement (part_id, type, qty, ref_type, ref_id, date)
                 VALUES (%s, 'IN', %s, 'purchase', %s, NOW())
-            """, (part_id, received_qty, po_id))
+            """, (part_id, received_qty, receipt_id))
             
-            # Update received quantity in purchase_items
+            # 5. Update received quantity in purchase_items (D18)
             cursor.execute("""
                 UPDATE purchase_items 
                 SET received_qty = COALESCE(received_qty, 0) + %s
                 WHERE purchase_id = %s AND part_id = %s
             """, (received_qty, po_id, part_id))
-        
-        # Update purchase order status to 'received'
+            
+        # 6. Update PO Status based on totals
         cursor.execute("""
-            UPDATE purchase_orders 
-            SET status = 'received', received_by = %s, received_at = NOW()
-            WHERE id = %s
-        """, (user.get('id'), po_id))
+            SELECT SUM(qty) as total_ordered, SUM(received_qty) as total_received
+            FROM purchase_items
+            WHERE purchase_id = %s
+        """, (po_id,))
+        totals = cursor.fetchone()
+        
+        total_ordered = totals['total_ordered'] or 0
+        total_received = totals['total_received'] or 0
+        
+        if total_received >= total_ordered:
+            new_status = 'completed'
+        else:
+            new_status = 'partial'
+            
+        cursor.execute("""
+            UPDATE purchase_orders SET status = %s WHERE id = %s
+        """, (new_status, po_id))
         
         db.commit()
-        
-        return {"message": "Purchase order received and stock updated successfully"}
-    except HTTPException:
-        raise
+        return {
+            "message": "Purchase order received and stock updated successfully",
+            "receipt_no": receipt_no,
+            "po_status": new_status
+        }
     except Exception as e:
         db.rollback()
         print(f"Error receiving purchase order: {e}")
@@ -310,8 +375,8 @@ def delete_purchase_order(
         if not po:
             raise HTTPException(status_code=404, detail="Purchase order not found")
         
-        if po[1] != 'pending':
-            raise HTTPException(status_code=400, detail="Cannot delete purchase order that is not in pending status")
+        if po[1] != 'ordering':
+            raise HTTPException(status_code=400, detail="Cannot delete purchase order that is not in ordering status")
         
         # Delete purchase items first (foreign key)
         cursor.execute("DELETE FROM purchase_items WHERE purchase_id = %s", (po_id,))
@@ -401,6 +466,84 @@ def get_low_stock_parts(user: dict = Depends(authenticate_user)):
         import traceback
         traceback.print_exc()
         return []
+    finally:
+        cursor.close()
+        db.close()
+
+
+@router.get("/goods-receipts")
+def get_goods_receipts(
+    user: dict = Depends(authenticate_user)
+):
+    """Get all goods receipts (Process 7.3)"""
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+    try:
+        cursor.execute("""
+            SELECT gr.*, 
+                   po.po_no as po_no,
+                   s.name as supplier_name,
+                   e.name as received_by_name
+            FROM goods_receipts gr
+            LEFT JOIN purchase_orders po ON gr.purchase_order_id = po.id
+            LEFT JOIN suppliers s ON gr.supplier_id = s.id
+            LEFT JOIN employees e ON gr.received_by = e.id
+            ORDER BY gr.id DESC
+        """)
+        receipts = cursor.fetchall()
+        for gr in receipts:
+            if gr.get('receipt_date'):
+                gr['receipt_date'] = str(gr['receipt_date'])
+        return receipts
+    except Exception as e:
+        print(f"Error getting goods receipts: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        db.close()
+
+
+@router.get("/goods-receipts/{receipt_id}")
+def get_goods_receipt(
+    receipt_id: int,
+    user: dict = Depends(authenticate_user)
+):
+    """Get details of a single goods receipt"""
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+    try:
+        cursor.execute("""
+            SELECT gr.*, 
+                   po.po_no as po_no,
+                   s.name as supplier_name,
+                   e.name as received_by_name
+            FROM goods_receipts gr
+            LEFT JOIN purchase_orders po ON gr.purchase_order_id = po.id
+            LEFT JOIN suppliers s ON gr.supplier_id = s.id
+            LEFT JOIN employees e ON gr.received_by = e.id
+            WHERE gr.id = %s
+        """, (receipt_id,))
+        receipt = cursor.fetchone()
+        if not receipt:
+            raise HTTPException(status_code=404, detail="Goods receipt not found")
+        
+        if receipt.get('receipt_date'):
+            receipt['receipt_date'] = str(receipt['receipt_date'])
+            
+        cursor.execute("""
+            SELECT gri.*, p.name as part_name
+            FROM goods_receipt_items gri
+            LEFT JOIN parts p ON gri.part_id = p.id
+            WHERE gri.receipt_id = %s
+        """, (receipt_id,))
+        items = cursor.fetchall()
+        receipt['items'] = items
+        return receipt
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error getting goods receipt: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
     finally:
         cursor.close()
         db.close()

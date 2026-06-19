@@ -219,59 +219,51 @@ def get_invoice_info_by_job_order(
         total_amount = 0
         total_discount = 0
         
-        # ========== 1. GET ACTUAL PARTS USAGE FROM REPAIR (D14) ==========
+        # ========== GET PARTS AND SERVICES FROM APPROVED QUOTATION ==========
         cursor.execute("""
-            SELECT ro.id as repair_id
-            FROM repair_orders ro
-            WHERE ro.job_order_id = %s
-            ORDER BY ro.id DESC LIMIT 1
+            SELECT id, discount_amount, sub_total, net_total
+            FROM quotations
+            WHERE job_order_id = %s AND status = 'approved'
+            ORDER BY id DESC LIMIT 1
         """, (job_order_id,))
-        repair = cursor.fetchone()
+        quotation = cursor.fetchone()
         
-        if repair:
+        if quotation:
+            total_discount = float(quotation.get('discount_amount', 0) or 0)
+            
+            # 1. Get parts from quotation_items (using sell price from quotation)
             cursor.execute("""
                 SELECT 
-                    pu.id,
-                    pu.part_id,
-                    pu.qty,
-                    pu.cost_price,
-                    pu.note,
-                    COALESCE(p.name, 'ອາໄຫຼ່ທີ່ບໍ່ຮູ້ຈັກ') as item_name
-                FROM parts_usage pu
-                LEFT JOIN parts p ON pu.part_id = p.id
-                WHERE pu.repair_id = %s
-            """, (repair['repair_id'],))
-            parts_usage = cursor.fetchall()
+                    qi.id,
+                    qi.qty,
+                    qi.unit_price,
+                    qi.total,
+                    qi.part_id,
+                    COALESCE(p.name, qi.custom_name, 'ອາໄຫຼ່ທີ່ບໍ່ຮູ້ຈັກ') as item_name
+                FROM quotation_items qi
+                LEFT JOIN parts p ON qi.part_id = p.id
+                WHERE qi.quotation_id = %s AND qi.part_id IS NOT NULL
+                ORDER BY qi.id
+            """, (quotation['id'],))
+            quotation_parts = cursor.fetchall()
             
-            for part in parts_usage:
+            for part in quotation_parts:
                 qty = part.get('qty', 0)
-                unit_price = part.get('cost_price', 0)
-                total = qty * unit_price
+                unit_price = float(part.get('unit_price', 0) or 0)
+                total = float(part.get('total', qty * unit_price) or 0)
                 
                 parts_list.append({
                     'id': part.get('id'),
                     'part_id': part.get('part_id'),
                     'name': part.get('item_name', '-'),
                     'qty': qty,
-                    'unit_price': float(unit_price),
-                    'total': float(total),
-                    'note': part.get('note', '')
+                    'unit_price': unit_price,
+                    'total': total,
+                    'note': ''
                 })
                 total_amount += total
-        
-        # ========== 2. GET SERVICES FROM QUOTATION (D11 + D12) ==========
-        cursor.execute("""
-            SELECT q.id, q.discount_amount, q.sub_total, q.net_total
-            FROM quotations q
-            WHERE q.job_order_id = %s AND q.status = 'approved'
-            ORDER BY q.id DESC LIMIT 1
-        """, (job_order_id,))
-        quotation = cursor.fetchone()
-        
-        if quotation:
-            total_discount = quotation.get('discount_amount', 0)
             
-            # Get only services from quotation_items (including custom services)
+            # 2. Get only services from quotation_items (including custom services)
             cursor.execute("""
                 SELECT 
                     qi.id,
@@ -289,18 +281,18 @@ def get_invoice_info_by_job_order(
             
             for service in quotation_services:
                 qty = service.get('qty', 1)
-                unit_price = service.get('unit_price', 0)
-                total = service.get('total', qty * unit_price)
+                unit_price = float(service.get('unit_price', 0) or 0)
+                total = float(service.get('total', qty * unit_price) or 0)
                 
                 services_list.append({
                     'id': service.get('id'),
                     'service_id': service.get('service_id'),
                     'name': service.get('item_name', '-'),
                     'qty': qty,
-                    'unit_price': float(unit_price),
-                    'total': float(total)
+                    'unit_price': unit_price,
+                    'total': total
                 })
-                total_amount += float(total)
+                total_amount += total
         
         final_total = total_amount - total_discount
         if final_total < 0:
