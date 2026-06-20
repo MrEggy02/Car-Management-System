@@ -504,8 +504,8 @@ class AppLayout:
             # Reports (Process 8)
             "revenue_report": 29,
             "repair_summary_report": 30,
-            "parts_usage_report": 31,
-            "service_items_report": 32,
+            "parts_service_sales_report": 31,
+            "mechanic_performance_report": 32,
             "promotion_usage_report": 33,
             "goods_receipt_list": 34,
         }

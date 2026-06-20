@@ -485,36 +485,29 @@ class JobOrderListContent:
         try:
             self.show_snack_bar(get_text("preparing_print"), is_error=False)
             
-            order = next((o for o in self.job_orders if o.get("id") == order_id), None)
-            if not order:
-                self.show_snack_bar(get_text("order_not_found"), is_error=True)
+            pdf_bytes = self.client.get_job_order_pdf(order_id)
+            if not pdf_bytes:
+                self.show_snack_bar(get_text("pdf_export_failed"), is_error=True)
                 return
+                
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            workspace_root = os.path.abspath(os.path.join(base_dir, "..", "..", ".."))
+            output_dir = os.path.join(workspace_root, "output")
+            os.makedirs(output_dir, exist_ok=True)
             
-            def generate_and_print():
-                html_content = self._generate_print_html(order)
-                
-                with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False, encoding='utf-8') as f:
-                    f.write(html_content)
-                    temp_path = f.name
-                
-                time.sleep(0.5)
-                webbrowser.open(f'file://{temp_path}')
-                
-                def cleanup():
-                    time.sleep(30)
-                    try:
-                        if os.path.exists(temp_path):
-                            os.remove(temp_path)
-                    except:
-                        pass
-                
-                threading.Thread(target=cleanup, daemon=True).start()
+            order = next((o for o in self.job_orders if o.get("id") == order_id), None)
+            job_no = order.get("job_no", f"JOB_{order_id}") if order else f"JOB_{order_id}"
+            pdf_path = os.path.join(output_dir, f"job_order_{job_no}.pdf")
             
-            threading.Thread(target=generate_and_print, daemon=True).start()
+            with open(pdf_path, "wb") as f:
+                f.write(pdf_bytes)
+                
+            os.startfile(pdf_path)
+            self.show_snack_bar(get_text("pdf_export_success"), is_error=False)
             
         except Exception as ex:
-            print(f"Error printing: {ex}")
-            self.show_snack_bar(f"{get_text('error')}: {str(ex)}", is_error=True)
+            print(f"Error printing job order: {ex}")
+            self.show_snack_bar(f"{get_text('pdf_export_failed')}: {str(ex)}", is_error=True)
     
     def _generate_print_html(self, order):
         font_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "assets/fonts/Phetsarath.ttf")

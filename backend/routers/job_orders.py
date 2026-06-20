@@ -1,5 +1,5 @@
 # backend/routers/job_orders.py
-from fastapi import APIRouter, HTTPException, Depends, Form
+from fastapi import APIRouter, HTTPException, Depends, Form, Response
 from database import get_db
 from auth import authenticate_user
 from typing import Optional
@@ -669,3 +669,25 @@ def get_invoice_info_by_job_order(
     finally:
         cursor.close()
         db.close()
+
+
+@router.get("/job-orders/{order_id}/pdf")
+def get_job_order_pdf(order_id: int, user: dict = Depends(authenticate_user)):
+    """Generate a formal A4 job order PDF receipt"""
+    try:
+        from utils_pdf import generate_job_order_pdf
+        pdf_bytes = generate_job_order_pdf(order_id)
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"inline; filename=job_order_{order_id}.pdf"
+            }
+        )
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        print(f"Error generating job order PDF: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))

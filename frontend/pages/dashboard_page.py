@@ -12,8 +12,13 @@ from theme.app_theme import apply_theme  # เพิ่ม import theme
 
 def dashboard_page(page: ft.Page, client: APIClient, user: dict):
     
-    print("DEBUG: dashboard_page called")
-    print(f"DEBUG: user = {user}")
+    try:
+        import sys
+        enc = getattr(sys.stdout, 'encoding', 'utf-8') or 'utf-8'
+        print(f"DEBUG: dashboard_page called".encode(enc, errors='replace').decode(enc))
+        print(f"DEBUG: user = {str(user)}".encode(enc, errors='replace').decode(enc))
+    except Exception:
+        pass
     
     # Apply global font theme
     apply_theme(page)
@@ -37,9 +42,19 @@ def dashboard_page(page: ft.Page, client: APIClient, user: dict):
     try:
         app_layout = AppLayout(page, client, user)
         app_layout.build()
-        print("DEBUG: AppLayout built successfully")
+        try:
+            import sys
+            enc = getattr(sys.stdout, 'encoding', 'utf-8') or 'utf-8'
+            print(f"DEBUG: AppLayout built successfully".encode(enc, errors='replace').decode(enc))
+        except:
+            pass
     except Exception as e:
-        print(f"DEBUG: Error building AppLayout: {e}")
+        try:
+            import sys
+            enc = getattr(sys.stdout, 'encoding', 'utf-8') or 'utf-8'
+            print(f"DEBUG: Error building AppLayout: {str(e)}".encode(enc, errors='replace').decode(enc))
+        except:
+            pass
         import traceback
         traceback.print_exc()
     

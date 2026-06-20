@@ -170,13 +170,23 @@ class PromotionUsageReportContent:
         )
     
     def _pick_start_date(self, e):
+        if getattr(self, 'ignore_start_focus', False):
+            self.ignore_start_focus = False
+            return
+            
         def on_date_selected(e):
-            self.start_date = e.control.value.strftime("%Y-%m-%d")
-            self.start_date_picker.value = self.start_date
-            self.page.update()
+            self.ignore_start_focus = True
+            if e.control.value:
+                self.start_date = e.control.value.strftime("%Y-%m-%d")
+                self.start_date_picker.value = self.start_date
+                self.page.update()
+                
+        def on_dismiss(e):
+            self.ignore_start_focus = True
         
         date_picker = ft.DatePicker(
             on_change=on_date_selected,
+            on_dismiss=on_dismiss,
             first_date=datetime(2020, 1, 1),
             last_date=datetime.now(),
         )
@@ -185,13 +195,23 @@ class PromotionUsageReportContent:
         self.page.update()
     
     def _pick_end_date(self, e):
+        if getattr(self, 'ignore_end_focus', False):
+            self.ignore_end_focus = False
+            return
+            
         def on_date_selected(e):
-            self.end_date = e.control.value.strftime("%Y-%m-%d")
-            self.end_date_picker.value = self.end_date
-            self.page.update()
+            self.ignore_end_focus = True
+            if e.control.value:
+                self.end_date = e.control.value.strftime("%Y-%m-%d")
+                self.end_date_picker.value = self.end_date
+                self.page.update()
+                
+        def on_dismiss(e):
+            self.ignore_end_focus = True
         
         date_picker = ft.DatePicker(
             on_change=on_date_selected,
+            on_dismiss=on_dismiss,
             first_date=datetime(2020, 1, 1),
             last_date=datetime.now(),
         )
@@ -460,7 +480,7 @@ class PromotionUsageReportContent:
             padding=ft.padding.all(20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
-            margin=ft.margin.symmetric(horizontal=24, bottom=24),
+            margin=ft.margin.only(left=24, right=24, bottom=24),
             shadow=ft.BoxShadow(
                 blur_radius=10,
                 color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
@@ -475,359 +495,35 @@ class PromotionUsageReportContent:
             return "0 KIP"
     
     def print_report(self, e):
-        """Print report using browser print dialog"""
+        """Export report as A4 PDF and open it"""
         try:
-            # Show loading indicator
             self._show_snack_bar(get_text("preparing_print"), is_error=False)
             
-            # Generate HTML for printing in a separate thread
-            def generate_and_print():
-                html_content = self._generate_print_html()
-                
-                # Create temporary HTML file
-                with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False, encoding='utf-8') as f:
-                    f.write(html_content)
-                    temp_path = f.name
-                
-                # Small delay to ensure file is written
-                time.sleep(0.5)
-                
-                # Open in browser
-                webbrowser.open(f'file://{temp_path}')
-                
-                # Schedule cleanup after a delay (30 seconds)
-                def cleanup():
-                    time.sleep(30)
-                    try:
-                        if os.path.exists(temp_path):
-                            os.remove(temp_path)
-                    except:
-                        pass
-                
-                threading.Thread(target=cleanup, daemon=True).start()
+            # Fetch PDF bytes from backend
+            pdf_bytes = self.client.get_promotion_usage_report_pdf(
+                start_date=self.start_date,
+                end_date=self.end_date
+            )
             
-            # Run in background thread to not block UI
-            threading.Thread(target=generate_and_print, daemon=True).start()
+            # Ensure output directory exists in project root
+            output_dir = "output"
+            if not os.path.exists(output_dir):
+                os.makedirs(output_dir)
+                
+            file_name = f"promotion_usage_report_{self.start_date}_to_{self.end_date}.pdf"
+            file_path = os.path.join(output_dir, file_name)
+            
+            # Write PDF bytes
+            with open(file_path, "wb") as f:
+                f.write(pdf_bytes)
+                
+            # Open PDF
+            os.startfile(file_path)
+            self._show_snack_bar(get_text("pdf_export_success"), is_error=False)
             
         except Exception as ex:
-            print(f"Error printing: {ex}")
-            self._show_snack_bar(f"{get_text('error')}: {str(ex)}", is_error=True)
-    
-    def _generate_print_html(self):
-        """Generate HTML for printing with Lao/English text"""
-        summary = self.report_data.get('summary', {})
-        promotion_usage = self.report_data.get('promotion_usage', [])
-        promotion_quoted = self.report_data.get('promotion_quoted', [])
-        
-        # Get shop info
-        shop_info = {}
-        try:
-            shop_info = self.client.get_shop()
-        except:
-            pass
-        
-        shop_name = shop_info.get('name', 'JP Auto Shop')
-        shop_address = shop_info.get('address', '')
-        shop_phone = shop_info.get('phone', '')
-        
-        # Get current language
-        current_lang = 'lo'
-        try:
-            from i18n import get_current_language
-            current_lang = get_current_language()
-        except:
-            pass
-        
-        # Set titles based on language
-        if current_lang == 'lo':
-            report_title = "ລາຍງານການໃຊ້ໂປຣໂມຊັນ"
-            summary_title = "ສະຫຼຸບໂປຣໂມຊັນ"
-            usage_title = "ລາຍລະອຽດການໃຊ້ໂປຣໂມຊັນ"
-            quoted_title = "ລາຍລະອຽດການກຳນົດໂປຣໂມຊັນ"
-            total_used_text = "ຈຳນວນທີ່ໃຊ້ທັງໝົດ"
-            total_discount_text = "ສ່ວນຫຼຸດທັງໝົດ"
-            total_invoices_text = "ໃບບິນທີ່ໃຊ້ໂປຣໂມຊັນ"
-            promotion_name_text = "ຊື່ໂປຣໂມຊັນ"
-            discount_type_text = "ປະເພດສ່ວນຫຼຸດ"
-            usage_count_text = "ຈຳນວນຄັ້ງທີ່ໃຊ້"
-            total_discount_col_text = "ສ່ວນຫຼຸດທັງໝົດ"
-            total_revenue_text = "ລາຍຮັບທັງໝົດ"
-            quoted_count_text = "ຈຳນວນທີ່ກຳນົດ"
-            quoted_discount_text = "ສ່ວນຫຼຸດທີ່ກຳນົດ"
-            period_text = "ວັນທີ"
-            to_text = "ຫາ"
-            printed_text = "ພິມເມື່ອ"
-            phone_text = "ໂທ"
-        else:
-            report_title = "Promotion Usage Report"
-            summary_title = "Promotion Summary"
-            usage_title = "Promotion Usage Details"
-            quoted_title = "Promotion Usage at Quotation Stage"
-            total_used_text = "Total Promotions Used"
-            total_discount_text = "Total Discount Given"
-            total_invoices_text = "Invoices with Promotion"
-            promotion_name_text = "Promotion Name"
-            discount_type_text = "Discount Type"
-            usage_count_text = "Usage Count"
-            total_discount_col_text = "Total Discount"
-            total_revenue_text = "Total Revenue"
-            quoted_count_text = "Quoted Count"
-            quoted_discount_text = "Quoted Discount"
-            period_text = "Period"
-            to_text = "to"
-            printed_text = "Printed on"
-            phone_text = "Tel"
-        
-        # Build promotion usage table HTML
-        usage_html = ""
-        for promo in promotion_usage:
-            name = promo.get('promotion_name', '-')
-            discount_type = promo.get('discount_type', '-')
-            discount_value = promo.get('discount_value', 0)
-            usage_count = promo.get('usage_count', 0)
-            total_discount = promo.get('total_discount_given', 0)
-            total_revenue = promo.get('total_revenue', 0)
-            
-            if discount_type == 'percentage':
-                discount_text = f"{discount_type}: {int(discount_value)}%"
-            else:
-                discount_text = f"{discount_type}: {self._format_currency(discount_value)}"
-            
-            usage_html += f"""
-            <tr>
-                <td>{name}</td>
-                <td>{discount_text}</td>
-                <td class="text-right">{usage_count}</td>
-                <td class="text-right">{self._format_currency(total_discount)}</td>
-                <td class="text-right">{self._format_currency(total_revenue)}</td>
-            </tr>
-            """
-        
-        # Build promotion quoted table HTML
-        quoted_html = ""
-        for promo in promotion_quoted:
-            name = promo.get('promotion_name', '-')
-            quoted_count = promo.get('quoted_count', 0)
-            quoted_discount = promo.get('quoted_discount', 0)
-            quoted_html += f"""
-            <tr>
-                <td>{name}</td>
-                <td class="text-right">{quoted_count}</td>
-                <td class="text-right">{self._format_currency(quoted_discount)}</td>
-            </tr>
-            """
-        
-        html_content = f"""<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>{report_title}</title>
-    <style>
-        @media print {{
-            body {{ margin: 0; padding: 15px; }}
-        }}
-        * {{
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }}
-        body {{
-            font-family: 'Noto Sans', 'DejaVu Sans', 'Segoe UI', Arial, sans-serif;
-            font-size: 12px;
-            padding: 20px;
-            color: #333;
-            background: white;
-        }}
-        .print-container {{
-            max-width: 1200px;
-            margin: 0 auto;
-        }}
-        .header {{
-            text-align: center;
-            margin-bottom: 25px;
-            border-bottom: 2px solid #1565C0;
-            padding-bottom: 15px;
-        }}
-        .shop-name {{
-            font-size: 22px;
-            font-weight: bold;
-            color: #1565C0;
-            margin-bottom: 5px;
-        }}
-        .shop-address {{
-            font-size: 11px;
-            color: #666;
-        }}
-        .shop-phone {{
-            font-size: 11px;
-            color: #666;
-        }}
-        .report-title {{
-            font-size: 18px;
-            font-weight: bold;
-            margin-top: 12px;
-            color: #1E293B;
-        }}
-        .period {{
-            font-size: 11px;
-            color: #64748B;
-            margin-top: 5px;
-        }}
-        .print-date {{
-            font-size: 10px;
-            color: #94A3B8;
-            margin-top: 3px;
-        }}
-        .section {{
-            margin-bottom: 25px;
-        }}
-        .section-title {{
-            font-size: 14px;
-            font-weight: bold;
-            background-color: #F1F5F9;
-            padding: 8px 12px;
-            margin-bottom: 12px;
-            border-left: 4px solid #1565C0;
-        }}
-        .cards-grid {{
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            margin-bottom: 15px;
-        }}
-        .card {{
-            flex: 1;
-            min-width: 180px;
-            background-color: #F8FAFC;
-            border: 1px solid #E2E8F0;
-            border-radius: 8px;
-            padding: 12px;
-            text-align: center;
-        }}
-        .card-value {{
-            font-size: 18px;
-            font-weight: bold;
-            color: #1565C0;
-        }}
-        .card-label {{
-            font-size: 11px;
-            color: #64748B;
-            margin-top: 4px;
-        }}
-        table {{
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 15px;
-        }}
-        th {{
-            background-color: #F8FAFC;
-            border: 1px solid #E2E8F0;
-            padding: 8px 10px;
-            text-align: left;
-            font-weight: bold;
-            font-size: 11px;
-        }}
-        td {{
-            border: 1px solid #E2E8F0;
-            padding: 6px 10px;
-            font-size: 11px;
-        }}
-        .text-right {{
-            text-align: right;
-        }}
-        .text-center {{
-            text-align: center;
-        }}
-        .footer {{
-            margin-top: 25px;
-            text-align: center;
-            font-size: 9px;
-            color: #94A3B8;
-            border-top: 1px solid #E2E8F0;
-            padding-top: 12px;
-        }}
-    </style>
-</head>
-<body>
-    <div class="print-container">
-        <div class="header">
-            <div class="shop-name">{shop_name}</div>
-            <div class="shop-address">{shop_address}</div>
-            <div class="shop-phone">{phone_text}: {shop_phone}</div>
-            <div class="report-title">{report_title}</div>
-            <div class="period">{period_text}: {self.start_date} {to_text} {self.end_date}</div>
-            <div class="print-date">{printed_text}: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</div>
-        </div>
-        
-        <div class="section">
-            <div class="section-title">{summary_title}</div>
-            <div class="cards-grid">
-                <div class="card">
-                    <div class="card-value">{summary.get('total_promotions_used', 0)}</div>
-                    <div class="card-label">{total_used_text}</div>
-                </div>
-                <div class="card">
-                    <div class="card-value">{self._format_currency(summary.get('total_discount_given', 0))}</div>
-                    <div class="card-label">{total_discount_text}</div>
-                </div>
-                <div class="card">
-                    <div class="card-value">{summary.get('total_invoices_with_promotion', 0)}</div>
-                    <div class="card-label">{total_invoices_text}</div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="section">
-            <div class="section-title">{usage_title}</div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>{promotion_name_text}</th>
-                        <th>{discount_type_text}</th>
-                        <th class="text-right">{usage_count_text}</th>
-                        <th class="text-right">{total_discount_col_text}</th>
-                        <th class="text-right">{total_revenue_text}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {usage_html if usage_html else '<tr><td colspan="5" class="text-center">-</td></tr>'}
-                </tbody>
-            能有
-        </div>
-        
-        <div class="section">
-            <div class="section-title">{quoted_title}</div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>{promotion_name_text}</th>
-                        <th class="text-right">{quoted_count_text}</th>
-                        <th class="text-right">{quoted_discount_text}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {quoted_html if quoted_html else '<tr><td colspan="3" class="text-center">-</td></tr>'}
-                </tbody>
-            能有
-        </div>
-        
-        <div class="footer">
-            {shop_name}<br>
-            {shop_address} | {phone_text}: {shop_phone}
-        </div>
-    </div>
-    
-    <script>
-        window.onload = function() {{
-            setTimeout(function() {{
-                window.print();
-            }}, 100);
-        }}
-    </script>
-</body>
-</html>"""
-        
-        return html_content
+            print(f"Error printing PDF: {ex}")
+            self._show_snack_bar(f"{get_text('pdf_export_failed')}: {str(ex)}", is_error=True)
     
     def _show_snack_bar(self, message, is_error=False):
         self.page.snack_bar = ft.SnackBar(

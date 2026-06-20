@@ -449,13 +449,13 @@ class ContentManager:
         ).build()
     
     def _get_parts_usage_report_content(self):
-        """Get parts usage report page (Process 8.3)"""
-        from pages.reports.parts_usage_report import PartsUsageReportContent
+        """Get parts and service sales report page (Process 8.3)"""
+        from pages.reports.parts_service_sales_report import PartsServiceSalesReportContent
         
         def navigate(page_name, *args, **kwargs):
             self.parent.navigate_to(page_name, **kwargs)
         
-        return PartsUsageReportContent(
+        return PartsServiceSalesReportContent(
             self.parent.page,
             self.parent.client,
             self.parent.user,
@@ -463,13 +463,13 @@ class ContentManager:
         ).build()
     
     def _get_service_items_report_content(self):
-        """Get service items report page (Process 8.4)"""
-        from pages.reports.service_items_report import ServiceItemsReportContent
+        """Get mechanic performance report page (Process 8.4)"""
+        from pages.reports.mechanic_performance_report import MechanicPerformanceReportContent
         
         def navigate(page_name, *args, **kwargs):
             self.parent.navigate_to(page_name, **kwargs)
         
-        return ServiceItemsReportContent(
+        return MechanicPerformanceReportContent(
             self.parent.page,
             self.parent.client,
             self.parent.user,

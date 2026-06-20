@@ -167,13 +167,23 @@ class RepairSummaryReportContent:
         )
     
     def _pick_start_date(self, e):
+        if getattr(self, 'ignore_start_focus', False):
+            self.ignore_start_focus = False
+            return
+            
         def on_date_selected(e):
-            self.start_date = e.control.value.strftime("%Y-%m-%d")
-            self.start_date_picker.value = self.start_date
-            self.page.update()
+            self.ignore_start_focus = True
+            if e.control.value:
+                self.start_date = e.control.value.strftime("%Y-%m-%d")
+                self.start_date_picker.value = self.start_date
+                self.page.update()
+                
+        def on_dismiss(e):
+            self.ignore_start_focus = True
         
         date_picker = ft.DatePicker(
             on_change=on_date_selected,
+            on_dismiss=on_dismiss,
             first_date=datetime(2020, 1, 1),
             last_date=datetime.now(),
         )
@@ -182,13 +192,23 @@ class RepairSummaryReportContent:
         self.page.update()
     
     def _pick_end_date(self, e):
+        if getattr(self, 'ignore_end_focus', False):
+            self.ignore_end_focus = False
+            return
+            
         def on_date_selected(e):
-            self.end_date = e.control.value.strftime("%Y-%m-%d")
-            self.end_date_picker.value = self.end_date
-            self.page.update()
+            self.ignore_end_focus = True
+            if e.control.value:
+                self.end_date = e.control.value.strftime("%Y-%m-%d")
+                self.end_date_picker.value = self.end_date
+                self.page.update()
+                
+        def on_dismiss(e):
+            self.ignore_end_focus = True
         
         date_picker = ft.DatePicker(
             on_change=on_date_selected,
+            on_dismiss=on_dismiss,
             first_date=datetime(2020, 1, 1),
             last_date=datetime.now(),
         )
@@ -220,15 +240,6 @@ class RepairSummaryReportContent:
                 start_date=self.start_date,
                 end_date=self.end_date
             )
-            
-            print("=" * 50)
-            print("REPAIR SUMMARY DATA RECEIVED:")
-            print(f"status_summary: {self.report_data.get('status_summary', [])}")
-            print(f"repair_stats: {self.report_data.get('repair_stats', {})}")
-            print(f"vehicle_stats: {self.report_data.get('vehicle_stats', [])}")
-            print(f"mechanic_stats: {self.report_data.get('mechanic_stats', [])}")
-            print("=" * 50)
-            
             # Build the report UI
             self._build_report_ui()
             
@@ -316,7 +327,7 @@ class RepairSummaryReportContent:
                 {"status": "completed", "count": 0, "percentage": 0}
             ]
         
-        cards_row = ft.Row(spacing=16, expand=True, wrap=True)
+        cards_row = ft.Row(spacing=16, expand=True)
         
         for status in status_summary:
             status_name = status.get('status', '')
@@ -369,7 +380,7 @@ class RepairSummaryReportContent:
         avg_hours = repair_stats.get('avg_repair_hours', 0)
         
         # Stats row
-        stats_row = ft.Row(spacing=16, expand=True, wrap=True)
+        stats_row = ft.Row(spacing=16, expand=True)
         
         stat_items = [
             (get_text("total_repairs"), str(total), ft.Icons.CONSTRUCTION, "#3B82F6"),
@@ -673,310 +684,35 @@ class RepairSummaryReportContent:
         )
     
     def print_report(self, e):
-        """Print report using browser print dialog"""
+        """Export report as A4 PDF and open it"""
         try:
             self._show_snack_bar(get_text("preparing_print"), is_error=False)
             
-            def generate_and_print():
-                html_content = self._generate_print_html()
-                
-                with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False, encoding='utf-8') as f:
-                    f.write(html_content)
-                    temp_path = f.name
-                
-                time.sleep(0.5)
-                webbrowser.open(f'file://{temp_path}')
-                
-                def cleanup():
-                    time.sleep(30)
-                    try:
-                        if os.path.exists(temp_path):
-                            os.remove(temp_path)
-                    except:
-                        pass
-                
-                threading.Thread(target=cleanup, daemon=True).start()
+            # Fetch PDF bytes from backend
+            pdf_bytes = self.client.get_repair_summary_report_pdf(
+                start_date=self.start_date,
+                end_date=self.end_date
+            )
             
-            threading.Thread(target=generate_and_print, daemon=True).start()
+            # Ensure output directory exists in project root
+            output_dir = "output"
+            if not os.path.exists(output_dir):
+                os.makedirs(output_dir)
+                
+            file_name = f"repair_summary_report_{self.start_date}_to_{self.end_date}.pdf"
+            file_path = os.path.join(output_dir, file_name)
+            
+            # Write PDF bytes
+            with open(file_path, "wb") as f:
+                f.write(pdf_bytes)
+                
+            # Open PDF
+            os.startfile(file_path)
+            self._show_snack_bar(get_text("pdf_export_success"), is_error=False)
             
         except Exception as ex:
-            print(f"Error printing: {ex}")
-            self._show_snack_bar(f"{get_text('error')}: {str(ex)}", is_error=True)
-    
-    def _generate_print_html(self):
-        """Generate HTML for printing"""
-        status_summary = self.report_data.get('status_summary', [])
-        repair_stats = self.report_data.get('repair_stats', {})
-        vehicle_stats = self.report_data.get('vehicle_stats', [])
-        mechanic_stats = self.report_data.get('mechanic_stats', [])
-        daily_repairs = self.report_data.get('daily_repairs', [])
-        
-        shop_info = {}
-        try:
-            shop_info = self.client.get_shop()
-        except:
-            pass
-        
-        shop_name = shop_info.get('name', 'JP Auto Shop')
-        shop_address = shop_info.get('address', '')
-        shop_phone = shop_info.get('phone', '')
-        
-        current_lang = 'lo'
-        try:
-            from i18n import get_current_language
-            current_lang = get_current_language()
-        except:
-            pass
-        
-        if current_lang == 'lo':
-            report_title = "ລາຍງານສະຫຼຸບການສ້ອມແປງ"
-            status_title = "ສະຫຼຸບສະຖານະການສ້ອມແປງ"
-            stats_title = "ສະຖິຕິການສ້ອມແປງ"
-            vehicles_title = "ລົດທີ່ມາສ້ອມແປງຫຼາຍທີ່ສຸດ"
-            mechanics_title = "ຜົນງານຊ່າງຈັກ"
-            daily_title = "ສະຖິຕິການສ້ອມແປງລາຍວັນ"
-            period_text = "ວັນທີ"
-            to_text = "ຫາ"
-            printed_text = "ພິມເມື່ອ"
-            phone_text = "ໂທ"
-            brand_text = "ຍີ່ຫໍ້"
-            repair_count_text = "ຈຳນວນຄັ້ງ"
-            completed_text = "ສຳເລັດ"
-            avg_hours_text = "ເວລາສະເລ່ຍ"
-            mechanic_text = "ຊ່າງຈັກ"
-            date_text = "ວັນທີ"
-            daily_repairs_text = "ຈຳນວນການສ້ອມແປງ"
-            in_progress_text = "ກຳລັງສ້ອມແປງ"
-            
-            status_texts = {
-                'pending': "ລໍຖ້າ",
-                'working': "ກຳລັງສ້ອມແປງ",
-                'paused': "ຢຸດຊົ່ວຄາວ",
-                'completed': "ສຳເລັດ",
-                'cancelled': "ຍົກເລີກ"
-            }
-        else:
-            report_title = "Repair Summary Report"
-            status_title = "Repair Status Summary"
-            stats_title = "Repair Statistics"
-            vehicles_title = "Top Vehicles by Brand"
-            mechanics_title = "Mechanic Performance"
-            daily_title = "Daily Repair Statistics"
-            period_text = "Period"
-            to_text = "to"
-            printed_text = "Printed on"
-            phone_text = "Tel"
-            brand_text = "Brand"
-            repair_count_text = "Repair Count"
-            completed_text = "Completed"
-            avg_hours_text = "Avg Hours"
-            mechanic_text = "Mechanic"
-            date_text = "Date"
-            daily_repairs_text = "Daily Repairs"
-            in_progress_text = "In Progress"
-            
-            status_texts = {
-                'pending': "Pending",
-                'working': "Working",
-                'paused': "Paused",
-                'completed': "Completed",
-                'cancelled': "Cancelled"
-            }
-        
-        # Build status cards
-        status_cards_html = ""
-        for status in status_summary:
-            status_name = status.get('status', '')
-            count = status.get('count', 0)
-            status_display = status_texts.get(status_name, status_name)
-            color = "#4CAF50" if status_name == "completed" else "#FF9800" if status_name == "pending" else "#2196F3"
-            status_cards_html += f"""
-            <div class="status-card">
-                <div class="status-count" style="color: {color}">{count}</div>
-                <div class="status-label">{status_display}</div>
-            </div>
-            """
-        
-        # Build vehicle table
-        vehicle_html = ""
-        for vehicle in vehicle_stats:
-            vehicle_html += f"""
-            <tr>
-                <td>{vehicle.get('brand', '-')}</td>
-                <td class="text-right">{vehicle.get('repair_count', 0)}</td>
-                <td class="text-right">{vehicle.get('completed_count', 0)}</td>
-                <td class="text-right">{vehicle.get('avg_hours', 0):.1f}h</td>
-            </tr>
-            """
-        
-        # Build mechanic table
-        mechanic_html = ""
-        for mechanic in mechanic_stats:
-            name = mechanic.get('mechanic_name', '-')
-            repair_count = mechanic.get('repair_count', 0)
-            completed_count = mechanic.get('completed_count', 0)
-            avg_hours = mechanic.get('avg_hours_per_repair', 0)
-            completion_rate = (completed_count / repair_count * 100) if repair_count > 0 else 0
-            mechanic_html += f"""
-            <tr>
-                <td>{name}</td>
-                <td class="text-right">{repair_count}</td>
-                <td class="text-right">{completed_count}</td>
-                <td class="text-right">{avg_hours:.1f}h ({completion_rate:.0f}%)</td>
-            </tr>
-            """
-        
-        # Build daily table
-        daily_html = ""
-        for day in daily_repairs:
-            daily_html += f"""
-            <tr>
-                <td>{day.get('date', '-')}</td>
-                <td class="text-right">{day.get('daily_repairs', 0)}</td>
-                <td class="text-right">{day.get('daily_completed', 0)}</td>
-                <td class="text-right">{day.get('daily_in_progress', 0)}</td>
-            </tr>
-            """
-        
-        total = repair_stats.get('total_repairs', 0)
-        completed = repair_stats.get('completed_repairs', 0)
-        completion_rate = repair_stats.get('completion_rate', 0)
-        avg_hours = repair_stats.get('avg_repair_hours', 0)
-        
-        html_content = f"""<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>{report_title}</title>
-    <style>
-        @media print {{ body {{ margin: 0; padding: 15px; }} }}
-        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-        body {{
-            font-family: 'Noto Sans', 'DejaVu Sans', 'Segoe UI', Arial, sans-serif;
-            font-size: 12px; padding: 20px; color: #333; background: white;
-        }}
-        .print-container {{ max-width: 1200px; margin: 0 auto; }}
-        .header {{
-            text-align: center; margin-bottom: 25px;
-            border-bottom: 2px solid #1565C0; padding-bottom: 15px;
-        }}
-        .shop-name {{ font-size: 22px; font-weight: bold; color: #1565C0; }}
-        .shop-address {{ font-size: 11px; color: #666; }}
-        .shop-phone {{ font-size: 11px; color: #666; }}
-        .report-title {{ font-size: 18px; font-weight: bold; margin-top: 12px; color: #1E293B; }}
-        .period {{ font-size: 11px; color: #64748B; margin-top: 5px; }}
-        .print-date {{ font-size: 10px; color: #94A3B8; margin-top: 3px; }}
-        .section {{ margin-bottom: 25px; }}
-        .section-title {{
-            font-size: 14px; font-weight: bold;
-            background-color: #F1F5F9; padding: 8px 12px;
-            margin-bottom: 12px; border-left: 4px solid #1565C0;
-        }}
-        .status-cards {{ display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; }}
-        .status-card {{
-            flex: 1; min-width: 80px; background-color: #F8FAFC;
-            border: 1px solid #E2E8F0; border-radius: 8px;
-            padding: 12px; text-align: center;
-        }}
-        .status-count {{ font-size: 28px; font-weight: bold; }}
-        .status-label {{ font-size: 11px; color: #64748B; margin-top: 4px; }}
-        .stats-cards {{ display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; }}
-        .stat-card {{
-            flex: 1; min-width: 120px; background-color: #F8FAFC;
-            border: 1px solid #E2E8F0; border-radius: 8px;
-            padding: 12px; text-align: center;
-        }}
-        .stat-value {{ font-size: 18px; font-weight: bold; color: #1565C0; }}
-        .stat-label {{ font-size: 11px; color: #64748B; margin-top: 4px; }}
-        .progress-bar {{
-            height: 6px; background-color: #E2E8F0; border-radius: 3px; margin-top: 6px;
-            overflow: hidden;
-        }}
-        .progress-fill {{
-            height: 100%; background-color: #10B981; border-radius: 3px;
-            width: {completion_rate}%;
-        }}
-        table {{ width: 100%; border-collapse: collapse; margin-bottom: 12px; }}
-        th {{
-            background-color: #F8FAFC; border: 1px solid #E2E8F0;
-            padding: 6px 8px; text-align: left; font-weight: bold; font-size: 10px;
-        }}
-        td {{
-            border: 1px solid #E2E8F0; padding: 5px 8px; font-size: 10px;
-        }}
-        .text-right {{ text-align: right; }}
-        .text-center {{ text-align: center; }}
-        .footer {{
-            margin-top: 25px; text-align: center; font-size: 9px;
-            color: #94A3B8; border-top: 1px solid #E2E8F0; padding-top: 12px;
-        }}
-    </style>
-</head>
-<body>
-    <div class="print-container">
-        <div class="header">
-            <div class="shop-name">{shop_name}</div>
-            <div class="shop-address">{shop_address}</div>
-            <div class="shop-phone">{phone_text}: {shop_phone}</div>
-            <div class="report-title">{report_title}</div>
-            <div class="period">{period_text}: {self.start_date} {to_text} {self.end_date}</div>
-            <div class="print-date">{printed_text}: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</div>
-        </div>
-        
-        <div class="section">
-            <div class="section-title">{status_title}</div>
-            <div class="status-cards">{status_cards_html if status_cards_html else '<div class="text-center">-</div>'}</div>
-        </div>
-        
-        <div class="section">
-            <div class="section-title">{stats_title}</div>
-            <div class="stats-cards">
-                <div class="stat-card"><div class="stat-value">{total}</div><div class="stat-label">{get_text('total_repairs')}</div></div>
-                <div class="stat-card"><div class="stat-value">{completed}</div><div class="stat-label">{get_text('completed_repairs')}</div></div>
-                <div class="stat-card"><div class="stat-value">{completion_rate:.1f}%</div><div class="stat-label">{get_text('completion_rate')}</div></div>
-                <div class="stat-card"><div class="stat-value">{avg_hours:.1f}</div><div class="stat-label">{get_text('avg_repair_hours')}</div></div>
-            </div>
-            <div class="progress-bar"><div class="progress-fill"></div></div>
-        </div>
-        
-        <div class="section">
-            <div class="section-title">{vehicles_title}</div>
-            <table>
-                <thead><tr><th>{brand_text}</th><th class="text-right">{repair_count_text}</th><th class="text-right">{completed_text}</th><th class="text-right">{avg_hours_text}</th></tr></thead>
-                <tbody>{vehicle_html if vehicle_html else '<tr><td colspan="4" class="text-center">-</td></tr>'}</tbody>
-            </table>
-        </div>
-        
-        <div class="section">
-            <div class="section-title">{mechanics_title}</div>
-            <table>
-                <thead><tr><th>{mechanic_text}</th><th class="text-right">{repair_count_text}</th><th class="text-right">{completed_text}</th><th class="text-right">{avg_hours_text}</th></tr></thead>
-                <tbody>{mechanic_html if mechanic_html else '<tr><td colspan="4" class="text-center">-</td></tr>'}</tbody>
-            </table>
-        </div>
-        
-        <div class="section">
-            <div class="section-title">{daily_title}</div>
-            <table>
-                <thead><tr><th>{date_text}</th><th class="text-right">{daily_repairs_text}</th><th class="text-right">{completed_text}</th><th class="text-right">{in_progress_text}</th></tr></thead>
-                <tbody>{daily_html if daily_html else '<tr><td colspan="4" class="text-center">-</td></tr>'}</tbody>
-            </table>
-        </div>
-        
-        <div class="footer">{shop_name}<br>{shop_address} | {phone_text}: {shop_phone}</div>
-    </div>
-    
-    <script>
-        window.onload = function() {{
-            setTimeout(function() {{
-                window.print();
-            }}, 100);
-        }}
-    </script>
-</body>
-</html>"""
-        
-        return html_content
+            print(f"Error printing PDF: {ex}")
+            self._show_snack_bar(f"{get_text('pdf_export_failed')}: {str(ex)}", is_error=True)
     
     def _show_snack_bar(self, message, is_error=False):
         self.page.snack_bar = ft.SnackBar(

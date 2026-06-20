@@ -117,7 +117,12 @@ def login_page(page: ft.Page, on_login_success):
                 response = client.login(username_val, password_val)
                 hide_loading()
                 
-                print(f"DEBUG: Login response = {response}")
+                try:
+                    import sys
+                    enc = getattr(sys.stdout, 'encoding', 'utf-8') or 'utf-8'
+                    print(f"DEBUG: Login response = {str(response).encode(enc, errors='replace').decode(enc)}")
+                except Exception:
+                    pass
                 
                 # ✅ Handle both response formats
                 user_data = None
@@ -139,7 +144,12 @@ def login_page(page: ft.Page, on_login_success):
                                     user_data["fullname"] = emp.get("name")
                                     break
                         except Exception as e:
-                            print(f"DEBUG: Error getting employee details: {e}")
+                            try:
+                                import sys
+                                enc = getattr(sys.stdout, 'encoding', 'utf-8') or 'utf-8'
+                                print(f"DEBUG: Error getting employee details: {str(e).encode(enc, errors='replace').decode(enc)}")
+                            except Exception:
+                                pass
                     
                     # If still no id, create minimal user data
                     if user_data and "id" not in user_data:
@@ -157,7 +167,12 @@ def login_page(page: ft.Page, on_login_success):
             except Exception as err:
                 hide_loading()
                 error_message = str(err)
-                print(f"DEBUG: Login error = {error_message}")
+                try:
+                    import sys
+                    enc = getattr(sys.stdout, 'encoding', 'utf-8') or 'utf-8'
+                    print(f"DEBUG: Login error = {str(error_message).encode(enc, errors='replace').decode(enc)}")
+                except Exception:
+                    pass
                 
                 # Check for specific error messages from backend
                 error_lower = error_message.lower()

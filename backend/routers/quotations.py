@@ -1,5 +1,5 @@
 # backend/routers/quotations.py
-from fastapi import APIRouter, HTTPException, Depends, Form
+from fastapi import APIRouter, HTTPException, Depends, Form, Response
 from database import get_db
 from auth import authenticate_user
 from typing import Optional
@@ -706,3 +706,25 @@ def search_services(
     finally:
         cursor.close()
         db.close()
+
+
+@router.get("/quotations/{quotation_id}/pdf")
+def get_quotation_pdf(quotation_id: int, user: dict = Depends(authenticate_user)):
+    """Generate a formal A4 quotation PDF"""
+    try:
+        from utils_pdf import generate_quotation_pdf
+        pdf_bytes = generate_quotation_pdf(quotation_id)
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"inline; filename=quotation_{quotation_id}.pdf"
+            }
+        )
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        print(f"Error generating quotation PDF: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))

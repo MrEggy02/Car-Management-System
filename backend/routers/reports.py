@@ -709,3 +709,293 @@ def get_dashboard_summary(user: dict = Depends(authenticate_user)):
     finally:
         cursor.close()
         db.close()
+
+
+# ========== Services and Spare Parts Sales Report (ລາຍງານຍອດຂາຍບໍລິການ ແລະ ອາໄຫຼ່) ==========
+@router.get("/reports/parts-service-sales")
+def get_parts_service_sales_report(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    user: dict = Depends(authenticate_user)
+):
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+    try:
+        if not end_date:
+            end_date = datetime.now().strftime('%Y-%m-%d')
+        if not start_date:
+            start_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+            
+        # 1. Services Sales Breakdown from approved quotations
+        cursor.execute("""
+            SELECT 
+                s.name as service_name,
+                SUM(qi.qty) as quantity_sold,
+                AVG(qi.unit_price) as avg_unit_price,
+                SUM(qi.total) as total_sales_amount
+            FROM quotation_items qi
+            LEFT JOIN services s ON qi.service_id = s.id
+            LEFT JOIN quotations q ON qi.quotation_id = q.id
+            WHERE qi.service_id IS NOT NULL AND q.status = 'approved'
+            AND DATE(q.created_at) BETWEEN %s AND %s
+            GROUP BY s.id, s.name
+            ORDER BY total_sales_amount DESC
+        """, (start_date, end_date))
+        service_sales = cursor.fetchall()
+        
+        # 2. Spare Parts Sales Breakdown from approved quotations
+        cursor.execute("""
+            SELECT 
+                p.name as part_name,
+                COALESCE(c.name, 'ບໍ່ມີປະເພດ') as category_name,
+                p.stock_qty as current_stock,
+                u.name as unit_name,
+                SUM(qi.qty) as quantity_sold,
+                AVG(qi.unit_price) as avg_unit_price,
+                SUM(qi.total) as total_sales_amount,
+                SUM(qi.qty * p.cost_price) as total_cost_amount,
+                SUM(qi.total - (qi.qty * p.cost_price)) as profit
+            FROM quotation_items qi
+            LEFT JOIN parts p ON qi.part_id = p.id
+            LEFT JOIN Part_Categories c ON p.category_id = c.id
+            LEFT JOIN Units u ON p.unit_id = u.id
+            LEFT JOIN quotations q ON qi.quotation_id = q.id
+            WHERE qi.part_id IS NOT NULL AND q.status = 'approved'
+            AND DATE(q.created_at) BETWEEN %s AND %s
+            GROUP BY p.id, p.name, c.name, u.name, p.stock_qty
+            ORDER BY total_sales_amount DESC
+        """, (start_date, end_date))
+        parts_sales = cursor.fetchall()
+        
+        # Calculate summary totals
+        total_service_sales = sum([float(x['total_sales_amount'] or 0) for x in service_sales])
+        total_parts_sales = sum([float(x['total_sales_amount'] or 0) for x in parts_sales])
+        total_parts_cost = sum([float(x['total_cost_amount'] or 0) for x in parts_sales])
+        total_parts_profit = sum([float(x['profit'] or 0) for x in parts_sales])
+        
+        # Convert decimal/float types to avoid serialization issues
+        for s in service_sales:
+            s['avg_unit_price'] = float(s['avg_unit_price'] or 0)
+            s['total_sales_amount'] = float(s['total_sales_amount'] or 0)
+            s['quantity_sold'] = int(s['quantity_sold'] or 0)
+            
+        for p in parts_sales:
+            p['avg_unit_price'] = float(p['avg_unit_price'] or 0)
+            p['total_sales_amount'] = float(p['total_sales_amount'] or 0)
+            p['total_cost_amount'] = float(p['total_cost_amount'] or 0)
+            p['profit'] = float(p['profit'] or 0)
+            p['quantity_sold'] = int(p['quantity_sold'] or 0)
+            p['current_stock'] = int(p['current_stock'] or 0)
+            
+        return {
+            "summary": {
+                "total_service_sales": total_service_sales,
+                "total_parts_sales": total_parts_sales,
+                "total_parts_cost": total_parts_cost,
+                "total_parts_profit": total_parts_profit,
+                "combined_sales": total_service_sales + total_parts_sales
+            },
+            "service_sales": service_sales,
+            "parts_sales": parts_sales,
+            "period": {"start_date": start_date, "end_date": end_date}
+        }
+    except Exception as e:
+        print(f"Error in parts service sales report: {e}")
+        import traceback
+        traceback.print_exc()
+        return {}
+    finally:
+        cursor.close()
+        db.close()
+
+
+# ========== Mechanic Performance Report (ລາຍງານປະສິດທິພາບຂອງຊ່າງ) ==========
+@router.get("/reports/mechanic-performance")
+def get_mechanic_performance_report(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    user: dict = Depends(authenticate_user)
+):
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+    try:
+        if not end_date:
+            end_date = datetime.now().strftime('%Y-%m-%d')
+        if not start_date:
+            start_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+            
+        cursor.execute("""
+            SELECT 
+                e.id as mechanic_id,
+                e.name as mechanic_name,
+                e.phone as mechanic_phone,
+                e.status as mechanic_status,
+                COUNT(ro.id) as total_assigned,
+                SUM(CASE WHEN ro.status = 'completed' THEN 1 ELSE 0 END) as completed_count,
+                SUM(CASE WHEN ro.status = 'working' THEN 1 ELSE 0 END) as working_count,
+                SUM(CASE WHEN ro.status = 'paused' THEN 1 ELSE 0 END) as paused_count,
+                SUM(CASE WHEN ro.status = 'waiting' THEN 1 ELSE 0 END) as waiting_count,
+                ROUND(AVG(CASE WHEN ro.status = 'completed' AND ro.end_date IS NOT NULL 
+                    THEN TIMESTAMPDIFF(HOUR, ro.start_date, ro.end_date) 
+                    ELSE NULL END), 1) as avg_hours
+            FROM Employees e
+            LEFT JOIN repair_orders ro ON e.id = ro.mechanic_id AND DATE(ro.start_date) BETWEEN %s AND %s
+            WHERE e.role = 'mechanic' AND e.status = 'active'
+            GROUP BY e.id, e.name, e.phone, e.status
+            ORDER BY completed_count DESC
+        """, (start_date, end_date))
+        mechanic_stats = cursor.fetchall()
+        
+        # Calculate totals
+        total_assigned = 0
+        total_completed = 0
+        total_working = 0
+        total_paused = 0
+        total_waiting = 0
+        valid_durations = []
+        
+        for m in mechanic_stats:
+            m['total_assigned'] = int(m['total_assigned'] or 0)
+            m['completed_count'] = int(m['completed_count'] or 0)
+            m['working_count'] = int(m['working_count'] or 0)
+            m['paused_count'] = int(m['paused_count'] or 0)
+            m['waiting_count'] = int(m['waiting_count'] or 0)
+            m['avg_hours'] = float(m['avg_hours'] or 0) if m['avg_hours'] is not None else None
+            
+            # Efficiency
+            assigned = m['total_assigned']
+            m['efficiency'] = round((m['completed_count'] / assigned * 100), 1) if assigned > 0 else 0
+            
+            total_assigned += m['total_assigned']
+            total_completed += m['completed_count']
+            total_working += m['working_count']
+            total_paused += m['paused_count']
+            total_waiting += m['waiting_count']
+            if m['avg_hours'] is not None and m['avg_hours'] > 0:
+                valid_durations.append(m['avg_hours'])
+                
+        avg_workshop_hours = round(sum(valid_durations) / len(valid_durations), 1) if valid_durations else 0
+        
+        return {
+            "summary": {
+                "total_mechanics": len(mechanic_stats),
+                "total_assigned": total_assigned,
+                "total_completed": total_completed,
+                "total_working": total_working,
+                "total_paused": total_paused,
+                "total_waiting": total_waiting,
+                "avg_workshop_hours": avg_workshop_hours
+            },
+            "mechanic_stats": mechanic_stats,
+            "period": {"start_date": start_date, "end_date": end_date}
+        }
+    except Exception as e:
+        print(f"Error in mechanic performance report: {e}")
+        import traceback
+        traceback.print_exc()
+        return {}
+    finally:
+        cursor.close()
+        db.close()
+
+
+# ========== 5 SPECIALIZED REPORTS PDF STREAMING ENDPOINTS ==========
+
+from fastapi import Response
+from utils_pdf import (
+    generate_revenue_report_pdf,
+    generate_repair_summary_pdf,
+    generate_parts_service_sales_pdf,
+    generate_mechanic_performance_pdf,
+    generate_promotion_usage_pdf
+)
+
+@router.get("/reports/revenue/pdf")
+def get_revenue_report_pdf(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    user: dict = Depends(authenticate_user)
+):
+    try:
+        pdf_bytes = generate_revenue_report_pdf(start_date, end_date)
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"attachment; filename=revenue_report_{start_date}_to_{end_date}.pdf"
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/reports/repair-summary/pdf")
+def get_repair_summary_report_pdf(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    user: dict = Depends(authenticate_user)
+):
+    try:
+        pdf_bytes = generate_repair_summary_pdf(start_date, end_date)
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"attachment; filename=repair_summary_report_{start_date}_to_{end_date}.pdf"
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/reports/parts-service-sales/pdf")
+def get_parts_service_sales_report_pdf(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    user: dict = Depends(authenticate_user)
+):
+    try:
+        pdf_bytes = generate_parts_service_sales_pdf(start_date, end_date)
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"attachment; filename=parts_service_sales_report_{start_date}_to_{end_date}.pdf"
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/reports/mechanic-performance/pdf")
+def get_mechanic_performance_report_pdf(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    user: dict = Depends(authenticate_user)
+):
+    try:
+        pdf_bytes = generate_mechanic_performance_pdf(start_date, end_date)
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"attachment; filename=mechanic_performance_report_{start_date}_to_{end_date}.pdf"
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/reports/promotion-usage/pdf")
+def get_promotion_usage_report_pdf(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    user: dict = Depends(authenticate_user)
+):
+    try:
+        pdf_bytes = generate_promotion_usage_pdf(start_date, end_date)
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"attachment; filename=promotion_usage_report_{start_date}_to_{end_date}.pdf"
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

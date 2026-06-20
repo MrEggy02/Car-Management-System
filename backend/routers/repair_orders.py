@@ -1,9 +1,10 @@
 # backend/routers/repair_orders.py
-from fastapi import APIRouter, HTTPException, Depends, Form
+from fastapi import APIRouter, HTTPException, Depends, Form, Response
 from database import get_db
 from auth import authenticate_user
 from typing import Optional
 from datetime import datetime
+from utils_pdf import generate_repair_work_order_pdf
 
 router = APIRouter()
 
@@ -128,6 +129,25 @@ def get_repair_order(repair_id: int, user: dict = Depends(authenticate_user)):
     finally:
         cursor.close()
         db.close()
+
+
+@router.get("/repair-orders/{repair_id}/pdf")
+def get_repair_order_pdf(repair_id: int, user: dict = Depends(authenticate_user)):
+    """Generate a formal A4 repair work order PDF for mechanics"""
+    try:
+        pdf_bytes = generate_repair_work_order_pdf(repair_id)
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"inline; filename=repair_work_order_{repair_id}.pdf"
+            }
+        )
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        print(f"Error generating PDF endpoint: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/repair-orders")

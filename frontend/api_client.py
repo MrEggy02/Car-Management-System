@@ -43,12 +43,18 @@ class APIClient:
                 raise ValueError(f"Unknown method: {method}")
 
             # Debug logging
-            print(f"=== REQUEST DEBUG ===")
-            print(f"URL: {url}")
-            print(f"Method: {method}")
-            print(f"Status Code: {response.status_code}")
-            if response.text:
-                print(f"Response Text: {response.text[:500]}")
+            try:
+                print(f"=== REQUEST DEBUG ===")
+                print(f"URL: {url}")
+                print(f"Method: {method}")
+                print(f"Status Code: {response.status_code}")
+                if response.text:
+                    import sys
+                    enc = getattr(sys.stdout, 'encoding', 'utf-8') or 'utf-8'
+                    safe_text = response.text[:500].encode(enc, errors='replace').decode(enc)
+                    print(f"Response Text: {safe_text}")
+            except Exception:
+                pass
 
             if response.status_code == 200:
                 if method == "GET" and not response.content:
@@ -522,6 +528,10 @@ class APIClient:
     def get_job_order(self, order_id: int) -> Dict:
         return self._request("GET", f"/job-orders/{order_id}")
 
+    def get_job_order_pdf(self, order_id: int) -> bytes:
+        """Get job order PDF as bytes"""
+        return self._request("GET", f"/job-orders/{order_id}/pdf")
+
     def update_job_order(self, order_id: int, **kwargs) -> Dict:
         return self._request("PUT", f"/job-orders/{order_id}", data=kwargs)
 
@@ -535,6 +545,10 @@ class APIClient:
 
     def get_quotation(self, quotation_id: int) -> Dict:
         return self._request("GET", f"/quotations/{quotation_id}")
+
+    def get_quotation_pdf(self, quotation_id: int) -> bytes:
+        """Get quotation PDF as bytes"""
+        return self._request("GET", f"/quotations/{quotation_id}/pdf")
 
     def get_quotation_items(self, quotation_id: int) -> List[Dict]:
         """Get all items for a quotation"""
@@ -600,6 +614,10 @@ class APIClient:
 
     def get_repair_order(self, repair_id: int) -> Dict:
         return self._request("GET", f"/repair-orders/{repair_id}")
+
+    def get_repair_order_pdf(self, repair_id: int) -> bytes:
+        """Get repair work order PDF as bytes"""
+        return self._request("GET", f"/repair-orders/{repair_id}/pdf")
 
     def create_repair_order(self, job_order_id: int, mechanic_id: int = None) -> Dict:
         data = {"job_order_id": job_order_id}
@@ -907,6 +925,62 @@ class APIClient:
         if end_date:
             params["end_date"] = end_date
         return self._request("GET", "/reports/service-items", params=params)
+
+    def get_parts_service_sales_report(self, start_date: str = None, end_date: str = None) -> Dict:
+        params = {}
+        if start_date:
+            params["start_date"] = start_date
+        if end_date:
+            params["end_date"] = end_date
+        return self._request("GET", "/reports/parts-service-sales", params=params)
+
+    def get_mechanic_performance_report(self, start_date: str = None, end_date: str = None) -> Dict:
+        params = {}
+        if start_date:
+            params["start_date"] = start_date
+        if end_date:
+            params["end_date"] = end_date
+        return self._request("GET", "/reports/mechanic-performance", params=params)
+
+    def get_revenue_report_pdf(self, start_date: str = None, end_date: str = None) -> bytes:
+        params = {}
+        if start_date:
+            params["start_date"] = start_date
+        if end_date:
+            params["end_date"] = end_date
+        return self._request("GET", "/reports/revenue/pdf", params=params)
+
+    def get_repair_summary_report_pdf(self, start_date: str = None, end_date: str = None) -> bytes:
+        params = {}
+        if start_date:
+            params["start_date"] = start_date
+        if end_date:
+            params["end_date"] = end_date
+        return self._request("GET", "/reports/repair-summary/pdf", params=params)
+
+    def get_parts_service_sales_report_pdf(self, start_date: str = None, end_date: str = None) -> bytes:
+        params = {}
+        if start_date:
+            params["start_date"] = start_date
+        if end_date:
+            params["end_date"] = end_date
+        return self._request("GET", "/reports/parts-service-sales/pdf", params=params)
+
+    def get_mechanic_performance_report_pdf(self, start_date: str = None, end_date: str = None) -> bytes:
+        params = {}
+        if start_date:
+            params["start_date"] = start_date
+        if end_date:
+            params["end_date"] = end_date
+        return self._request("GET", "/reports/mechanic-performance/pdf", params=params)
+
+    def get_promotion_usage_report_pdf(self, start_date: str = None, end_date: str = None) -> bytes:
+        params = {}
+        if start_date:
+            params["start_date"] = start_date
+        if end_date:
+            params["end_date"] = end_date
+        return self._request("GET", "/reports/promotion-usage/pdf", params=params)
     
     def get_job_orders_with_details(self, status: str = None) -> List[Dict]:
         """Get all job orders with customer and vehicle details in ONE query"""

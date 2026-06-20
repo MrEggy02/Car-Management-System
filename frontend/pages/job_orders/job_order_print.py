@@ -316,14 +316,41 @@ class JobOrderPrintContent:
         )
     
     def print_receipt(self, e):
-        """Print receipt (trigger browser print)"""
-        # For web, this can open print dialog
-        self.page.window.open("javascript:window.print()")
-        
-        # Show success message
+        """Export job order as A4 PDF and open it"""
+        try:
+            # Show preparing message
+            self._show_snack_bar(get_text("preparing_print"), is_error=False)
+            
+            # Fetch PDF bytes from backend
+            pdf_bytes = self.client.get_job_order_pdf(self.order_id)
+            
+            # Ensure output directory exists in project root
+            import os
+            output_dir = "output"
+            if not os.path.exists(output_dir):
+                os.makedirs(output_dir)
+                
+            job_no = (self.order_data or {}).get("job_no", f"JOB_{self.order_id}")
+            file_name = f"job_order_{job_no}.pdf"
+            file_path = os.path.join(output_dir, file_name)
+            
+            # Write PDF bytes
+            with open(file_path, "wb") as f:
+                f.write(pdf_bytes)
+                
+            # Open PDF
+            os.startfile(file_path)
+            self._show_snack_bar(get_text("pdf_export_success"), is_error=False)
+            
+        except Exception as ex:
+            print(f"Error printing PDF: {ex}")
+            self._show_snack_bar(f"{get_text('pdf_export_failed')}: {str(ex)}", is_error=True)
+
+    def _show_snack_bar(self, message, is_error=False):
         self.page.snack_bar = ft.SnackBar(
-            content=ft.Text(get_text("print_sent")),
-            bgcolor=ft.Colors.GREEN_600,
+            content=ft.Text(message, size=13),
+            bgcolor=ft.Colors.RED_600 if is_error else ft.Colors.GREEN_600,
             open=True,
+            duration=2000,
         )
         self.page.update()

@@ -346,8 +346,8 @@ class SidebarManager:
         reports_menu_items = [
             {"label": get_text("revenue_report"), "index": 29},
             {"label": get_text("repair_summary_report"), "index": 30},
-            {"label": get_text("parts_usage_report"), "index": 31},
-            {"label": get_text("service_items_report"), "index": 32},
+            {"label": get_text("parts_service_sales_report"), "index": 31},
+            {"label": get_text("mechanic_performance_report"), "index": 32},
             {"label": get_text("promotion_usage_report"), "index": 33},
         ]
         

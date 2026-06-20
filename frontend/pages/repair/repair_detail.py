@@ -567,13 +567,54 @@ class RepairDetailContent:
             ),
         )
         
-        action_row = ft.Row([back_btn], spacing=12, alignment=ft.MainAxisAlignment.CENTER)
+        export_btn = ft.ElevatedButton(
+            content=ft.Row([
+                ft.Icon(ft.Icons.PRINT, size=18, color=ft.Colors.WHITE),
+                ft.Text(get_text("export_work_order"), size=14, color=ft.Colors.WHITE, weight=ft.FontWeight.W_600),
+            ], spacing=6),
+            on_click=self.export_repair_pdf,
+            style=ft.ButtonStyle(
+                bgcolor=self.primary_color,
+                shape=ft.RoundedRectangleBorder(radius=10),
+                padding=ft.padding.symmetric(horizontal=24, vertical=12),
+            ),
+        )
+        
+        action_row = ft.Row([back_btn, export_btn], spacing=12, alignment=ft.MainAxisAlignment.CENTER)
         
         return ft.Column([
             main_content,
             ft.Container(height=16),
             action_row,
         ], spacing=0)
+
+    def export_repair_pdf(self, e):
+        self.show_snack_bar(get_text("loading"))
+        try:
+            import os
+            
+            pdf_bytes = self.client.get_repair_order_pdf(self.repair_id)
+            if not pdf_bytes:
+                self.show_snack_bar(get_text("pdf_export_failed"), is_error=True)
+                return
+                
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            workspace_root = os.path.abspath(os.path.join(base_dir, "..", "..", ".."))
+            output_dir = os.path.join(workspace_root, "output")
+            os.makedirs(output_dir, exist_ok=True)
+            
+            ro_no = f"R{self.repair_id:04d}"
+            pdf_path = os.path.join(output_dir, f"repair_work_order_{ro_no}.pdf")
+            
+            with open(pdf_path, "wb") as f:
+                f.write(pdf_bytes)
+                
+            os.startfile(pdf_path)
+            self.show_snack_bar(get_text("pdf_export_success"), is_error=False)
+            
+        except Exception as ex:
+            print(f"Error exporting PDF: {ex}")
+            self.show_snack_bar(f"{get_text('pdf_export_failed')}: {str(ex)}", is_error=True)
     
     def show_add_part_dialog(self, e):
         if not self.parts_list:
