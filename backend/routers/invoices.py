@@ -1,5 +1,5 @@
 # backend/routers/invoices.py
-from fastapi import APIRouter, HTTPException, Depends, Form
+from fastapi import APIRouter, HTTPException, Depends, Form, Response
 from database import get_db
 from auth import authenticate_user
 from typing import Optional
@@ -529,3 +529,25 @@ def delete_invoice(invoice_id: int, user: dict = Depends(authenticate_user)):
     finally:
         cursor.close()
         db.close()
+
+
+@router.get("/invoices/{invoice_id}/pdf")
+def get_invoice_pdf(invoice_id: int, user: dict = Depends(authenticate_user)):
+    """Generate a formal A4 invoice PDF"""
+    try:
+        from utils_pdf import generate_invoice_pdf
+        pdf_bytes = generate_invoice_pdf(invoice_id)
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"inline; filename=invoice_{invoice_id}.pdf"
+            }
+        )
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        print(f"Error generating invoice PDF: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
