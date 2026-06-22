@@ -535,6 +535,55 @@ def pull_quotation_parts(
     finally:
         cursor.close()
         db.close()
+@router.delete("/repair-orders/{repair_id}")
+def delete_repair_order(repair_id: int, user: dict = Depends(authenticate_user)):
+    """Delete a repair order and restore the job order status to 'approved' or 'pending'"""
+    db = get_db()
+    cursor = db.cursor()
+    try:
+        # Get job_order_id and status before deleting
+        cursor.execute("SELECT job_order_id, status FROM repair_orders WHERE id = %s", (repair_id,))
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Repair order not found")
+        job_order_id, status = row[0], row[1]
+        
+        if status == 'completed':
+            raise HTTPException(status_code=400, detail="Cannot delete completed repair orders")
+        
+        # 1. Fetch parts used in parts_usage to restore stock
+        cursor.execute("SELECT part_id, qty FROM parts_usage WHERE repair_id = %s", (repair_id,))
+        usages = cursor.fetchall()
+        for part_id, qty in usages:
+            # Return stock
+            cursor.execute("UPDATE parts SET stock_qty = stock_qty + %s WHERE id = %s", (qty, part_id))
+            # Log stock movement (type='IN', ref_type='repair')
+            cursor.execute("""
+                INSERT INTO stock_movement (part_id, type, qty, ref_type, ref_id, date)
+                VALUES (%s, 'IN', %s, 'repair', %s, NOW())
+            """, (part_id, qty, repair_id))
+            
+        # 2. Delete repair order
+        cursor.execute("DELETE FROM repair_orders WHERE id = %s", (repair_id,))
+        
+        # 3. Update job order status based on approved quotation existence
+        if job_order_id:
+            cursor.execute("SELECT id FROM quotations WHERE job_order_id = %s AND status = 'approved'", (job_order_id,))
+            has_approved_quote = cursor.fetchone()
+            new_job_status = 'approved' if has_approved_quote else 'pending'
+            cursor.execute("UPDATE job_orders SET status = %s WHERE id = %s", (new_job_status, job_order_id))
+            
+        db.commit()
+        return {"message": "Repair order deleted successfully and stock restored"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        print(f"Error deleting repair order: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        db.close()
 
 
 @router.get("/employees/mechanics")

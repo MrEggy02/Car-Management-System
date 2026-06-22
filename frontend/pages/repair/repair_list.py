@@ -327,7 +327,7 @@ class RepairListContent:
                     _header_cell(get_text("mechanic"), 140),
                     _header_cell(get_text("status"), 110, 0),
                     _header_cell(get_text("days_open"), 100, 0),
-                    _header_cell(get_text("actions"), 120, 0),
+                    _header_cell(get_text("actions"), 180, 0),
                 ],
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
@@ -348,7 +348,7 @@ class RepairListContent:
             border=ft.border.all(1, ft.Colors.GREY_200),
             border_radius=12,
             bgcolor=ft.Colors.WHITE,
-            width=1110,
+            width=1170,
         )
 
         return ft.Container(
@@ -563,6 +563,33 @@ class RepairListContent:
             border_radius=6,
         )
 
+        if is_completed:
+            delete_btn = ft.Container(
+                content=ft.Row(
+                    [
+                        ft.Icon(ft.Icons.DELETE_OUTLINE, size=16, color=ft.Colors.GREY_400),
+                        ft.Text(get_text("delete"), size=12, color=ft.Colors.GREY_400),
+                    ],
+                    spacing=4,
+                ),
+                padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                border_radius=6,
+                tooltip=get_text("cannot_delete_completed_repair"),
+            )
+        else:
+            delete_btn = ft.Container(
+                content=ft.Row(
+                    [
+                        ft.Icon(ft.Icons.DELETE_OUTLINE, size=16, color=ft.Colors.RED_600),
+                        ft.Text(get_text("delete"), size=12, color=ft.Colors.RED_600),
+                    ],
+                    spacing=4,
+                ),
+                on_click=lambda e, rid=repair_id, rno=repair_no: self.confirm_delete(rid, rno),
+                padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                border_radius=6,
+            )
+
         def _cell(content, width, align=-1, left_pad=True):
             return ft.Container(
                 content=content,
@@ -582,7 +609,7 @@ class RepairListContent:
                     _cell(mechanic_cell, 140),
                     _cell(status_badge, 110, 0, False),
                     _cell(duration_badge, 100, 0, False),
-                    _cell(view_btn, 120, 0, False),
+                    _cell(ft.Row([view_btn, delete_btn], spacing=4), 180, 0, False),
                 ],
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
@@ -1012,6 +1039,52 @@ class RepairListContent:
                     on_click=confirm_assign,
                     style=ft.ButtonStyle(
                         bgcolor=self.primary_color,
+                        color=ft.Colors.WHITE,
+                        shape=ft.RoundedRectangleBorder(radius=8),
+                    ),
+                ),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+        self.page.overlay.append(dialog)
+        dialog.open = True
+        self.page.update()
+
+    def confirm_delete(self, repair_id: int, repair_no: str):
+        """Show confirmation dialog before deleting a repair order."""
+        def do_delete(e):
+            self.close_dialog(dialog)
+            try:
+                self.client.delete_repair_order(repair_id)
+                self.load_repair_orders()
+                self.show_snack_bar(f"✅ {get_text('delete_success')}", is_error=False)
+            except Exception as ex:
+                self.show_snack_bar(f"Error: {str(ex)}", is_error=True)
+
+        dialog = ft.AlertDialog(
+            modal=True,
+            shape=ft.RoundedRectangleBorder(radius=16),
+            bgcolor=ft.Colors.WHITE,
+            title=ft.Row([
+                ft.Icon(ft.Icons.WARNING_AMBER_ROUNDED, color=ft.Colors.RED_600, size=24),
+                ft.Text(get_text("confirm_delete"), size=16, weight=ft.FontWeight.BOLD),
+            ], spacing=8),
+            content=ft.Text(
+                f"{get_text('delete_confirmation')}\n{repair_no}",
+                size=14,
+                color="#475569",
+            ),
+            actions=[
+                ft.TextButton(
+                    get_text("cancel"),
+                    on_click=lambda e: self.close_dialog(dialog),
+                    style=ft.ButtonStyle(color="#64748B"),
+                ),
+                ft.ElevatedButton(
+                    get_text("delete"),
+                    on_click=do_delete,
+                    style=ft.ButtonStyle(
+                        bgcolor=ft.Colors.RED_600,
                         color=ft.Colors.WHITE,
                         shape=ft.RoundedRectangleBorder(radius=8),
                     ),

@@ -655,6 +655,9 @@ class APIClient:
     def pull_quotation_parts(self, repair_id: int) -> Dict:
         return self._request("POST", f"/repair-orders/{repair_id}/pull-quotation-parts")
 
+    def delete_repair_order(self, repair_id: int) -> Dict:
+        return self._request("DELETE", f"/repair-orders/{repair_id}")
+
     # ========== Process 6: Invoice Management ==========
     def get_invoices(self, job_order_id: int = None, payment_status: str = None) -> List[Dict]:
         params = {}
