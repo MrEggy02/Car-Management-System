@@ -547,3 +547,26 @@ def get_goods_receipt(
     finally:
         cursor.close()
         db.close()
+
+
+@router.get("/purchase-orders/{po_id}/pdf")
+def get_purchase_order_pdf(po_id: int, user: dict = Depends(authenticate_user)):
+    """Generate a formal A4 purchase order PDF"""
+    try:
+        from fastapi import Response
+        from utils_pdf import generate_purchase_order_pdf
+        pdf_bytes = generate_purchase_order_pdf(po_id)
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"inline; filename=purchase_order_{po_id}.pdf"
+            }
+        )
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        print(f"Error generating purchase order PDF: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))

@@ -4,5 +4,5 @@
         "./flet_app/pages",
         "./flet_app/theme"
     ],
-    "workbench.colorTheme": "Visual Studio Light"
+    "workbench.colorTheme": "Dracula Theme"
 }

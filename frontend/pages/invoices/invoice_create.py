@@ -579,7 +579,6 @@ class InvoiceCreateContent:
             options=[
                 ft.dropdown.Option("cash", get_text("payment_cash")),
                 ft.dropdown.Option("transfer", get_text("payment_transfer")),
-                ft.dropdown.Option("qr", get_text("payment_qr")),
             ],
             expand=True,
             border_radius=12,

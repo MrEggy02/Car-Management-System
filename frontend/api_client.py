@@ -718,6 +718,10 @@ class APIClient:
     def get_purchase_order(self, po_id: int) -> Dict:
         return self._request("GET", f"/purchase-orders/{po_id}")
 
+    def get_purchase_order_pdf(self, po_id: int) -> bytes:
+        """Get purchase order PDF as bytes"""
+        return self._request("GET", f"/purchase-orders/{po_id}/pdf")
+
     def create_purchase_order(self, supplier_id: int, items: List[Dict]) -> Dict:
         import json
         return self._request("POST", "/purchase-orders", data={

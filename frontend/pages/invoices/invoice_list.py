@@ -113,8 +113,6 @@ class InvoiceListContent:
             {"id": "all", "name": get_text("all_status")},
             {"id": "pending", "name": get_text("status_pending")},
             {"id": "paid", "name": get_text("status_paid")},
-            {"id": "partial", "name": get_text("status_partial")},
-            {"id": "refunded", "name": get_text("status_refunded")},
         ]
         
         for status in status_list:
@@ -349,21 +347,16 @@ class InvoiceListContent:
         
         status_colors = {
             "pending": "#FF9800",
-            "paid": "#4CAF50",
-            "partial": "#2196F3",
-            "refunded": "#F44336"
+            "paid": "#4CAF50"
         }
         status_texts = {
             "pending": get_text("status_pending"),
-            "paid": get_text("status_paid"),
-            "partial": get_text("status_partial"),
-            "refunded": get_text("status_refunded")
+            "paid": get_text("status_paid")
         }
         
         method_texts = {
             "cash": get_text("payment_cash"),
-            "transfer": get_text("payment_transfer"),
-            "qr": get_text("payment_qr")
+            "transfer": get_text("payment_transfer")
         }
         
         status_badge = ft.Container(
@@ -569,21 +562,16 @@ class InvoiceListContent:
         
         status_colors = {
             "pending": "#FF9800",
-            "paid": "#4CAF50",
-            "partial": "#2196F3",
-            "refunded": "#F44336"
+            "paid": "#4CAF50"
         }
         status_texts = {
             "pending": get_text("status_pending"),
-            "paid": get_text("status_paid"),
-            "partial": get_text("status_partial"),
-            "refunded": get_text("status_refunded")
+            "paid": get_text("status_paid")
         }
         
         method_texts = {
             "cash": get_text("payment_cash"),
-            "transfer": get_text("payment_transfer"),
-            "qr": get_text("payment_qr")
+            "transfer": get_text("payment_transfer")
         }
         
         dialog = ft.AlertDialog(

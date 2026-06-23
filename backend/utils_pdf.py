@@ -1536,17 +1536,14 @@ def generate_invoice_pdf(invoice_id: int) -> bytes:
     status = invoice.get('payment_status', 'pending')
     status_translations = {
         "pending": "ລໍຖ້າຊຳລະ (Pending)",
-        "paid": "ຊຳລະແລ້ວ (Paid)",
-        "partial": "ຊຳລະບາງສ່ວນ (Partial)",
-        "refunded": "ຄືນເງິນ (Refunded)"
+        "paid": "ຊຳລະແລ້ວ (Paid)"
     }
     status_text = status_translations.get(status, status)
 
     payment_method = invoice.get('payment_method', 'cash')
     method_translations = {
         "cash": "ເງິນສົດ (Cash)",
-        "transfer": "ໂອນເງິນ (Transfer)",
-        "qr": "QR Code"
+        "transfer": "ໂອນເງິນ (Transfer)"
     }
     method_text = method_translations.get(payment_method, payment_method)
 
@@ -2139,7 +2136,7 @@ def generate_revenue_report_pdf(start_date: str = None, end_date: str = None) ->
     ]
     for method in payment_methods:
         name = method.get('payment_method', '-')
-        display = "\u0ec0\u0e87\u0eb4\u0e99\u0eaa\u0ebb\u0e94 (Cash)" if name == 'cash' else "\u0ec2\u0e8a\u0e99\u0ec0\u0e87\u0eb4\u0e99 (Transfer)" if name == 'transfer' else "QR Payment" if name == 'qr' else name.capitalize()
+        display = "ເງິນສົດ (Cash)" if name == 'cash' else "ໂອນເງິນ (Transfer)" if name == 'transfer' else name.capitalize()
         pm_data.append([
             Paragraph(display, table_cell),
             Paragraph(str(method.get('count', 0)), table_cell),
@@ -2473,16 +2470,17 @@ def generate_parts_service_sales_pdf(start_date: str = None, end_date: str = Non
         # 1. Services Sales Breakdown from approved quotations
         cursor.execute("""
             SELECT 
-                s.name as service_name,
+                COALESCE(s.name, qi.custom_name) as service_name,
                 SUM(qi.qty) as quantity_sold,
                 AVG(qi.unit_price) as avg_unit_price,
                 SUM(qi.total) as total_sales_amount
             FROM quotation_items qi
             LEFT JOIN services s ON qi.service_id = s.id
             LEFT JOIN quotations q ON qi.quotation_id = q.id
-            WHERE qi.service_id IS NOT NULL AND q.status = 'approved'
+            WHERE (qi.service_id IS NOT NULL OR (qi.service_id IS NULL AND qi.part_id IS NULL AND qi.custom_name IS NOT NULL))
+            AND q.status = 'approved'
             AND DATE(q.created_at) BETWEEN %s AND %s
-            GROUP BY s.id, s.name
+            GROUP BY qi.service_id, qi.custom_name, s.name
             ORDER BY total_sales_amount DESC
             LIMIT 30
         """, (start_date, end_date))
@@ -2885,9 +2883,11 @@ def generate_promotion_usage_pdf(start_date: str = None, end_date: str = None) -
                 SUM(i.total_discount) as total_discount_given,
                 SUM(i.final_total) as total_revenue_with_promotion
             FROM invoices i
-            LEFT JOIN promotions p ON i.promotion_id = p.id
+            INNER JOIN job_orders jo ON i.job_order_id = jo.id
+            INNER JOIN quotations q ON q.job_order_id = jo.id AND q.status = 'approved'
+            LEFT JOIN promotions p ON q.promotion_id = p.id
             WHERE DATE(i.paid_date) BETWEEN %s AND %s
-            AND i.promotion_id IS NOT NULL
+            AND q.promotion_id IS NOT NULL
             AND i.payment_status = 'paid'
             GROUP BY p.id, p.name, p.discount_type, p.value
             ORDER BY usage_count DESC
@@ -2914,15 +2914,17 @@ def generate_promotion_usage_pdf(start_date: str = None, end_date: str = None) -
         cursor.execute("""
             SELECT 
                 CASE 
-                    WHEN promotion_id IS NOT NULL THEN 'With Promotion'
+                    WHEN q.promotion_id IS NOT NULL THEN 'With Promotion'
                     ELSE 'Without Promotion'
                 END as promo_status,
                 COUNT(*) as invoice_count,
-                SUM(final_total) as total_revenue
-            FROM invoices
-            WHERE DATE(paid_date) BETWEEN %s AND %s
-            AND payment_status = 'paid'
-            GROUP BY CASE WHEN promotion_id IS NOT NULL THEN 'With Promotion' ELSE 'Without Promotion' END
+                SUM(i.final_total) as total_revenue
+            FROM invoices i
+            LEFT JOIN job_orders jo ON i.job_order_id = jo.id
+            LEFT JOIN quotations q ON q.job_order_id = jo.id AND q.status = 'approved'
+            WHERE DATE(i.paid_date) BETWEEN %s AND %s
+            AND i.payment_status = 'paid'
+            GROUP BY CASE WHEN q.promotion_id IS NOT NULL THEN 'With Promotion' ELSE 'Without Promotion' END
         """, (start_date, end_date))
         comparison = cursor.fetchall()
         
@@ -3081,6 +3083,366 @@ def generate_promotion_usage_pdf(start_date: str = None, end_date: str = None) -
         bottomMargin=54
     )
     doc.build(story, canvasmaker=create_canvas_class("ລາຍງານການນຳໃຊ້ໂປຣໂມຊັນ (Promotion Usage Report)"))
+    pdf_content = buffer.getvalue()
+    buffer.close()
+    return pdf_content
+
+
+def generate_purchase_order_pdf(po_id: int) -> bytes:
+    """Queries purchase order information and generates a formal A4 PDF purchase order."""
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+    try:
+        # Fetch PO details and associated supplier, creator, etc.
+        cursor.execute("""
+            SELECT po.*, 
+                   s.name as supplier_name, s.contact_person as supplier_contact,
+                   s.phone as supplier_phone, s.address as supplier_address,
+                   e.name as created_by_name
+            FROM purchase_orders po
+            LEFT JOIN suppliers s ON po.supplier_id = s.id
+            LEFT JOIN employees e ON po.created_by = e.id
+            WHERE po.id = %s
+        """, (po_id,))
+        po = cursor.fetchone()
+        
+        if not po:
+            raise HTTPException(status_code=404, detail=f"Purchase Order ID {po_id} not found")
+
+        # Fetch shop information
+        cursor.execute("SELECT name, address, phone FROM Shop LIMIT 1")
+        shop = cursor.fetchone()
+        if not shop:
+            shop = {
+                "name": "J&P Auto Maxing",
+                "address": "ນະຄອນຫຼວງວຽງຈັນ (Vientiane, Laos)",
+                "phone": "020 22224444"
+            }
+
+        # Fetch PO items
+        cursor.execute("""
+            SELECT pi.*, p.name as part_name, u.name as unit_name
+            FROM purchase_items pi
+            LEFT JOIN parts p ON pi.part_id = p.id
+            LEFT JOIN units u ON p.unit_id = u.id
+            WHERE pi.purchase_id = %s
+            ORDER BY pi.id
+        """, (po_id,))
+        items = cursor.fetchall()
+
+    except Exception as ex:
+        print(f"Error querying data for PO PDF: {ex}")
+        raise HTTPException(status_code=500, detail=f"Database query error: {str(ex)}")
+    finally:
+        cursor.close()
+        db.close()
+
+    # Build ReportLab PDF flowables
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=36,
+        leftMargin=36,
+        topMargin=36,
+        bottomMargin=54 # extra space at bottom for footer canvas
+    )
+
+    # Styles
+    styles = getSampleStyleSheet()
+    normal_style = styles['Normal']
+    normal_style.fontName = FONT_NAME
+    normal_style.fontSize = 10
+    normal_style.leading = 14
+
+    title_style = ParagraphStyle(
+        'DocTitlePO',
+        parent=normal_style,
+        fontName=FONT_NAME,
+        fontSize=18,
+        leading=22,
+        alignment=2, # Right aligned
+        textColor=colors.HexColor('#0D47A1')
+    )
+
+    subtitle_style = ParagraphStyle(
+        'DocSubtitlePO',
+        parent=normal_style,
+        fontName=FONT_NAME,
+        fontSize=9,
+        leading=11,
+        alignment=2, # Right aligned
+        textColor=colors.HexColor('#64748B')
+    )
+
+    section_header_style = ParagraphStyle(
+        'SectionHeaderPO',
+        parent=normal_style,
+        fontName=FONT_NAME,
+        fontSize=11,
+        leading=14,
+        textColor=colors.HexColor('#0D47A1'),
+        spaceBefore=12,
+        spaceAfter=4,
+        keepWithNext=True
+    )
+
+    meta_label_style = ParagraphStyle(
+        'MetaLabelPO',
+        parent=normal_style,
+        fontName=FONT_NAME,
+        fontSize=9,
+        leading=13,
+        textColor=colors.HexColor('#475569')
+    )
+
+    meta_value_style = ParagraphStyle(
+        'MetaValuePO',
+        parent=normal_style,
+        fontName=FONT_NAME,
+        fontSize=9,
+        leading=13,
+        textColor=colors.HexColor('#1E293B')
+    )
+
+    table_header_style = ParagraphStyle(
+        'TableHeaderPO',
+        parent=normal_style,
+        fontName=FONT_NAME,
+        fontSize=9,
+        leading=11,
+        textColor=colors.white,
+        alignment=1 # Center aligned
+    )
+
+    table_cell_style = ParagraphStyle(
+        'TableCellPO',
+        parent=normal_style,
+        fontName=FONT_NAME,
+        fontSize=9,
+        leading=12,
+        textColor=colors.HexColor('#1E293B')
+    )
+
+    table_cell_right_style = ParagraphStyle(
+        'TableCellRightPO',
+        parent=table_cell_style,
+        alignment=2 # Right aligned
+    )
+
+    table_cell_center_style = ParagraphStyle(
+        'TableCellCenterPO',
+        parent=table_cell_style,
+        alignment=1 # Center aligned
+    )
+
+    story = []
+
+    # A. PDF Header Table
+    shop_name = shop.get('name', 'J&P Auto Maxing')
+    shop_address = shop.get('address', '')
+    shop_phone = shop.get('phone', '')
+
+    po_no = po.get('po_no', f"PO-{po['id']:04d}")
+    
+    order_date = po.get('order_date')
+    if order_date:
+        if isinstance(order_date, str):
+            order_date_str = order_date[:10]
+            try:
+                dt = datetime.strptime(order_date[:19], "%Y-%m-%d %H:%M:%S")
+                order_date_str = dt.strftime("%d/%m/%Y")
+            except:
+                pass
+        else:
+            try:
+                order_date_str = order_date.strftime("%d/%m/%Y")
+            except:
+                order_date_str = str(order_date)
+    else:
+        order_date_str = '-'
+        
+    status = po.get('status', 'ordering')
+    status_translations = {
+        "ordering": "ກຳລັງສັ່ງຊື້ (Ordering)",
+        "partial": "ຮັບບາງສ່ວນ (Partial)",
+        "completed": "ສຳເລັດແລ້ວ (Completed)",
+        "cancelled": "ຍົກເລີກແລ້ວ (Cancelled)"
+    }
+    status_text = status_translations.get(status, status)
+
+    meta_box_data = [
+        [Paragraph("<b>ເລກທີໃບສັ່ງຊື້ / PO No:</b>", meta_label_style), Paragraph(f"<b>{po_no}</b>", meta_value_style)],
+        [Paragraph("<b>ວັນທີສັ່ງຊື້ / Order Date:</b>", meta_label_style), Paragraph(order_date_str, meta_value_style)],
+        [Paragraph("<b>ສະຖານະ / Status:</b>", meta_label_style), Paragraph(status_text, meta_value_style)]
+    ]
+    meta_table = Table(meta_box_data, colWidths=[130, 90])
+    meta_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ('TOPPADDING', (0, 0), (-1, -1), 3),
+        ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#0D47A1')),
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#F8FAFC')),
+        ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E2E8F0')),
+    ]))
+
+    header_left = Paragraph(
+        f"<font size=16 color='#0D47A1'><b>{shop_name}</b></font><br/>"
+        f"<font size=9 color='#475569'>{shop_address}<br/>"
+        f"ເບີໂທລະສັບ / Phone: {shop_phone}</font>",
+        normal_style
+    )
+
+    header_right = [
+        Paragraph("<b>ໃບສັ່ງຊື້ອາໄຫຼ່</b>", title_style),
+        Paragraph("PURCHASE ORDER", subtitle_style),
+        Spacer(1, 6),
+        meta_table
+    ]
+
+    header_table = Table([[header_left, header_right]], colWidths=[300, 220])
+    header_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+    ]))
+    story.append(header_table)
+
+    # B. Divider line
+    divider = Table([[""]], colWidths=[520])
+    divider.setStyle(TableStyle([
+        ('LINEABOVE', (0, 0), (-1, -1), 1.5, colors.HexColor('#0D47A1')),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+    ]))
+    story.append(divider)
+
+    # C. Supplier & Info Section
+    supplier_name = po.get('supplier_name', '-')
+    supplier_contact = po.get('supplier_contact', '-')
+    supplier_phone = po.get('supplier_phone', '-')
+    supplier_address = po.get('supplier_address', '-')
+    created_by_name = po.get('created_by_name', '-')
+
+    left_info = [
+        [Paragraph("<b>ຜູ້ສະໜອງ / Supplier Info</b>", section_header_style), ""],
+        [Paragraph("<b>ชື່ຜູ້ສະໜອງ / Name:</b>", meta_label_style), Paragraph(supplier_name, meta_value_style)],
+        [Paragraph("<b>ຜູ້ຕິດຕໍ່ / Contact:</b>", meta_label_style), Paragraph(supplier_contact or '-', meta_value_style)],
+        [Paragraph("<b>ເບີໂທລະສັບ / Phone:</b>", meta_label_style), Paragraph(supplier_phone or '-', meta_value_style)],
+        [Paragraph("<b>ທີ່ຢູ່ / Address:</b>", meta_label_style), Paragraph(supplier_address or '-', meta_value_style)]
+    ]
+    left_table = Table(left_info, colWidths=[100, 150])
+    left_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('SPAN', (0, 0), (1, 0)),
+    ]))
+
+    right_info = [
+        [Paragraph("<b>ຂໍ້ມູນການຈັດຊື້ / PO Info</b>", section_header_style), ""],
+        [Paragraph("<b>ເລກທີໃບສັ່ງຊື້ / PO No:</b>", meta_label_style), Paragraph(po_no, meta_value_style)],
+        [Paragraph("<b>ຜູ້ຈັດຊື້ / Created By:</b>", meta_label_style), Paragraph(created_by_name, meta_value_style)],
+        [Paragraph("<b>ວັນທີສັ່ງຊື້ / Date:</b>", meta_label_style), Paragraph(order_date_str, meta_value_style)]
+    ]
+    right_table = Table(right_info, colWidths=[110, 140])
+    right_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('SPAN', (0, 0), (1, 0)),
+    ]))
+
+    info_layout_table = Table([[left_table, right_table]], colWidths=[260, 260])
+    info_layout_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+    ]))
+    story.append(info_layout_table)
+    story.append(Spacer(1, 10))
+
+    # D. PO Items Table
+    story.append(Paragraph("<b>ລາຍການສັ່ງຊື້ / Purchase Items:</b>", section_header_style))
+    story.append(Spacer(1, 4))
+
+    table_data = [
+        [
+            Paragraph("<b>ລຳດັບ<br/>No.</b>", table_header_style),
+            Paragraph("<b>ລາຍການອາໄຫຼ່<br/>Part Name / Description</b>", table_header_style),
+            Paragraph("<b>ຈຳນວນ<br/>Qty</b>", table_header_style),
+            Paragraph("<b>ຫົວໜ່ວຍ<br/>Unit</b>", table_header_style),
+            Paragraph("<b>ລາຄາ/ໜ່ວຍ<br/>Unit Cost (KIP)</b>", table_header_style),
+            Paragraph("<b>ລວມ<br/>Total (KIP)</b>", table_header_style)
+        ]
+    ]
+
+    total_amount = float(po.get('total_amount', 0) or 0)
+
+    for idx, item in enumerate(items, 1):
+        name = item.get('part_name', '-')
+        qty = item.get('qty', 1)
+        unit_name = item.get('unit_name', '-')
+        unit_cost = float(item.get('unit_cost', 0) or 0)
+        total_line = float(item.get('total_line', qty * unit_cost) or 0)
+
+        table_data.append([
+            Paragraph(str(idx), table_cell_center_style),
+            Paragraph(name, table_cell_style),
+            Paragraph(str(qty), table_cell_center_style),
+            Paragraph(unit_name or '-', table_cell_center_style),
+            Paragraph(f"{int(unit_cost):,}", table_cell_right_style),
+            Paragraph(f"{int(total_line):,}", table_cell_right_style)
+        ])
+
+    # E. Totals Table
+    table_data.append([
+        "",
+        "",
+        "",
+        "",
+        Paragraph("<b>ຍອດລວມທັງໝົດ / Grand Total:</b>", ParagraphStyle('TotalLblPO', parent=meta_label_style, fontSize=10, alignment=2)),
+        Paragraph(f"<b>{int(total_amount):,} KIP</b>", ParagraphStyle('TotalValPO', parent=meta_value_style, fontSize=10, alignment=2, textColor=colors.HexColor('#10B981')))
+    ])
+
+    item_table = Table(table_data, colWidths=[30, 200, 45, 45, 90, 110])
+    item_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0D47A1')),
+        ('GRID', (0, 0), (-1, -2), 0.5, colors.HexColor('#CBD5E1')),
+        ('SPAN', (0, -1), (3, -1)), # Span the bottom empty columns
+        ('LINEABOVE', (4, -1), (5, -1), 1.5, colors.HexColor('#0D47A1')),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+    ]))
+    story.append(item_table)
+    story.append(Spacer(1, 20))
+
+    # F. Signature Block
+    sig_data = [
+        [
+            Paragraph("<b>ຜູ້ຈັດຊື້ / Purchaser:</b><br/><br/><br/>___________________________<br/>ວັນທີ / Date: ____/____/______", meta_label_style),
+            Paragraph("<b>ຜູ້ສະໜອງ / Supplier Acknowledgement:</b><br/><br/><br/>___________________________<br/>ວັນທີ / Date: ____/____/______", meta_label_style)
+        ]
+    ]
+    sig_table = Table(sig_data, colWidths=[260, 260])
+    sig_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('TOPPADDING', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+    ]))
+    
+    sig_section = KeepTogether([
+        Spacer(1, 10),
+        sig_table
+    ])
+    story.append(sig_section)
+
+    # Build the document
+    doc.build(story, canvasmaker=create_canvas_class("ໃບສັ່ງຊື້ອາໄຫຼ່ (Purchase Order)"))
     pdf_content = buffer.getvalue()
     buffer.close()
     return pdf_content

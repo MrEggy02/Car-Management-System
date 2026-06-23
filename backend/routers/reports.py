@@ -523,15 +523,19 @@ def get_promotion_usage_report(
                 p.id,
                 p.name as promotion_name,
                 p.discount_type,
+                p.value as discount_value,
                 p.value,
                 COUNT(i.id) as usage_count,
                 SUM(i.total_discount) as total_discount_given,
+                SUM(i.final_total) as total_revenue,
                 SUM(i.final_total) as total_revenue_with_promotion,
                 AVG(i.total_discount) as avg_discount_per_use
             FROM invoices i
-            LEFT JOIN promotions p ON i.promotion_id = p.id
+            INNER JOIN job_orders jo ON i.job_order_id = jo.id
+            INNER JOIN quotations q ON q.job_order_id = jo.id AND q.status = 'approved'
+            LEFT JOIN promotions p ON q.promotion_id = p.id
             WHERE DATE(i.paid_date) BETWEEN %s AND %s
-            AND i.promotion_id IS NOT NULL
+            AND q.promotion_id IS NOT NULL
             AND i.payment_status = 'paid'
             GROUP BY p.id, p.name, p.discount_type, p.value
             ORDER BY usage_count DESC
@@ -543,7 +547,8 @@ def get_promotion_usage_report(
             SELECT 
                 p.name as promotion_name,
                 COUNT(DISTINCT q.id) as quoted_count,
-                SUM(q.discount_amount) as total_quoted_discount
+                SUM(q.discount_amount) as total_quoted_discount,
+                SUM(q.discount_amount) as quoted_discount
             FROM quotations q
             LEFT JOIN promotions p ON q.promotion_id = p.id
             WHERE DATE(q.created_at) BETWEEN %s AND %s
@@ -557,15 +562,17 @@ def get_promotion_usage_report(
         # 3. Overall promotion summary
         cursor.execute("""
             SELECT 
-                COUNT(DISTINCT promotion_id) as total_promotions_used,
-                SUM(total_discount) as total_discount_given,
+                COUNT(DISTINCT q.promotion_id) as total_promotions_used,
+                SUM(i.total_discount) as total_discount_given,
                 COUNT(*) as total_invoices_with_promotion,
-                SUM(final_total) as total_revenue_from_promo_invoices,
-                AVG(total_discount) as avg_discount_per_invoice
-            FROM invoices
-            WHERE DATE(paid_date) BETWEEN %s AND %s
-            AND promotion_id IS NOT NULL
-            AND payment_status = 'paid'
+                SUM(i.final_total) as total_revenue_from_promo_invoices,
+                AVG(i.total_discount) as avg_discount_per_invoice
+            FROM invoices i
+            INNER JOIN job_orders jo ON i.job_order_id = jo.id
+            INNER JOIN quotations q ON q.job_order_id = jo.id AND q.status = 'approved'
+            WHERE DATE(i.paid_date) BETWEEN %s AND %s
+            AND q.promotion_id IS NOT NULL
+            AND i.payment_status = 'paid'
         """, (start_date, end_date))
         summary = cursor.fetchone()
         
@@ -573,27 +580,41 @@ def get_promotion_usage_report(
         cursor.execute("""
             SELECT 
                 CASE 
-                    WHEN promotion_id IS NOT NULL THEN 'With Promotion'
+                    WHEN q.promotion_id IS NOT NULL THEN 'With Promotion'
                     ELSE 'Without Promotion'
                 END as promo_status,
                 COUNT(*) as invoice_count,
-                SUM(final_total) as total_revenue,
-                AVG(final_total) as avg_invoice_value
-            FROM invoices
-            WHERE DATE(paid_date) BETWEEN %s AND %s
-            AND payment_status = 'paid'
-            GROUP BY CASE WHEN promotion_id IS NOT NULL THEN 'With Promotion' ELSE 'Without Promotion' END
+                SUM(i.final_total) as total_revenue,
+                AVG(i.final_total) as avg_invoice_value
+            FROM invoices i
+            LEFT JOIN job_orders jo ON i.job_order_id = jo.id
+            LEFT JOIN quotations q ON q.job_order_id = jo.id AND q.status = 'approved'
+            WHERE DATE(i.paid_date) BETWEEN %s AND %s
+            AND i.payment_status = 'paid'
+            GROUP BY CASE WHEN q.promotion_id IS NOT NULL THEN 'With Promotion' ELSE 'Without Promotion' END
         """, (start_date, end_date))
         comparison = cursor.fetchall()
         
         # Convert decimal to float
         for promo in promotion_usage:
+            if promo.get('value'):
+                promo['value'] = float(promo['value'])
+            if promo.get('discount_value'):
+                promo['discount_value'] = float(promo['discount_value'])
             if promo.get('total_discount_given'):
                 promo['total_discount_given'] = float(promo['total_discount_given'])
             if promo.get('total_revenue_with_promotion'):
                 promo['total_revenue_with_promotion'] = float(promo['total_revenue_with_promotion'])
+            if promo.get('total_revenue'):
+                promo['total_revenue'] = float(promo['total_revenue'])
             if promo.get('avg_discount_per_use'):
                 promo['avg_discount_per_use'] = float(promo['avg_discount_per_use'])
+                
+        for promo in promotion_quoted:
+            if promo.get('total_quoted_discount'):
+                promo['total_quoted_discount'] = float(promo['total_quoted_discount'])
+            if promo.get('quoted_discount'):
+                promo['quoted_discount'] = float(promo['quoted_discount'])
         
         return {
             "promotion_usage": promotion_usage,
@@ -729,16 +750,17 @@ def get_parts_service_sales_report(
         # 1. Services Sales Breakdown from approved quotations
         cursor.execute("""
             SELECT 
-                s.name as service_name,
+                COALESCE(s.name, qi.custom_name) as service_name,
                 SUM(qi.qty) as quantity_sold,
                 AVG(qi.unit_price) as avg_unit_price,
                 SUM(qi.total) as total_sales_amount
             FROM quotation_items qi
             LEFT JOIN services s ON qi.service_id = s.id
             LEFT JOIN quotations q ON qi.quotation_id = q.id
-            WHERE qi.service_id IS NOT NULL AND q.status = 'approved'
+            WHERE (qi.service_id IS NOT NULL OR (qi.service_id IS NULL AND qi.part_id IS NULL AND qi.custom_name IS NOT NULL))
+            AND q.status = 'approved'
             AND DATE(q.created_at) BETWEEN %s AND %s
-            GROUP BY s.id, s.name
+            GROUP BY qi.service_id, qi.custom_name, s.name
             ORDER BY total_sales_amount DESC
         """, (start_date, end_date))
         service_sales = cursor.fetchall()

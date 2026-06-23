@@ -356,13 +356,54 @@ class PurchaseOrderDetailContent:
             ),
         )
         
-        action_row = ft.Row([back_btn], spacing=12, alignment=ft.MainAxisAlignment.CENTER)
+        print_btn = ft.ElevatedButton(
+            content=ft.Row([
+                ft.Icon(ft.Icons.PRINT, size=18, color=ft.Colors.WHITE),
+                ft.Text(get_text("print") if get_text("print") else "Print", size=14, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500),
+            ], spacing=6),
+            on_click=self.print_purchase_order,
+            style=ft.ButtonStyle(
+                bgcolor=self.primary_color,
+                shape=ft.RoundedRectangleBorder(radius=10),
+                padding=ft.padding.symmetric(horizontal=24, vertical=12),
+            ),
+        )
+        
+        action_row = ft.Row([back_btn, print_btn], spacing=12, alignment=ft.MainAxisAlignment.CENTER)
         
         return ft.Column([
             main_content,
             ft.Container(height=16),
             action_row,
         ], spacing=0)
+    
+    def print_purchase_order(self, e):
+        self.show_snack_bar(get_text("loading"))
+        try:
+            import os
+            
+            pdf_bytes = self.client.get_purchase_order_pdf(self.po_id)
+            if not pdf_bytes:
+                self.show_snack_bar(get_text("pdf_export_failed"), is_error=True)
+                return
+                
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            workspace_root = os.path.abspath(os.path.join(base_dir, "..", "..", ".."))
+            output_dir = os.path.join(workspace_root, "output")
+            os.makedirs(output_dir, exist_ok=True)
+            
+            po_no = self.po_data.get('po_no', f"PO-{self.po_id}")
+            pdf_path = os.path.join(output_dir, f"purchase_order_{po_no}.pdf")
+            
+            with open(pdf_path, "wb") as f:
+                f.write(pdf_bytes)
+                
+            os.startfile(pdf_path)
+            self.show_snack_bar(get_text("pdf_export_success"), is_error=False)
+            
+        except Exception as ex:
+            print(f"Error printing purchase order PDF: {ex}")
+            self.show_snack_bar(f"{get_text('pdf_export_failed')}: {str(ex)}", is_error=True)
     
     def show_snack_bar(self, message: str, is_error: bool = False):
         self.page.snack_bar = ft.SnackBar(

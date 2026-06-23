@@ -144,21 +144,16 @@ class InvoiceDetailContent:
         
         status_colors = {
             "pending": "#FF9800",
-            "paid": "#4CAF50",
-            "partial": "#2196F3",
-            "refunded": "#F44336"
+            "paid": "#4CAF50"
         }
         status_texts = {
             "pending": get_text("status_pending"),
-            "paid": get_text("status_paid"),
-            "partial": get_text("status_partial"),
-            "refunded": get_text("status_refunded")
+            "paid": get_text("status_paid")
         }
         
         method_texts = {
             "cash": get_text("payment_cash"),
-            "transfer": get_text("payment_transfer"),
-            "qr": get_text("payment_qr")
+            "transfer": get_text("payment_transfer")
         }
         
         # Status Badge
