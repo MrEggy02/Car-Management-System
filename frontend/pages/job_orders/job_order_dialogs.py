@@ -17,7 +17,7 @@ def show_create_job_order_dialog(primary_color, customers, vehicles_by_customer,
         border_radius=10,
         bgcolor=ft.Colors.WHITE,
         filled=True,
-        content_padding=ft.padding.symmetric(horizontal=14, vertical=10),
+        content_padding=ft.Padding(left=14, right=14, top=10, bottom=10),
         options=[
             ft.dropdown.Option(str(c.get("id")), f"{c.get('name')} - {c.get('phone', '-')}")
             for c in customers
@@ -32,7 +32,7 @@ def show_create_job_order_dialog(primary_color, customers, vehicles_by_customer,
         border_radius=10,
         bgcolor=ft.Colors.WHITE,
         filled=True,
-        content_padding=ft.padding.symmetric(horizontal=14, vertical=10),
+        content_padding=ft.Padding(left=14, right=14, top=10, bottom=10),
         options=[],
         expand=True,
     )
@@ -47,7 +47,7 @@ def show_create_job_order_dialog(primary_color, customers, vehicles_by_customer,
             customer_name_text,
             customer_phone_text,
         ], spacing=6),
-        padding=ft.padding.all(12),
+        padding=ft.Padding(left=12, right=12, top=12, bottom=12),
         bgcolor=ft.Colors.GREY_50,
         border_radius=10,
         visible=False,
@@ -63,7 +63,7 @@ def show_create_job_order_dialog(primary_color, customers, vehicles_by_customer,
         border_radius=10,
         bgcolor=ft.Colors.WHITE,
         filled=True,
-        content_padding=ft.padding.symmetric(horizontal=14, vertical=12),
+        content_padding=ft.Padding(left=14, right=14, top=12, bottom=12),
         expand=True,
     )
     
@@ -74,7 +74,7 @@ def show_create_job_order_dialog(primary_color, customers, vehicles_by_customer,
         border_radius=10,
         bgcolor=ft.Colors.WHITE,
         filled=True,
-        content_padding=ft.padding.symmetric(horizontal=14, vertical=10),
+        content_padding=ft.Padding(left=14, right=14, top=10, bottom=10),
         expand=True,
         input_filter=ft.NumbersOnlyInputFilter(),
     )
@@ -84,7 +84,7 @@ def show_create_job_order_dialog(primary_color, customers, vehicles_by_customer,
         border_radius=10,
         bgcolor=ft.Colors.WHITE,
         filled=True,
-        content_padding=ft.padding.symmetric(horizontal=14, vertical=10),
+        content_padding=ft.Padding(left=14, right=14, top=10, bottom=10),
         options=[
             ft.dropdown.Option("full", "ເຕັມຖັງ (Full)"),
             ft.dropdown.Option("3/4", "3/4 ຖັງ"),
@@ -134,7 +134,7 @@ def show_create_job_order_dialog(primary_color, customers, vehicles_by_customer,
             selected_items_list.controls.append(
                 ft.Container(
                     content=ft.Text("ຍັງບໍ່ມີລາຍການທີ່ເລືອກ", size=12, color="#94A3B8"),
-                    padding=ft.padding.all(20),
+                    padding=ft.Padding(left=20, right=20, top=20, bottom=20),
                     alignment=ft.Alignment(0, 0),
                 )
             )
@@ -168,7 +168,7 @@ def show_create_job_order_dialog(primary_color, customers, vehicles_by_customer,
                             padding=0,
                         ),
                     ], spacing=6, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                    padding=ft.padding.symmetric(vertical=6, horizontal=8),
+                    padding=ft.Padding(left=8, right=8, top=6, bottom=6),
                     bgcolor=ft.Colors.GREY_50,
                     border_radius=6,
                 )
@@ -198,7 +198,7 @@ def show_create_job_order_dialog(primary_color, customers, vehicles_by_customer,
                             padding=0,
                         ),
                     ], spacing=6, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                    padding=ft.padding.symmetric(vertical=6, horizontal=8),
+                    padding=ft.Padding(left=8, right=8, top=6, bottom=6),
                     bgcolor=ft.Colors.GREY_50,
                     border_radius=6,
                 )
@@ -258,7 +258,7 @@ def show_create_job_order_dialog(primary_color, customers, vehicles_by_customer,
         expand=True,
         bgcolor="#FAFBFC",
         border_radius=12,
-        padding=ft.padding.all(16),
+        padding=ft.Padding(left=16, right=16, top=16, bottom=16),
     )
     
     # ==================== RIGHT PANE - SELECT ITEMS ====================
@@ -268,7 +268,7 @@ def show_create_job_order_dialog(primary_color, customers, vehicles_by_customer,
         content=ft.Text(get_text("parts"), size=13, weight=ft.FontWeight.W_600, color=ft.Colors.WHITE),
         bgcolor=primary_color,
         border_radius=8,
-        padding=ft.padding.symmetric(horizontal=20, vertical=8),
+        padding=ft.Padding(left=20, right=20, top=8, bottom=8),
         expand=True,
     )
     
@@ -276,7 +276,7 @@ def show_create_job_order_dialog(primary_color, customers, vehicles_by_customer,
         content=ft.Text(get_text("services"), size=13, weight=ft.FontWeight.W_600, color="#64748B"),
         bgcolor=ft.Colors.GREY_200,
         border_radius=8,
-        padding=ft.padding.symmetric(horizontal=20, vertical=8),
+        padding=ft.Padding(left=20, right=20, top=8, bottom=8),
         expand=True,
     )
     
@@ -287,7 +287,7 @@ def show_create_job_order_dialog(primary_color, customers, vehicles_by_customer,
         bgcolor=ft.Colors.WHITE,
         filled=True,
         prefix_icon=ft.Icons.SEARCH,
-        content_padding=ft.padding.symmetric(horizontal=14, vertical=12),
+        content_padding=ft.Padding(left=14, right=14, top=12, bottom=12),
         expand=True,
     )
     
@@ -300,7 +300,7 @@ def show_create_job_order_dialog(primary_color, customers, vehicles_by_customer,
         filled=True,
         input_filter=ft.NumbersOnlyInputFilter(),
         text_align=ft.TextAlign.CENTER,
-        content_padding=ft.padding.symmetric(horizontal=10, vertical=8),
+        content_padding=ft.Padding(left=10, right=10, top=8, bottom=8),
     )
     
     # Results list
@@ -330,7 +330,7 @@ def show_create_job_order_dialog(primary_color, customers, vehicles_by_customer,
                                color=ft.Colors.WHITE if is_active else "#64748B"),
                 bgcolor=primary_color if is_active else ft.Colors.GREY_200,
                 border_radius=20,
-                padding=ft.padding.symmetric(horizontal=12, vertical=6),
+                padding=ft.Padding(left=12, right=12, top=6, bottom=6),
                 ink=True,
                 on_click=lambda e, cid=cat["id"]: filter_by_category(cid),
             )
@@ -374,7 +374,7 @@ def show_create_job_order_dialog(primary_color, customers, vehicles_by_customer,
                             on_click=lambda e, pid=part.get('id'), pname=part.get('name'), pprice=part.get('price'): add_item("part", pid, pname, pprice),
                         ),
                     ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                    padding=ft.padding.symmetric(vertical=8, horizontal=10),
+                    padding=ft.Padding(left=10, right=10, top=8, bottom=8),
                     bgcolor=ft.Colors.GREY_50,
                     border_radius=8,
                 )
@@ -405,7 +405,7 @@ def show_create_job_order_dialog(primary_color, customers, vehicles_by_customer,
                             on_click=lambda e, sid=service.get('id'), sname=service.get('name'), sprice=service.get('price'): add_item("service", sid, sname, sprice),
                         ),
                     ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                    padding=ft.padding.symmetric(vertical=8, horizontal=10),
+                    padding=ft.Padding(left=10, right=10, top=8, bottom=8),
                     bgcolor=ft.Colors.GREY_50,
                     border_radius=8,
                 )
@@ -415,7 +415,7 @@ def show_create_job_order_dialog(primary_color, customers, vehicles_by_customer,
             results_list.controls.append(
                 ft.Container(
                     content=ft.Text(get_text("no_items_found"), size=12, color="#94A3B8"),
-                    padding=ft.padding.all(20),
+                    padding=ft.Padding(left=20, right=20, top=20, bottom=20),
                     alignment=ft.Alignment(0, 0),
                 )
             )
@@ -469,16 +469,16 @@ def show_create_job_order_dialog(primary_color, customers, vehicles_by_customer,
             ft.Container(height=8),
             ft.Container(
                 content=results_list,
-                border=ft.border.all(1, ft.Colors.GREY_200),
+                border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_200), right=ft.BorderSide(1, ft.Colors.GREY_200), bottom=ft.BorderSide(1, ft.Colors.GREY_200), left=ft.BorderSide(1, ft.Colors.GREY_200)),
                 border_radius=10,
-                padding=ft.padding.all(8),
+                padding=ft.Padding(left=8, right=8, top=8, bottom=8),
                 height=240,
             ),
         ], spacing=0),
         expand=True,
         bgcolor="#FAFBFC",
         border_radius=12,
-        padding=ft.padding.all(16),
+        padding=ft.Padding(left=16, right=16, top=16, bottom=16),
     )
     
     # Main content with two columns
@@ -490,7 +490,7 @@ def show_create_job_order_dialog(primary_color, customers, vehicles_by_customer,
         ], spacing=0, expand=True),
         width=950,
         height=620,
-        padding=ft.padding.all(16),
+        padding=ft.Padding(left=16, right=16, top=16, bottom=16),
     )
     
     # ==================== EVENT HANDLERS ====================
@@ -615,15 +615,15 @@ def show_create_job_order_dialog(primary_color, customers, vehicles_by_customer,
                         content=ft.Icon(ft.Icons.ADD_CIRCLE, size=22, color=ft.Colors.WHITE),
                         bgcolor=primary_color,
                         border_radius=10,
-                        padding=ft.padding.all(6),
+                        padding=ft.Padding(left=6, right=6, top=6, bottom=6),
                     ),
                     ft.Text(get_text("new_job_order"), size=16, weight=ft.FontWeight.BOLD, color="#1E293B"),
                 ],
                 spacing=10,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(horizontal=20, vertical=14),
-            border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
+            padding=ft.Padding(left=20, right=20, top=14, bottom=14),
+            border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
         ),
         content=main_content,
         actions=[
@@ -644,12 +644,12 @@ def show_create_job_order_dialog(primary_color, customers, vehicles_by_customer,
                             bgcolor=primary_color,
                             shape=ft.RoundedRectangleBorder(radius=8),
                             elevation=0,
-                            padding=ft.padding.symmetric(horizontal=24, vertical=10),
+                            padding=ft.Padding(left=24, right=24, top=10, bottom=10),
                         ),
                     ),
                 ], spacing=12, alignment=ft.MainAxisAlignment.END),
-                padding=ft.padding.symmetric(horizontal=20, vertical=14),
-                border=ft.border.only(top=ft.BorderSide(1, ft.Colors.GREY_100)),
+                padding=ft.Padding(left=20, right=20, top=14, bottom=14),
+                border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_100)),
             ),
         ],
         actions_alignment=ft.MainAxisAlignment.END,
@@ -819,15 +819,15 @@ def show_create_job_order_dialog(primary_color, customers, vehicles_by_customer,
                             content=ft.Icon(ft.Icons.ADD_CIRCLE, size=20, color=ft.Colors.WHITE),
                             bgcolor=primary_color,
                             border_radius=10,
-                            padding=ft.padding.all(5),
+                            padding=ft.Padding(left=5, right=5, top=5, bottom=5),
                         ),
                         ft.Text(f"{get_text('add_new_vehicle')} - {customer_name}", size=15, weight=ft.FontWeight.BOLD, color="#1E293B"),
                     ],
                     spacing=8,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
-                padding=ft.padding.symmetric(horizontal=16, vertical=10),
-                border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
+                padding=ft.Padding(left=16, right=16, top=10, bottom=10),
+                border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
             ),
             content=ft.Container(
                 content=ft.Column([
@@ -835,7 +835,7 @@ def show_create_job_order_dialog(primary_color, customers, vehicles_by_customer,
                     ft.Container(height=8),
                     ft.Row([model, year, color], spacing=10, expand=True),
                 ], spacing=0),
-                padding=ft.padding.all(16),
+                padding=ft.Padding(left=16, right=16, top=16, bottom=16),
                 width=500,
                 height=220,
             ),
@@ -857,8 +857,8 @@ def show_create_job_order_dialog(primary_color, customers, vehicles_by_customer,
                             ),
                         ),
                     ], spacing=8, alignment=ft.MainAxisAlignment.END),
-                    padding=ft.padding.symmetric(horizontal=16, vertical=10),
-                    border=ft.border.only(top=ft.BorderSide(1, ft.Colors.GREY_100)),
+                    padding=ft.Padding(left=16, right=16, top=10, bottom=10),
+                    border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_100)),
                 ),
             ],
             actions_alignment=ft.MainAxisAlignment.END,
@@ -871,10 +871,8 @@ def show_create_job_order_dialog(primary_color, customers, vehicles_by_customer,
     return dialog
 
 
-def show_job_order_detail_dialog(order, primary_color, on_close, on_print=None, on_upload_click=None):
+def show_job_order_detail_dialog(order, primary_color, on_close, on_print=None):
     """Show job order detail dialog with print button"""
-    import webbrowser
-    from api_client import API_BASE_URL
     
     order_id = order.get("id")
     job_no = order.get("job_no", "-")
@@ -892,10 +890,8 @@ def show_job_order_detail_dialog(order, primary_color, on_close, on_print=None, 
     else:
         receive_date = "-"
     problem = order.get("problem_description", "-")
-    car_defects = order.get("car_defects", "-") or "-"
     mileage = order.get("mileage", 0)
     fuel_level = order.get("fuel_level", "-")
-    signed_receipt_image = order.get("signed_receipt_image", "") or ""
     status = order.get("status", "pending")
     created_by = order.get("created_by_name", "-")
     
@@ -914,7 +910,7 @@ def show_job_order_detail_dialog(order, primary_color, on_close, on_print=None, 
         content=ft.Text(status_text, size=12, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500),
         bgcolor=status_color,
         border_radius=12,
-        padding=ft.padding.symmetric(horizontal=12, vertical=4),
+        padding=ft.Padding(left=12, right=12, top=4, bottom=4),
     )
     
     actions_row = ft.Row([
@@ -934,54 +930,6 @@ def show_job_order_detail_dialog(order, primary_color, on_close, on_print=None, 
             on_click=lambda e: on_print(order_id),
             style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=6)),
         ))
-        
-    image_header_row = ft.Row([
-        ft.Text(get_text("signed_receipt_image"), size=11, color="#64748B", weight=ft.FontWeight.BOLD),
-    ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
-    
-    if on_upload_click:
-        image_header_row.controls.append(
-            ft.TextButton(
-                content=ft.Row([
-                    ft.Icon(ft.Icons.UPLOAD_FILE, size=14, color=primary_color),
-                    ft.Text(get_text("change_image") if signed_receipt_image else get_text("upload_signed_receipt"), size=11, color=primary_color, weight=ft.FontWeight.W_600),
-                ], spacing=4),
-                on_click=lambda e: on_upload_click(order_id),
-                style=ft.ButtonStyle(padding=ft.padding.all(0)),
-            )
-        )
-        
-    image_display_container = ft.Container()
-    if signed_receipt_image:
-        image_url = f"{API_BASE_URL}/uploads/{signed_receipt_image}"
-        image_display_container.content = ft.GestureDetector(
-            on_tap=lambda e: webbrowser.open(image_url),
-            mouse_cursor=ft.MouseCursor.CLICK,
-            content=ft.Container(
-                content=ft.Image(
-                    src=image_url,
-                    width=400,
-                    height=180,
-                    fit="contain",
-                ),
-                border=ft.border.all(1, ft.Colors.GREY_300),
-                border_radius=8,
-                bgcolor=ft.Colors.GREY_50,
-                padding=6,
-                tooltip="Click to view full image",
-            )
-        )
-    else:
-        image_display_container.content = ft.Container(
-            content=ft.Row([
-                ft.Icon(ft.Icons.IMAGE_NOT_SUPPORTED, size=18, color="#94A3B8"),
-                ft.Text(get_text("no_image_uploaded"), size=11, color="#94A3B8"),
-            ], spacing=6, alignment=ft.MainAxisAlignment.CENTER),
-            border=ft.border.all(1, ft.Colors.GREY_200),
-            border_radius=8,
-            padding=10,
-            alignment=ft.Alignment(0, 0),
-        )
     
     dialog = ft.AlertDialog(
         modal=True,
@@ -994,15 +942,15 @@ def show_job_order_detail_dialog(order, primary_color, on_close, on_print=None, 
                         content=ft.Icon(ft.Icons.RECEIPT, size=20, color=ft.Colors.WHITE),
                         bgcolor=primary_color,
                         border_radius=10,
-                        padding=ft.padding.all(5),
+                        padding=ft.Padding(left=5, right=5, top=5, bottom=5),
                     ),
                     ft.Text(f"{get_text('job_order_detail')}: {job_no}", size=15, weight=ft.FontWeight.BOLD, color="#1E293B"),
                 ],
                 spacing=8,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(horizontal=16, vertical=10),
-            border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
+            padding=ft.Padding(left=16, right=16, top=10, bottom=10),
+            border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
         ),
         content=ft.Container(
             content=ft.Column([
@@ -1050,35 +998,27 @@ def show_job_order_detail_dialog(order, primary_color, on_close, on_print=None, 
                 ]),
                 ft.Text(get_text("problem_description"), size=11, color="#64748B"),
                 ft.Text(problem, size=12, color="#1E293B"),
-                
-                ft.Text(get_text("car_defects"), size=11, color="#64748B"),
-                ft.Text(car_defects, size=12, color="#1E293B"),
-                
-                image_header_row,
-                image_display_container,
-                
                 ft.Divider(height=1, color=ft.Colors.GREY_100),
                 ft.Row([
                     ft.Text(get_text("service_advisor"), size=11, color="#64748B"),
                     ft.Text(created_by, size=12, color="#64748B", expand=True),
                 ], spacing=8),
             ], spacing=12, scroll=ft.ScrollMode.AUTO),
-            padding=ft.padding.all(16),
+            padding=ft.Padding(left=16, right=16, top=16, bottom=16),
             width=450,
-            height=540,
+            height=480,
         ),
         actions=[
             ft.Container(
                 content=actions_row,
-                padding=ft.padding.symmetric(horizontal=16, vertical=10),
-                border=ft.border.only(top=ft.BorderSide(1, ft.Colors.GREY_100)),
+                padding=ft.Padding(left=16, right=16, top=10, bottom=10),
+                border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_100)),
             ),
         ],
         actions_alignment=ft.MainAxisAlignment.END,
     )
     
     return dialog
-
 
 
 def show_status_update_dialog(order, primary_color, on_update, on_close):
@@ -1117,15 +1057,15 @@ def show_status_update_dialog(order, primary_color, on_update, on_close):
                         content=ft.Icon(ft.Icons.EDIT, size=20, color=ft.Colors.WHITE),
                         bgcolor=primary_color,
                         border_radius=10,
-                        padding=ft.padding.all(5),
+                        padding=ft.Padding(left=5, right=5, top=5, bottom=5),
                     ),
                     ft.Text(get_text("update_order_status"), size=15, weight=ft.FontWeight.BOLD, color="#1E293B"),
                 ],
                 spacing=8,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(horizontal=16, vertical=10),
-            border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
+            padding=ft.Padding(left=16, right=16, top=10, bottom=10),
+            border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
         ),
         content=ft.Container(
             content=ft.Column([
@@ -1133,7 +1073,7 @@ def show_status_update_dialog(order, primary_color, on_update, on_close):
                 ft.Container(height=12),
                 status_dropdown,
             ], spacing=0),
-            padding=ft.padding.all(16),
+            padding=ft.Padding(left=16, right=16, top=16, bottom=16),
             width=350,
         ),
         actions=[
@@ -1151,12 +1091,12 @@ def show_status_update_dialog(order, primary_color, on_update, on_close):
                             bgcolor=primary_color,
                             shape=ft.RoundedRectangleBorder(radius=6),
                             elevation=0,
-                            padding=ft.padding.symmetric(horizontal=16, vertical=6),
+                            padding=ft.Padding(left=16, right=16, top=6, bottom=6),
                         ),
                     ),
                 ], spacing=8, alignment=ft.MainAxisAlignment.END),
-                padding=ft.padding.symmetric(horizontal=16, vertical=10),
-                border=ft.border.only(top=ft.BorderSide(1, ft.Colors.GREY_100)),
+                padding=ft.Padding(left=16, right=16, top=10, bottom=10),
+                border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_100)),
             ),
         ],
         actions_alignment=ft.MainAxisAlignment.END,

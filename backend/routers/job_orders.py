@@ -1,11 +1,9 @@
 # backend/routers/job_orders.py
-from fastapi import APIRouter, HTTPException, Depends, Form, Response, UploadFile, File
+from fastapi import APIRouter, HTTPException, Depends, Form, Response
 from database import get_db
 from auth import authenticate_user
 from typing import Optional
 from datetime import datetime
-import os
-import uuid
 
 router = APIRouter()
 
@@ -28,10 +26,8 @@ def get_job_orders(
                     jo.vehicle_id,
                     jo.receive_date,
                     jo.problem_description,
-                    jo.car_defects,
                     jo.mileage,
                     jo.fuel_level,
-                    jo.signed_receipt_image,
                     jo.status,
                     jo.created_by,
                     jo.closed_by,
@@ -64,10 +60,8 @@ def get_job_orders(
                     jo.vehicle_id,
                     jo.receive_date,
                     jo.problem_description,
-                    jo.car_defects,
                     jo.mileage,
                     jo.fuel_level,
-                    jo.signed_receipt_image,
                     jo.status,
                     jo.created_by,
                     jo.closed_by,
@@ -116,10 +110,6 @@ def get_job_orders(
                 order['closed_by_name'] = "-"
             if not order.get('address'):
                 order['address'] = "-"
-            if not order.get('car_defects'):
-                order['car_defects'] = "-"
-            if not order.get('signed_receipt_image'):
-                order['signed_receipt_image'] = ""
         
         return job_orders
     except Exception as e:
@@ -153,10 +143,8 @@ def get_job_orders_with_details(
                 jo.vehicle_id,
                 jo.receive_date,
                 jo.problem_description,
-                jo.car_defects,
                 jo.mileage,
                 jo.fuel_level,
-                jo.signed_receipt_image,
                 jo.status,
                 jo.created_by,
                 jo.closed_by,
@@ -212,10 +200,6 @@ def get_job_orders_with_details(
                 order['closed_by_name'] = "-"
             if not order.get('address'):
                 order['address'] = "-"
-            if not order.get('car_defects'):
-                order['car_defects'] = "-"
-            if not order.get('signed_receipt_image'):
-                order['signed_receipt_image'] = ""
         
         return job_orders
     except Exception as e:
@@ -242,10 +226,8 @@ def get_job_order(order_id: int, user: dict = Depends(authenticate_user)):
                 jo.vehicle_id,
                 jo.receive_date,
                 jo.problem_description,
-                jo.car_defects,
                 jo.mileage,
                 jo.fuel_level,
-                jo.signed_receipt_image,
                 jo.status,
                 jo.created_by,
                 jo.closed_by,
@@ -289,10 +271,6 @@ def get_job_order(order_id: int, user: dict = Depends(authenticate_user)):
                 order['created_by_name'] = "-"
             if not order.get('closed_by_name'):
                 order['closed_by_name'] = "-"
-            if not order.get('car_defects'):
-                order['car_defects'] = "-"
-            if not order.get('signed_receipt_image'):
-                order['signed_receipt_image'] = ""
         
         return order
     except Exception as e:
@@ -312,8 +290,6 @@ def create_job_order(
     problem_description: str = Form(...),
     mileage: int = Form(0),
     fuel_level: str = Form(""),
-    car_defects: str = Form(""),
-    signed_receipt_image: Optional[UploadFile] = File(None),
     user: dict = Depends(authenticate_user)
 ):
     """Create a new job order"""
@@ -326,20 +302,11 @@ def create_job_order(
         count_num = count[0] + 1 if count else 1
         job_no = f"JOB-{year}-{count_num:04d}"
         
-        # Save image if provided
-        image_filename = None
-        if signed_receipt_image and signed_receipt_image.filename:
-            from utils import save_uploaded_file
-            ext = os.path.splitext(signed_receipt_image.filename)[1]
-            unique_filename = f"signed_{uuid.uuid4().hex}{ext}"
-            save_uploaded_file(signed_receipt_image.file, unique_filename)
-            image_filename = unique_filename
-            
         cursor.execute("""
             INSERT INTO job_orders 
-            (job_no, customer_id, vehicle_id, problem_description, car_defects, mileage, fuel_level, signed_receipt_image, status, created_by, receive_date)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        """, (job_no, customer_id, vehicle_id, problem_description, car_defects, mileage, fuel_level, image_filename, 'pending', user.get('id'), datetime.now()))
+            (job_no, customer_id, vehicle_id, problem_description, mileage, fuel_level, status, created_by, receive_date)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (job_no, customer_id, vehicle_id, problem_description, mileage, fuel_level, 'pending', user.get('id'), datetime.now()))
         
         db.commit()
         order_id = cursor.lastrowid
@@ -367,8 +334,6 @@ def update_job_order(
     problem_description: Optional[str] = Form(None),
     mileage: Optional[int] = Form(None),
     fuel_level: Optional[str] = Form(None),
-    car_defects: Optional[str] = Form(None),
-    signed_receipt_image: Optional[UploadFile] = File(None),
     user: dict = Depends(authenticate_user)
 ):
     """Update job order status or details"""
@@ -403,25 +368,6 @@ def update_job_order(
         if fuel_level:
             update_fields.append("fuel_level = %s")
             values.append(fuel_level)
-        if car_defects is not None:
-            update_fields.append("car_defects = %s")
-            values.append(car_defects)
-            
-        if signed_receipt_image and signed_receipt_image.filename:
-            # Get old image path if it exists to delete it
-            cursor.execute("SELECT signed_receipt_image FROM job_orders WHERE id = %s", (order_id,))
-            old_row = cursor.fetchone()
-            if old_row and old_row[0]:
-                from utils import delete_file
-                delete_file(os.path.join("uploads", old_row[0]))
-                
-            from utils import save_uploaded_file
-            ext = os.path.splitext(signed_receipt_image.filename)[1]
-            unique_filename = f"signed_{uuid.uuid4().hex}{ext}"
-            save_uploaded_file(signed_receipt_image.file, unique_filename)
-            
-            update_fields.append("signed_receipt_image = %s")
-            values.append(unique_filename)
         
         if update_fields:
             values.append(order_id)

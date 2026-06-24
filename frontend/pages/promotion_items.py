@@ -29,7 +29,7 @@ class PromotionItemsContent:
         parts_btn = ft.Container(
             content=ft.Text(get_text("parts"), size=16, weight=ft.FontWeight.W_500, 
                           color=ft.Colors.WHITE if self.current_tab == "parts" else "#64748B"),
-            padding=ft.padding.symmetric(horizontal=24, vertical=12),
+            padding=ft.Padding(left=24, right=24, top=12, bottom=12),
             bgcolor=self.primary_color if self.current_tab == "parts" else ft.Colors.TRANSPARENT,
             border_radius=30,
             on_click=lambda e: self.switch_tab("parts"),
@@ -38,7 +38,7 @@ class PromotionItemsContent:
         services_btn = ft.Container(
             content=ft.Text(get_text("services"), size=16, weight=ft.FontWeight.W_500,
                           color=ft.Colors.WHITE if self.current_tab == "services" else "#64748B"),
-            padding=ft.padding.symmetric(horizontal=24, vertical=12),
+            padding=ft.Padding(left=24, right=24, top=12, bottom=12),
             bgcolor=self.primary_color if self.current_tab == "services" else ft.Colors.TRANSPARENT,
             border_radius=30,
             on_click=lambda e: self.switch_tab("services"),
@@ -82,7 +82,7 @@ class PromotionItemsContent:
         content_area = ft.Container(
             content=content,
             expand=True,
-            padding=ft.padding.all(24),
+            padding=ft.Padding(left=24, right=24, top=24, bottom=24),
             bgcolor="#F5F7FA",
         )
         
@@ -132,13 +132,13 @@ class PromotionItemsContent:
                         content=ft.Icon(ft.Icons.LIST_ALT, size=28, color=ft.Colors.WHITE),
                         bgcolor=ft.Colors.with_opacity(0.2, ft.Colors.WHITE),
                         border_radius=15,
-                        padding=ft.padding.all(8),
+                        padding=ft.Padding(left=8, right=8, top=8, bottom=8),
                     ),
                 ],
                 spacing=16,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(vertical=20, horizontal=32),
+            padding=ft.Padding(left=32, right=32, top=20, bottom=20),
             gradient=ft.LinearGradient(
                 begin=ft.Alignment(-1, -1),
                 end=ft.Alignment(1, 1),
@@ -175,7 +175,7 @@ class PromotionItemsContent:
                         ft.Icon(ft.Icons.INBOX, size=48, color=ft.Colors.GREY_400),
                         ft.Text(f"ບໍ່ມີ {self.current_tab} ໃນໂປຣໂມຊັນນີ້", size=14, color="#64748B"),
                     ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-                    padding=ft.padding.all(40),
+                    padding=ft.Padding(left=40, right=40, top=40, bottom=40),
                 )
             )
         else:
@@ -207,10 +207,10 @@ class PromotionItemsContent:
                     tooltip=get_text("delete"),
                 ),
             ]),
-            padding=ft.padding.symmetric(horizontal=16, vertical=12),
+            padding=ft.Padding(left=16, right=16, top=12, bottom=12),
             bgcolor=ft.Colors.WHITE,
             border_radius=10,
-            border=ft.border.all(1, ft.Colors.GREY_100),
+            border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_100), right=ft.BorderSide(1, ft.Colors.GREY_100), bottom=ft.BorderSide(1, ft.Colors.GREY_100), left=ft.BorderSide(1, ft.Colors.GREY_100)),
         )
     
     def delete_item(self, item_id: int, item_name: str):

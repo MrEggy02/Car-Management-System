@@ -83,7 +83,7 @@ class MechanicPerformanceReportContent:
                 spacing=16,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(vertical=12, horizontal=24),
+            padding=ft.Padding(left=24, right=24, top=12, bottom=12),
             gradient=ft.LinearGradient(
                 begin=ft.Alignment(-1, -1),
                 end=ft.Alignment(1, 1),
@@ -122,7 +122,7 @@ class MechanicPerformanceReportContent:
             style=ft.ButtonStyle(
                 bgcolor=self.primary_color,
                 shape=ft.RoundedRectangleBorder(radius=10),
-                padding=ft.padding.symmetric(horizontal=20, vertical=12),
+                padding=ft.Padding(left=20, right=20, top=12, bottom=12),
             ),
         )
         
@@ -151,10 +151,10 @@ class MechanicPerformanceReportContent:
                     refresh_btn,
                 ], spacing=12),
             ]),
-            padding=ft.padding.all(20),
+            padding=ft.Padding(left=20, right=20, top=20, bottom=20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
-            margin=ft.margin.only(left=24, right=24, top=10, bottom=10),
+            margin=ft.Margin(left=24, right=24, top=10, bottom=10),
             shadow=ft.BoxShadow(
                 blur_radius=10,
                 color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
@@ -321,7 +321,7 @@ class MechanicPerformanceReportContent:
                 ft.Container(height=10),
                 row2
             ]),
-            margin=ft.margin.symmetric(horizontal=24),
+            margin=ft.Margin(left=24, right=24, top=0, bottom=0),
         )
     
     def _build_stat_card(self, title, value, icon, color, subtitle=""):
@@ -331,7 +331,7 @@ class MechanicPerformanceReportContent:
                     content=ft.Icon(icon, size=20, color=ft.Colors.WHITE),
                     bgcolor=color,
                     border_radius=10,
-                    padding=ft.padding.all(8),
+                    padding=ft.Padding(left=8, right=8, top=8, bottom=8),
                 ),
                 ft.Column([
                     ft.Text(value, size=18, weight=ft.FontWeight.BOLD, color="#1E293B"),
@@ -339,10 +339,10 @@ class MechanicPerformanceReportContent:
                     ft.Text(subtitle, size=10, color="#94A3B8") if subtitle else ft.Container(),
                 ], spacing=2, expand=True),
             ], spacing=12, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-            padding=ft.padding.all(12),
+            padding=ft.Padding(left=12, right=12, top=12, bottom=12),
             bgcolor=ft.Colors.WHITE,
             border_radius=12,
-            border=ft.border.all(1, ft.Colors.GREY_100),
+            border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_100), right=ft.BorderSide(1, ft.Colors.GREY_100), bottom=ft.BorderSide(1, ft.Colors.GREY_100), left=ft.BorderSide(1, ft.Colors.GREY_100)),
             expand=True,
         )
     
@@ -356,16 +356,16 @@ class MechanicPerformanceReportContent:
                     ft.Container(height=12),
                     ft.Container(
                         content=ft.Text(get_text("no_data"), size=14, color="#64748B"),
-                        padding=ft.padding.all(40),
+                        padding=ft.Padding(left=40, right=40, top=40, bottom=40),
                         bgcolor=ft.Colors.GREY_50,
                         border_radius=12,
                         alignment=ft.Alignment(0, 0),
                     ),
                 ]),
-                padding=ft.padding.all(20),
+                padding=ft.Padding(left=20, right=20, top=20, bottom=20),
                 bgcolor=ft.Colors.WHITE,
                 border_radius=16,
-                margin=ft.margin.only(left=24, right=24, bottom=24),
+                margin=ft.Margin(left=24, right=24, top=0, bottom=24),
                 shadow=ft.BoxShadow(
                     blur_radius=10,
                     color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
@@ -384,7 +384,7 @@ class MechanicPerformanceReportContent:
                 ft.Text("ກຳໄລລວມ", size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=120, text_align=ft.TextAlign.RIGHT),
                 ft.Text("ປະສິດທິພາບ", size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=100, text_align=ft.TextAlign.CENTER),
             ]),
-            padding=ft.padding.symmetric(vertical=12, horizontal=16),
+            padding=ft.Padding(left=16, right=16, top=12, bottom=12),
             bgcolor=ft.Colors.GREY_100,
             border_radius=ft.BorderRadius.only(top_left=12, top_right=12),
         )
@@ -418,12 +418,12 @@ class MechanicPerformanceReportContent:
                             content=ft.Text(f"{eff_val:.1f}%", size=11, color=ft.Colors.WHITE, weight=ft.FontWeight.BOLD),
                             bgcolor=eff_color,
                             border_radius=12,
-                            padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                            padding=ft.Padding(left=8, right=8, top=4, bottom=4),
                             width=90,
                             alignment=ft.Alignment(0, 0),
                         ),
                     ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                    padding=ft.padding.symmetric(vertical=12, horizontal=16),
+                    padding=ft.Padding(left=16, right=16, top=12, bottom=12),
                     bgcolor=bg,
                 )
             )
@@ -435,10 +435,10 @@ class MechanicPerformanceReportContent:
                 header,
                 table_body,
             ]),
-            padding=ft.padding.all(20),
+            padding=ft.Padding(left=20, right=20, top=20, bottom=20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
-            margin=ft.margin.only(left=24, right=24, bottom=24),
+            margin=ft.Margin(left=24, right=24, top=0, bottom=24),
             shadow=ft.BoxShadow(
                 blur_radius=10,
                 color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),

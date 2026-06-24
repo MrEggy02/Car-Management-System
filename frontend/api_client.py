@@ -582,35 +582,18 @@ class APIClient:
         problem_description: str,
         mileage: int = 0,
         fuel_level: str = "",
-        car_defects: str = "",
-        signed_receipt_image_path: str = None,
     ) -> Dict:
-        data = {
-            "customer_id": customer_id,
-            "vehicle_id": vehicle_id,
-            "problem_description": problem_description,
-            "mileage": mileage,
-            "fuel_level": fuel_level,
-            "car_defects": car_defects,
-        }
-        files = None
-        if signed_receipt_image_path:
-            try:
-                f = open(signed_receipt_image_path, "rb")
-                files = {"signed_receipt_image": (os.path.basename(signed_receipt_image_path), f, "image/png")}
-            except Exception as e:
-                print(f"Error opening signed_receipt_image: {e}")
-                
-        try:
-            return self._request(
-                "POST",
-                "/job-orders",
-                data=data,
-                files=files,
-            )
-        finally:
-            if files:
-                files["signed_receipt_image"][1].close()
+        return self._request(
+            "POST",
+            "/job-orders",
+            data={
+                "customer_id": customer_id,
+                "vehicle_id": vehicle_id,
+                "problem_description": problem_description,
+                "mileage": mileage,
+                "fuel_level": fuel_level,
+            },
+        )
 
     def get_job_orders(self, status: str = None) -> List[Dict]:
         params = {"status": status} if status else None
@@ -624,20 +607,7 @@ class APIClient:
         return self._request("GET", f"/job-orders/{order_id}/pdf")
 
     def update_job_order(self, order_id: int, **kwargs) -> Dict:
-        image_path = kwargs.pop("signed_receipt_image_path", None)
-        files = None
-        if image_path:
-            try:
-                f = open(image_path, "rb")
-                files = {"signed_receipt_image": (os.path.basename(image_path), f, "image/png")}
-            except Exception as e:
-                print(f"Error opening signed_receipt_image for update: {e}")
-                
-        try:
-            return self._request("PUT", f"/job-orders/{order_id}", data=kwargs, files=files)
-        finally:
-            if files:
-                files["signed_receipt_image"][1].close()
+        return self._request("PUT", f"/job-orders/{order_id}", data=kwargs)
 
     def delete_job_order(self, order_id: int) -> Dict:
         return self._request("DELETE", f"/job-orders/{order_id}")

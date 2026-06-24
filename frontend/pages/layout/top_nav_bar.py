@@ -112,7 +112,7 @@ class TopNavBarManager:
                                     ),
                                     bgcolor=ft.Colors.with_opacity(0.2, ft.Colors.WHITE),
                                     border_radius=10,
-                                    padding=ft.padding.symmetric(horizontal=8, vertical=2),
+                                    padding=ft.Padding(left=8, right=8, top=2, bottom=2),
                                 ),
                             ],
                             spacing=2,
@@ -122,7 +122,7 @@ class TopNavBarManager:
                     spacing=8,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
-                padding=ft.padding.symmetric(horizontal=8, vertical=6),
+                padding=ft.Padding(left=8, right=8, top=6, bottom=6),
                 border_radius=30,
             ),
         )
@@ -180,7 +180,7 @@ class TopNavBarManager:
                         ),
                         expand=True,
                         alignment=Alignment.CENTER,
-                        padding=ft.padding.only(left=175),
+                        padding=ft.Padding(left=175, right=0, top=0, bottom=0),
                     ),
                     ft.Row(
                         [
@@ -195,7 +195,7 @@ class TopNavBarManager:
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.only(left=15, right=20, top=12, bottom=12),
+            padding=ft.Padding(left=15, right=20, top=12, bottom=12),
             gradient=ft.LinearGradient(
                 begin=ft.Alignment(-1, -1),
                 end=ft.Alignment(1, 1),

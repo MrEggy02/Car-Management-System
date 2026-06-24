@@ -24,7 +24,7 @@ class InvoiceListContent:
         self.invoices = []
         self.filtered_invoices = []
         self.current_page = 1
-        self.items_per_page = 5
+        self.items_per_page = 10
         self.total_pages = 1
         self.search_field = None
         self.current_status_filter = "all"  # เปลี่ยนจาก dropdown เป็น chip
@@ -37,7 +37,7 @@ class InvoiceListContent:
         header = self._build_header()
         search_bar = self._build_search_bar()
         table = self._build_table()
-        self.pagination_container = ft.Container(padding=ft.padding.symmetric(vertical=12, horizontal=20))
+        self.pagination_container = ft.Container(padding=ft.Padding(left=20, right=20, top=12, bottom=12))
         
         content_area = ft.Container(
             content=ft.Column([
@@ -46,7 +46,7 @@ class InvoiceListContent:
                 self.pagination_container,
             ], expand=True),
             expand=True,
-            padding=ft.padding.all(24),
+            padding=ft.Padding(left=24, right=24, top=24, bottom=24),
             bgcolor="#F5F7FA",
         )
         
@@ -86,14 +86,14 @@ class InvoiceListContent:
                             bgcolor=ft.Colors.with_opacity(0.2, ft.Colors.WHITE),
                             shape=ft.RoundedRectangleBorder(radius=10),
                             elevation=0,
-                            padding=ft.padding.symmetric(horizontal=20, vertical=12),
+                            padding=ft.Padding(left=20, right=20, top=12, bottom=12),
                         ),
                     ),
                 ],
                 spacing=16,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(vertical=12, horizontal=24),
+            padding=ft.Padding(left=24, right=24, top=12, bottom=12),
             gradient=ft.LinearGradient(
                 begin=ft.Alignment(-1, -1),
                 end=ft.Alignment(1, 1),
@@ -122,7 +122,7 @@ class InvoiceListContent:
                                color=ft.Colors.WHITE if is_active else "#64748B"),
                 bgcolor=self.primary_color if is_active else ft.Colors.GREY_200,
                 border_radius=20,
-                padding=ft.padding.symmetric(horizontal=12, vertical=6),
+                padding=ft.Padding(left=12, right=12, top=6, bottom=6),
                 ink=True,
                 on_click=lambda e, sid=status["id"]: self.filter_by_status(sid),
             )
@@ -147,7 +147,7 @@ class InvoiceListContent:
             bgcolor=ft.Colors.WHITE,
             filled=True,
             prefix_icon=ft.Icons.SEARCH,
-            content_padding=ft.padding.symmetric(horizontal=16, vertical=14),
+            content_padding=ft.Padding(left=16, right=16, top=14, bottom=14),
             expand=True,
             border_color=ft.Colors.GREY_200,
             focused_border_color=self.primary_color,
@@ -171,7 +171,7 @@ class InvoiceListContent:
                 ft.Container(height=12),
                 self.status_chips,
             ], spacing=0),
-            margin=ft.margin.only(bottom=16),
+            margin=ft.Margin(left=0, right=0, top=0, bottom=16),
         )
     
     def _build_table(self):
@@ -180,28 +180,28 @@ class InvoiceListContent:
                 ft.Container(
                     content=ft.Text(get_text("invoice_no"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
                     width=100,
-                    padding=ft.padding.only(left=10),
+                    padding=ft.Padding(left=10, right=0, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(get_text("job_number"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
                     width=100,
-                    padding=ft.padding.only(left=10),
+                    padding=ft.Padding(left=10, right=0, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(get_text("customer_name"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
                     width=130,
-                    padding=ft.padding.only(left=10),
+                    padding=ft.Padding(left=10, right=0, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(get_text("plate_number"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
                     width=100,
-                    padding=ft.padding.only(left=10),
+                    padding=ft.Padding(left=10, right=0, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(get_text("final_total"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
                     width=120,
                     alignment=ft.Alignment(1, 0),
-                    padding=ft.padding.only(right=10),
+                    padding=ft.Padding(left=0, right=10, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(get_text("payment_status"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
@@ -224,7 +224,7 @@ class InvoiceListContent:
                     alignment=ft.Alignment(0, 0),
                 ),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
-            padding=ft.padding.symmetric(vertical=14, horizontal=10),
+            padding=ft.Padding(left=10, right=10, top=14, bottom=14),
             bgcolor=ft.Colors.GREY_100,
             border_radius=ft.BorderRadius.only(top_left=12, top_right=12),
         )
@@ -237,10 +237,10 @@ class InvoiceListContent:
                 ft.Divider(height=1, color=ft.Colors.GREY_300),
                 self.table_rows,
             ], spacing=0),
-            margin=ft.margin.only(left=20, right=20),
+            margin=ft.Margin(left=20, right=20, top=0, bottom=0),
             bgcolor=ft.Colors.WHITE,
             border_radius=ft.BorderRadius.only(top_left=12, top_right=12, bottom_left=12, bottom_right=12),
-            border=ft.border.all(1, ft.Colors.GREY_200),
+            border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_200), right=ft.BorderSide(1, ft.Colors.GREY_200), bottom=ft.BorderSide(1, ft.Colors.GREY_200), left=ft.BorderSide(1, ft.Colors.GREY_200)),
             expand=True,
         )
     
@@ -262,7 +262,7 @@ class InvoiceListContent:
                         ft.Icon(ft.Icons.ERROR_OUTLINE, size=48, color=ft.Colors.RED_400),
                         ft.Text(f"Error: {str(ex)}", size=14, color=ft.Colors.RED_600),
                     ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-                    padding=ft.padding.all(40),
+                    padding=ft.Padding(left=40, right=40, top=40, bottom=40),
                 )
             )
             self.page.update()
@@ -321,7 +321,7 @@ class InvoiceListContent:
                         ft.Icon(ft.Icons.RECEIPT_OUTLINED, size=48, color=ft.Colors.GREY_400),
                         ft.Text(get_text("no_invoices_found"), size=16, color=ft.Colors.GREY_500),
                     ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-                    padding=ft.padding.all(40),
+                    padding=ft.Padding(left=40, right=40, top=40, bottom=40),
                 )
             )
         
@@ -366,7 +366,7 @@ class InvoiceListContent:
             ], spacing=4),
             bgcolor=status_colors.get(payment_status, "#607D8B"),
             border_radius=12,
-            padding=ft.padding.symmetric(horizontal=10, vertical=4),
+            padding=ft.Padding(left=10, right=10, top=4, bottom=4),
         )
         
         view_btn = ft.Container(
@@ -375,7 +375,7 @@ class InvoiceListContent:
                 ft.Text(get_text("view"), size=12, color="#1565C0"),
             ], spacing=4),
             on_click=lambda e, iid=invoice_id: self.view_invoice_detail(iid),
-            padding=ft.padding.symmetric(horizontal=8, vertical=4),
+            padding=ft.Padding(left=8, right=8, top=4, bottom=4),
             border_radius=6,
         )
         
@@ -385,7 +385,7 @@ class InvoiceListContent:
                 ft.Text(get_text("print"), size=12, color=self.primary_color),
             ], spacing=4),
             on_click=lambda e, iid=invoice_id: self.print_invoice(iid),
-            padding=ft.padding.symmetric(horizontal=8, vertical=4),
+            padding=ft.Padding(left=8, right=8, top=4, bottom=4),
             border_radius=6,
         )
         
@@ -394,28 +394,28 @@ class InvoiceListContent:
                 ft.Container(
                     content=ft.Text(invoice_no, size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
                     width=100,
-                    padding=ft.padding.only(left=10),
+                    padding=ft.Padding(left=10, right=0, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(job_no, size=13, color="#1E293B"),
                     width=100,
-                    padding=ft.padding.only(left=10),
+                    padding=ft.Padding(left=10, right=0, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(customer_name, size=13, color="#1E293B", max_lines=1),
                     width=130,
-                    padding=ft.padding.only(left=10),
+                    padding=ft.Padding(left=10, right=0, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(plate_number, size=12, color="#64748B", max_lines=1),
                     width=100,
-                    padding=ft.padding.only(left=10),
+                    padding=ft.Padding(left=10, right=0, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(f"{int(final_total):,} KIP", size=13, weight=ft.FontWeight.W_500, color=ft.Colors.GREEN_700),
                     width=120,
                     alignment=ft.Alignment(1, 0),
-                    padding=ft.padding.only(right=10),
+                    padding=ft.Padding(left=0, right=10, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=status_badge,
@@ -438,7 +438,7 @@ class InvoiceListContent:
                     alignment=ft.Alignment(0, 0),
                 ),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
-            padding=ft.padding.symmetric(vertical=12, horizontal=10),
+            padding=ft.Padding(left=10, right=10, top=12, bottom=12),
             bgcolor=row_bg,
         )
         
@@ -470,7 +470,7 @@ class InvoiceListContent:
                         ),
                         ft.Container(
                             content=ft.Text(f"{self.current_page}/{self.total_pages}", size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
-                            padding=ft.padding.symmetric(horizontal=15),
+                            padding=ft.Padding(left=15, right=15, top=0, bottom=0),
                         ),
                         ft.IconButton(
                             icon=ft.Icons.CHEVRON_RIGHT,
@@ -482,7 +482,7 @@ class InvoiceListContent:
                     ]),
                     bgcolor=ft.Colors.WHITE,
                     border_radius=10,
-                    padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                    padding=ft.Padding(left=8, right=8, top=4, bottom=4),
                 ),
             ],
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -585,7 +585,7 @@ class InvoiceListContent:
                             content=ft.Icon(ft.Icons.RECEIPT, size=24, color=ft.Colors.WHITE),
                             bgcolor=self.primary_color,
                             border_radius=12,
-                            padding=ft.padding.all(8),
+                            padding=ft.Padding(left=8, right=8, top=8, bottom=8),
                         ),
                         ft.Text(
                             get_text("invoice_detail"),
@@ -597,8 +597,8 @@ class InvoiceListContent:
                     spacing=12,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
-                padding=ft.padding.symmetric(horizontal=20, vertical=16),
-                border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
+                padding=ft.Padding(left=20, right=20, top=16, bottom=16),
+                border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
             ),
             content=ft.Container(
                 content=ft.Column([
@@ -626,7 +626,7 @@ class InvoiceListContent:
                                     content=ft.Text(status_texts.get(payment_status, payment_status), size=12, color=ft.Colors.WHITE),
                                     bgcolor=status_colors.get(payment_status, "#607D8B"),
                                     border_radius=12,
-                                    padding=ft.padding.symmetric(horizontal=12, vertical=4),
+                                    padding=ft.Padding(left=12, right=12, top=4, bottom=4),
                                 ),
                             ], spacing=8),
                             ft.Row([
@@ -665,7 +665,7 @@ class InvoiceListContent:
                                 ft.Text(f"{int(change_amount):,} KIP", size=13, color="#1E293B"),
                             ], spacing=8),
                         ], spacing=10),
-                        padding=ft.padding.all(20),
+                        padding=ft.Padding(left=20, right=20, top=20, bottom=20),
                     ),
                 ]),
                 width=450,

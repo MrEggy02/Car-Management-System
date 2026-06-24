@@ -4,7 +4,6 @@ from typing import Dict, Callable
 from datetime import datetime
 import asyncio
 import functools
-import os
 
 from i18n import get_text
 
@@ -39,27 +38,8 @@ class JobOrderCreateContent:
         self.problem_description = None
         self.mileage = None
         self.fuel_level = None
-        self.car_defects = None
-        self.selected_image_path = None
-        self.image_preview = None
-        self.image_preview_container = None
-        self.file_picker = None
         
     def build(self):
-        # Setup file picker
-        def on_file_picked(e):
-            if e.files:
-                self.selected_image_path = e.files[0].path
-                self.image_preview.value = os.path.basename(self.selected_image_path)
-                self.image_preview_container.visible = True
-                self.page.update()
-                
-        self.file_picker = ft.FilePicker()
-        self.file_picker.on_result = on_file_picked
-        if self.file_picker not in self.page.overlay:
-            self.page.overlay.append(self.file_picker)
-            self.page.update()
-            
         # --- Header with Back Button on Left ---
         header = ft.Container(
             content=ft.Row(
@@ -73,7 +53,7 @@ class JobOrderCreateContent:
                         ),
                         bgcolor=ft.Colors.with_opacity(0.15, ft.Colors.WHITE),
                         border_radius=8,
-                        padding=ft.padding.symmetric(horizontal=8, vertical=8),
+                        padding=ft.Padding(left=8, right=8, top=8, bottom=8),
                         on_click=lambda e: self.navigate("job_order_list"),
                         ink=True,
                     ),
@@ -101,7 +81,7 @@ class JobOrderCreateContent:
                                 ),
                                 bgcolor=ft.Colors.with_opacity(0.15, ft.Colors.WHITE),
                                 border_radius=30,
-                                padding=ft.padding.symmetric(horizontal=20, vertical=10),
+                                padding=ft.Padding(left=20, right=20, top=10, bottom=10),
                                 on_click=self.create_job_order,
                                 ink=True,
                             ),
@@ -112,7 +92,7 @@ class JobOrderCreateContent:
                 spacing=16,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(vertical=12, horizontal=24),
+            padding=ft.Padding(left=24, right=24, top=12, bottom=12),
             gradient=ft.LinearGradient(
                 begin=ft.Alignment(-1, -1),
                 end=ft.Alignment(1, 1),
@@ -131,7 +111,7 @@ class JobOrderCreateContent:
             bgcolor=ft.Colors.WHITE,
             filled=True,
             prefix_icon=ft.Icons.SEARCH,
-            content_padding=ft.padding.symmetric(horizontal=16, vertical=14),
+            content_padding=ft.Padding(left=16, right=16, top=14, bottom=14),
             expand=True,
             on_change=self.on_search_customer,
             border_color=ft.Colors.GREY_200,
@@ -157,9 +137,9 @@ class JobOrderCreateContent:
         self.customer_results = ft.Column(spacing=6, scroll=ft.ScrollMode.AUTO, height=200)
         self.customer_results_container = ft.Container(
             content=self.customer_results,
-            border=ft.border.all(1, ft.Colors.GREY_200),
+            border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_200), right=ft.BorderSide(1, ft.Colors.GREY_200), bottom=ft.BorderSide(1, ft.Colors.GREY_200), left=ft.BorderSide(1, ft.Colors.GREY_200)),
             border_radius=12,
-            padding=ft.padding.all(8),
+            padding=ft.Padding(left=8, right=8, top=8, bottom=8),
             bgcolor=ft.Colors.WHITE,
             visible=False,
         )
@@ -180,7 +160,7 @@ class JobOrderCreateContent:
                 ft.Row([
                     ft.Container(
                         content=ft.Text(get_text("change_customer"), size=12, color=self.primary_color),
-                        padding=ft.padding.symmetric(horizontal=12, vertical=6),
+                        padding=ft.Padding(left=12, right=12, top=6, bottom=6),
                         bgcolor=ft.Colors.with_opacity(0.1, self.primary_color),
                         border_radius=16,
                         on_click=lambda e: self.change_customer(),
@@ -188,7 +168,7 @@ class JobOrderCreateContent:
                     ),
                 ], alignment=ft.MainAxisAlignment.END),
             ], spacing=0),
-            padding=ft.padding.all(10),
+            padding=ft.Padding(left=10, right=10, top=10, bottom=10),
             bgcolor=ft.Colors.BLUE_50,
             border_radius=10,
             visible=False,
@@ -209,7 +189,7 @@ class JobOrderCreateContent:
                 ft.Container(height=8),
                 self.vehicles_container,
             ]),
-            padding=ft.padding.all(12),
+            padding=ft.Padding(left=12, right=12, top=12, bottom=12),
             bgcolor=ft.Colors.WHITE,
             border_radius=12,
             visible=False,
@@ -247,7 +227,7 @@ class JobOrderCreateContent:
                 scroll=ft.ScrollMode.AUTO,
             ),
             width=450,
-            padding=ft.padding.all(20),
+            padding=ft.Padding(left=20, right=20, top=20, bottom=20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
         )
@@ -259,65 +239,13 @@ class JobOrderCreateContent:
             label=get_text("problem_description"),
             hint_text=get_text("problem_description_hint"),
             multiline=True,
-            min_lines=6,
-            max_lines=8,
+            min_lines=8,
+            max_lines=12,
             border_radius=12,
             bgcolor=ft.Colors.WHITE,
             filled=True,
-            content_padding=ft.padding.symmetric(horizontal=16, vertical=14),
+            content_padding=ft.Padding(left=16, right=16, top=14, bottom=14),
             expand=True,
-        )
-        
-        self.car_defects = ft.TextField(
-            label=get_text("car_defects"),
-            hint_text=get_text("car_defects_hint"),
-            multiline=True,
-            min_lines=3,
-            max_lines=5,
-            border_radius=12,
-            bgcolor=ft.Colors.WHITE,
-            filled=True,
-            content_padding=ft.padding.symmetric(horizontal=16, vertical=14),
-            expand=True,
-        )
-        
-        self.selected_image_path = None
-        self.image_preview = ft.Text("", size=12, color="#475569", expand=True)
-        self.image_preview_container = ft.Container(
-            content=ft.Row([
-                ft.Icon(ft.Icons.IMAGE, size=16, color=self.primary_color),
-                self.image_preview,
-                ft.IconButton(
-                    icon=ft.Icons.CLOSE,
-                    icon_size=16,
-                    icon_color=ft.Colors.RED_400,
-                    on_click=lambda e: self.clear_selected_image(),
-                )
-            ], spacing=6),
-            bgcolor=ft.Colors.GREY_50,
-            border_radius=8,
-            padding=ft.padding.symmetric(horizontal=12, vertical=6),
-            visible=False,
-        )
-        
-        upload_button = ft.OutlinedButton(
-            content=ft.Row(
-                [
-                    ft.Icon(ft.Icons.UPLOAD_FILE, size=18, color=self.primary_color),
-                    ft.Text(get_text("upload_signed_receipt"), size=14, color=self.primary_color),
-                ],
-                spacing=8,
-                tight=True,
-            ),
-            on_click=lambda e: self.page.run_task(
-                self.file_picker.pick_files,
-                allow_multiple=False,
-                file_type=ft.FilePickerFileType.IMAGE,
-            ),
-            style=ft.ButtonStyle(
-                shape=ft.RoundedRectangleBorder(radius=10),
-                side=ft.BorderSide(1, self.primary_color),
-            ),
         )
         
         self.mileage = ft.TextField(
@@ -326,7 +254,7 @@ class JobOrderCreateContent:
             border_radius=12,
             bgcolor=ft.Colors.WHITE,
             filled=True,
-            content_padding=ft.padding.symmetric(horizontal=16, vertical=14),
+            content_padding=ft.Padding(left=16, right=16, top=14, bottom=14),
             expand=True,
             input_filter=ft.NumbersOnlyInputFilter(),
         )
@@ -336,7 +264,7 @@ class JobOrderCreateContent:
             border_radius=12,
             bgcolor=ft.Colors.WHITE,
             filled=True,
-            content_padding=ft.padding.symmetric(horizontal=16, vertical=14),
+            content_padding=ft.Padding(left=16, right=16, top=14, bottom=14),
             options=[
                 ft.dropdown.Option("full", get_text("fuel_full")),
                 ft.dropdown.Option("3/4", get_text("fuel_3_4")),
@@ -371,27 +299,13 @@ class JobOrderCreateContent:
                     ft.Text(get_text("problem_description"), size=14, weight=ft.FontWeight.W_600, color="#475569"),
                     ft.Container(height=8),
                     self.problem_description,
-                    ft.Container(height=16),
-                    
-                    # Vehicle Defects
-                    ft.Text(get_text("car_defects"), size=14, weight=ft.FontWeight.W_600, color="#475569"),
-                    ft.Container(height=8),
-                    self.car_defects,
-                    ft.Container(height=16),
-                    
-                    # Signed Receipt Image
-                    ft.Text(get_text("signed_receipt_image"), size=14, weight=ft.FontWeight.W_600, color="#475569"),
-                    ft.Container(height=8),
-                    ft.Row([upload_button], alignment=ft.MainAxisAlignment.START),
-                    ft.Container(height=8),
-                    self.image_preview_container,
                 ],
                 spacing=0,
                 expand=True,
                 scroll=ft.ScrollMode.AUTO,
             ),
             width=450,
-            padding=ft.padding.all(20),
+            padding=ft.Padding(left=20, right=20, top=20, bottom=20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
         )
@@ -411,7 +325,7 @@ class JobOrderCreateContent:
         # Main Card
         big_card = ft.Container(
             content=two_columns_row,
-            padding=ft.padding.symmetric(horizontal=24, vertical=20),
+            padding=ft.Padding(left=24, right=24, top=20, bottom=20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
             expand=True,
@@ -430,7 +344,7 @@ class JobOrderCreateContent:
         content_area = ft.Container(
             content=scrollable_content,
             expand=True,
-            padding=ft.padding.all(20),
+            padding=ft.Padding(left=20, right=20, top=20, bottom=20),
             bgcolor="#F0F2F5",
         )
         
@@ -493,7 +407,7 @@ class JobOrderCreateContent:
             self.customer_results.controls.append(
                 ft.Container(
                     content=ft.Text(get_text("no_customers_found"), size=13, color="#94A3B8"),
-                    padding=ft.padding.all(20),
+                    padding=ft.Padding(left=20, right=20, top=20, bottom=20),
                     alignment=ft.Alignment(0, 0),
                 )
             )
@@ -509,7 +423,7 @@ class JobOrderCreateContent:
                             content=ft.Icon(ft.Icons.PERSON, size=20, color=self.primary_color),
                             bgcolor=ft.Colors.with_opacity(0.1, self.primary_color),
                             border_radius=10,
-                            padding=ft.padding.all(8),
+                            padding=ft.Padding(left=8, right=8, top=8, bottom=8),
                         ),
                         ft.Column([
                             ft.Text(cust_name, size=14, weight=ft.FontWeight.W_500, color="#1E293B"),
@@ -517,10 +431,10 @@ class JobOrderCreateContent:
                         ], spacing=2, expand=True),
                         ft.Icon(ft.Icons.CHEVRON_RIGHT, size=20, color="#94A3B8"),
                     ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                    padding=ft.padding.all(10),
+                    padding=ft.Padding(left=10, right=10, top=10, bottom=10),
                     bgcolor=ft.Colors.WHITE,
                     border_radius=10,
-                    border=ft.border.all(1, ft.Colors.GREY_200),
+                    border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_200), right=ft.BorderSide(1, ft.Colors.GREY_200), bottom=ft.BorderSide(1, ft.Colors.GREY_200), left=ft.BorderSide(1, ft.Colors.GREY_200)),
                     ink=True,
                     on_click=lambda e, cid=cust_id, cname=cust_name, cphone=cust_phone: self.select_customer(cid, cname, cphone),
                 )
@@ -586,7 +500,7 @@ class JobOrderCreateContent:
                 self.vehicles_container.controls.append(
                     ft.Container(
                         content=ft.Text(get_text("no_vehicles_registered"), size=13, color="#94A3B8"),
-                        padding=ft.padding.all(20),
+                        padding=ft.Padding(left=20, right=20, top=20, bottom=20),
                         alignment=ft.Alignment(0, 0),
                     )
                 )
@@ -634,7 +548,7 @@ class JobOrderCreateContent:
             self.vehicles_container.controls.append(
                 ft.Container(
                     content=ft.Text(f"{get_text('error')}: {str(e)}", size=13, color=ft.Colors.RED_400),
-                    padding=ft.padding.all(20),
+                    padding=ft.Padding(left=20, right=20, top=20, bottom=20),
                 )
             )
             self.vehicles_card.visible = True
@@ -670,8 +584,6 @@ class JobOrderCreateContent:
                 problem_description=self.problem_description.value,
                 mileage=int(self.mileage.value) if self.mileage.value and self.mileage.value.isdigit() else 0,
                 fuel_level=self.fuel_level.value if self.fuel_level.value else "",
-                car_defects=self.car_defects.value if self.car_defects.value else "",
-                signed_receipt_image_path=self.selected_image_path,
             )
             
             if result:
@@ -686,12 +598,6 @@ class JobOrderCreateContent:
             traceback.print_exc()
             self.show_snackbar(f"{get_text('error')}: {ex}", True)
     
-    def clear_selected_image(self):
-        self.selected_image_path = None
-        self.image_preview.value = ""
-        self.image_preview_container.visible = False
-        self.page.update()
-        
     def show_snackbar(self, msg, is_error=False):
         """Show snackbar message"""
         self.page.snack_bar = ft.SnackBar(

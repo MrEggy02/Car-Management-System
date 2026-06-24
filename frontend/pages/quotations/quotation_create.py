@@ -73,7 +73,7 @@ class QuotationCreateContent:
                         content=ft.Row([ft.Icon(ft.Icons.ARROW_BACK, size=18, color=ft.Colors.WHITE)], spacing=6),
                         bgcolor=ft.Colors.with_opacity(0.15, ft.Colors.WHITE),
                         border_radius=8,
-                        padding=ft.padding.symmetric(horizontal=8, vertical=8),
+                        padding=ft.Padding(left=8, right=8, top=8, bottom=8),
                         on_click=lambda e: self.navigate("quotation_list"),
                         ink=True,
                     ),
@@ -85,7 +85,7 @@ class QuotationCreateContent:
                                 content=ft.Row([ft.Icon(ft.Icons.SAVE, size=18, color=ft.Colors.WHITE), ft.Text(get_text("save_quotation"), size=14, color=ft.Colors.WHITE, weight=ft.FontWeight.W_600)], spacing=8),
                                 bgcolor=ft.Colors.with_opacity(0.15, ft.Colors.WHITE),
                                 border_radius=30,
-                                padding=ft.padding.symmetric(horizontal=20, vertical=10),
+                                padding=ft.Padding(left=20, right=20, top=10, bottom=10),
                                 on_click=self.save_quotation,
                                 ink=True,
                             ),
@@ -96,7 +96,7 @@ class QuotationCreateContent:
                 spacing=16,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(vertical=12, horizontal=24),
+            padding=ft.Padding(left=24, right=24, top=12, bottom=12),
             gradient=ft.LinearGradient(begin=ft.Alignment(-1, -1), end=ft.Alignment(1, 1), colors=[self.primary_color, self.primary_dark]),
             border_radius=ft.BorderRadius.only(bottom_left=20, bottom_right=20),
         )
@@ -109,7 +109,7 @@ class QuotationCreateContent:
             bgcolor=ft.Colors.WHITE,
             filled=True,
             prefix_icon=ft.Icons.SEARCH,
-            content_padding=ft.padding.symmetric(horizontal=16, vertical=14),
+            content_padding=ft.Padding(left=16, right=16, top=14, bottom=14),
             expand=True,
             on_change=self.on_search_job_order,
             border_color=ft.Colors.GREY_200,
@@ -128,9 +128,9 @@ class QuotationCreateContent:
         self.job_results_list = ft.Column(spacing=6, scroll=ft.ScrollMode.AUTO, height=150)
         self.job_results_container = ft.Container(
             content=self.job_results_list,
-            border=ft.border.all(1, ft.Colors.GREY_200),
+            border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_200), right=ft.BorderSide(1, ft.Colors.GREY_200), bottom=ft.BorderSide(1, ft.Colors.GREY_200), left=ft.BorderSide(1, ft.Colors.GREY_200)),
             border_radius=12,
-            padding=ft.padding.all(8),
+            padding=ft.Padding(left=8, right=8, top=8, bottom=8),
             bgcolor=ft.Colors.WHITE,
             visible=False,
         )
@@ -154,12 +154,12 @@ class QuotationCreateContent:
                             tooltip=get_text("clear_selection"),
                         ),
                     ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                    padding=ft.padding.symmetric(horizontal=12, vertical=8),
+                    padding=ft.Padding(left=12, right=12, top=8, bottom=8),
                 ),
                 elevation=0,
-                margin=ft.margin.all(0),
+                margin=ft.Margin(left=0, right=0, top=0, bottom=0),
             ),
-            margin=ft.margin.only(top=8),
+            margin=ft.Margin(left=0, right=0, top=8, bottom=0),
             visible=False,
             on_click=self.show_job_detail_dialog,
         )
@@ -188,7 +188,7 @@ class QuotationCreateContent:
                 ft.Container(height=8),
                 self._build_promotion_list(),
             ], spacing=0),
-            padding=ft.padding.all(12),
+            padding=ft.Padding(left=12, right=12, top=12, bottom=12),
             bgcolor=ft.Colors.GREY_50,
             border_radius=12,
             visible=False,
@@ -210,10 +210,10 @@ class QuotationCreateContent:
                     ft.Container(height=4),
                     self.promotion_discount_text,
                 ], spacing=4),
-                padding=ft.padding.all(12),
+                padding=ft.Padding(left=12, right=12, top=12, bottom=12),
             ),
             elevation=0,
-            margin=ft.margin.only(top=4),
+            margin=ft.Margin(left=0, right=0, top=4, bottom=0),
             visible=False,
         )
         
@@ -235,7 +235,7 @@ class QuotationCreateContent:
                 ft.Container(content=ft.Text(get_text("total_kip_short"), size=12, weight=ft.FontWeight.BOLD, color="#64748B"), width=110, alignment=ft.Alignment(1, 0)),
                 ft.Container(content=ft.Text("", size=12), width=40),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
-            padding=ft.padding.symmetric(vertical=10, horizontal=10),
+            padding=ft.Padding(left=10, right=10, top=10, bottom=10),
             bgcolor=ft.Colors.GREY_100,
             border_radius=8,
         )
@@ -245,7 +245,7 @@ class QuotationCreateContent:
         
         selected_section = ft.Column([
             ft.Row([ft.Icon(ft.Icons.LIST_ALT, size=18, color=self.primary_color), ft.Text(get_text("selected_items"), size=15, weight=ft.FontWeight.BOLD, color="#1E293B"), ft.Container(expand=True),
-                ft.Container(content=ft.Row([ft.Text(get_text("total_amount") + ":", size=13, weight=ft.FontWeight.W_500, color="#64748B"), self.total_text], spacing=8), padding=ft.padding.symmetric(horizontal=10, vertical=5), bgcolor=ft.Colors.GREY_50, border_radius=20)],
+                ft.Container(content=ft.Row([ft.Text(get_text("total_amount") + ":", size=13, weight=ft.FontWeight.W_500, color="#64748B"), self.total_text], spacing=8), padding=ft.Padding(left=10, right=10, top=5, bottom=5), bgcolor=ft.Colors.GREY_50, border_radius=20)],
                 spacing=8),
             ft.Divider(height=1, color=ft.Colors.GREY_200),
             ft.Container(height=10),
@@ -253,24 +253,24 @@ class QuotationCreateContent:
         ], spacing=0)
         
         # ==================== SELECT ITEMS SECTION ====================
-        self.parts_tab = ft.Container(content=ft.Text(get_text("parts"), size=14, weight=ft.FontWeight.W_600, color=ft.Colors.WHITE), bgcolor=self.primary_color, border_radius=25, padding=ft.padding.symmetric(horizontal=28, vertical=8), expand=True)
+        self.parts_tab = ft.Container(content=ft.Text(get_text("parts"), size=14, weight=ft.FontWeight.W_600, color=ft.Colors.WHITE), bgcolor=self.primary_color, border_radius=25, padding=ft.Padding(left=28, right=28, top=8, bottom=8), expand=True)
         self.parts_tab.on_click = self.on_parts_click
         
-        self.services_tab = ft.Container(content=ft.Text(get_text("services"), size=14, weight=ft.FontWeight.W_600, color="#64748B"), bgcolor=ft.Colors.GREY_200, border_radius=25, padding=ft.padding.symmetric(horizontal=28, vertical=8), expand=True)
+        self.services_tab = ft.Container(content=ft.Text(get_text("services"), size=14, weight=ft.FontWeight.W_600, color="#64748B"), bgcolor=ft.Colors.GREY_200, border_radius=25, padding=ft.Padding(left=28, right=28, top=8, bottom=8), expand=True)
         self.services_tab.on_click = self.on_services_click
         
         self.category_chips = ft.Row(spacing=8, scroll=ft.ScrollMode.AUTO)
         
-        self.search_field = ft.TextField(hint_text=get_text("search_items"), border_radius=25, bgcolor=ft.Colors.GREY_100, filled=True, prefix_icon=ft.Icons.SEARCH, border_color=ft.Colors.TRANSPARENT, content_padding=ft.padding.symmetric(horizontal=18, vertical=14), expand=True)
+        self.search_field = ft.TextField(hint_text=get_text("search_items"), border_radius=25, bgcolor=ft.Colors.GREY_100, filled=True, prefix_icon=ft.Icons.SEARCH, border_color=ft.Colors.TRANSPARENT, content_padding=ft.Padding(left=18, right=18, top=14, bottom=14), expand=True)
         self.search_field.on_change = self.on_search_change
         
-        self.qty_field = ft.TextField(label=get_text("quantity"), value="1", width=100, border_radius=12, bgcolor=ft.Colors.GREY_100, filled=True, input_filter=ft.NumbersOnlyInputFilter(), text_align=ft.TextAlign.CENTER, content_padding=ft.padding.symmetric(horizontal=12, vertical=12))
+        self.qty_field = ft.TextField(label=get_text("quantity"), value="1", width=100, border_radius=12, bgcolor=ft.Colors.GREY_100, filled=True, input_filter=ft.NumbersOnlyInputFilter(), text_align=ft.TextAlign.CENTER, content_padding=ft.Padding(left=12, right=12, top=12, bottom=12))
         
         self.results_list = ft.Column(spacing=10, scroll=ft.ScrollMode.AUTO, height=240)
-        welcome_container = ft.Container(content=ft.Column([ft.Icon(ft.Icons.SEARCH, size=48, color="#CBD5E1"), ft.Text(get_text("type_to_search"), size=14, color="#94A3B8"), ft.Text(get_text("search_parts_or_services"), size=12, color="#CBD5E1")], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=8), alignment=ft.Alignment(0, 0), padding=ft.padding.all(40))
+        welcome_container = ft.Container(content=ft.Column([ft.Icon(ft.Icons.SEARCH, size=48, color="#CBD5E1"), ft.Text(get_text("type_to_search"), size=14, color="#94A3B8"), ft.Text(get_text("search_parts_or_services"), size=12, color="#CBD5E1")], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=8), alignment=ft.Alignment(0, 0), padding=ft.Padding(left=40, right=40, top=40, bottom=40))
         self.results_list.controls.append(welcome_container)
         
-        results_container = ft.Container(content=self.results_list, border=ft.border.all(1, ft.Colors.GREY_200), border_radius=12, padding=ft.padding.all(10), bgcolor=ft.Colors.GREY_50, expand=True)
+        results_container = ft.Container(content=self.results_list, border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_200), right=ft.BorderSide(1, ft.Colors.GREY_200), bottom=ft.BorderSide(1, ft.Colors.GREY_200), left=ft.BorderSide(1, ft.Colors.GREY_200)), border_radius=12, padding=ft.Padding(left=10, right=10, top=10, bottom=10), bgcolor=ft.Colors.GREY_50, expand=True)
         
         select_items_section = ft.Column([
             ft.Row([
@@ -302,10 +302,10 @@ class QuotationCreateContent:
         
         two_columns_row = ft.ResponsiveRow([left_column, right_column], spacing=20, vertical_alignment=ft.CrossAxisAlignment.START)
         
-        big_card = ft.Container(content=two_columns_row, padding=ft.padding.symmetric(horizontal=16, vertical=16), bgcolor=ft.Colors.WHITE, border_radius=16)
+        big_card = ft.Container(content=two_columns_row, padding=ft.Padding(left=16, right=16, top=16, bottom=16), bgcolor=ft.Colors.WHITE, border_radius=16)
         
         scrollable_content = ft.Column([big_card], spacing=0, expand=True, scroll=ft.ScrollMode.AUTO, horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
-        content_area = ft.Container(content=scrollable_content, expand=True, padding=ft.padding.all(12), bgcolor="#F0F2F5")
+        content_area = ft.Container(content=scrollable_content, expand=True, padding=ft.Padding(left=12, right=12, top=12, bottom=12), bgcolor="#F0F2F5")
         
         main_content = ft.Container(content=ft.Column([header, content_area], spacing=0, expand=True), expand=True)
         
@@ -333,7 +333,7 @@ class QuotationCreateContent:
             self.promotion_list_container.controls.append(
                 ft.Container(
                     content=ft.Text(get_text("select_items_first_to_see_promotions"), size=12, color="#94A3B8"),
-                    padding=ft.padding.all(16),
+                    padding=ft.Padding(left=16, right=16, top=16, bottom=16),
                     alignment=ft.Alignment(0, 0),
                 )
             )
@@ -414,7 +414,7 @@ class QuotationCreateContent:
                                 content=ft.Text(f"{discount_display}", size=13, weight=ft.FontWeight.BOLD, color="#10B981" if is_applied else "#64748B"),
                                 bgcolor="#D1FAE5" if is_applied else ft.Colors.GREY_100,
                                 border_radius=12,
-                                padding=ft.padding.symmetric(horizontal=10, vertical=4),
+                                padding=ft.Padding(left=10, right=10, top=4, bottom=4),
                             ),
                         ], spacing=8),
                         ft.Container(height=4),
@@ -428,23 +428,23 @@ class QuotationCreateContent:
                                     ft.Icon(ft.Icons.CHECK_CIRCLE if is_applied else ft.Icons.INFO_OUTLINE, size=14, color="#10B981" if is_applied else "#64748B"),
                                     ft.Text(get_text("applied_best") if is_applied else get_text("available"), size=12, color="#10B981" if is_applied else "#64748B", weight=ft.FontWeight.BOLD if is_applied else ft.FontWeight.NORMAL)
                                 ], spacing=4),
-                                padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                                padding=ft.Padding(left=8, right=8, top=4, bottom=4),
                             )
                         ]),
                     ], spacing=4),
-                    padding=ft.padding.all(12),
+                    padding=ft.Padding(left=12, right=12, top=12, bottom=12),
                 ),
                 elevation=0,
-                margin=ft.margin.all(0),
+                margin=ft.Margin(left=0, right=0, top=0, bottom=0),
             )
             
             promo_container = ft.Container(
                 content=promo_card,
                 bgcolor=bg_color,
-                border=ft.border.all(1, border_color),
+                border=ft.Border(top=ft.BorderSide(1, border_color), right=ft.BorderSide(1, border_color), bottom=ft.BorderSide(1, border_color), left=ft.BorderSide(1, border_color)),
                 border_radius=12,
-                padding=ft.padding.all(2),
-                margin=ft.margin.only(bottom=8),
+                padding=ft.Padding(left=2, right=2, top=2, bottom=2),
+                margin=ft.Margin(left=0, right=0, top=0, bottom=8),
             )
             self.promotion_list_container.controls.append(promo_container)
         
@@ -452,7 +452,7 @@ class QuotationCreateContent:
             self.promotion_list_container.controls.append(
                 ft.Container(
                     content=ft.Text(get_text("no_applicable_promotions"), size=12, color="#94A3B8"),
-                    padding=ft.padding.all(16),
+                    padding=ft.Padding(left=16, right=16, top=16, bottom=16),
                     alignment=ft.Alignment(0, 0),
                 )
             )
@@ -636,7 +636,7 @@ class QuotationCreateContent:
         self.items_table_body.controls.clear()
         
         if not self.temp_items:
-            empty_row = ft.Container(content=ft.Text(get_text("no_items_selected"), size=13, color="#94A3B8"), padding=ft.padding.all(40), alignment=ft.Alignment(0, 0))
+            empty_row = ft.Container(content=ft.Text(get_text("no_items_selected"), size=13, color="#94A3B8"), padding=ft.Padding(left=40, right=40, top=40, bottom=40), alignment=ft.Alignment(0, 0))
             self.items_table_body.controls.append(empty_row)
             self.total_text.value = "0 KIP"
             self.update_promotion_list()
@@ -666,18 +666,18 @@ class QuotationCreateContent:
                     ft.Container(content=ft.Text(f"{int(item.get('total', 0)):,}", size=13, weight=ft.FontWeight.W_600, color="#10B981"), width=110, alignment=ft.Alignment(1, 0)),
                     ft.Container(content=remove_btn, width=40, alignment=ft.Alignment(0, 0)),
                 ], spacing=6, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                padding=ft.padding.symmetric(vertical=8, horizontal=10),
+                padding=ft.Padding(left=10, right=10, top=8, bottom=8),
                 bgcolor=bg_color,
             )
             self.items_table_body.controls.append(row)
             subtotal += item.get("total", 0)
         
-        subtotal_row = ft.Container(content=ft.Row([ft.Container(expand=True), ft.Text(get_text("subtotal") + ":", size=12, weight=ft.FontWeight.W_500, color="#64748B"), ft.Text(f"{int(subtotal):,} KIP", size=13, weight=ft.FontWeight.W_600, color="#1E293B")], spacing=8), padding=ft.padding.symmetric(vertical=8, horizontal=10), bgcolor=ft.Colors.GREY_100)
+        subtotal_row = ft.Container(content=ft.Row([ft.Container(expand=True), ft.Text(get_text("subtotal") + ":", size=12, weight=ft.FontWeight.W_500, color="#64748B"), ft.Text(f"{int(subtotal):,} KIP", size=13, weight=ft.FontWeight.W_600, color="#1E293B")], spacing=8), padding=ft.Padding(left=10, right=10, top=8, bottom=8), bgcolor=ft.Colors.GREY_100)
         self.items_table_body.controls.append(subtotal_row)
         
         final_total = subtotal
         if self.applied_promotion and self.promotion_discount_amount > 0:
-            discount_row = ft.Container(content=ft.Row([ft.Container(expand=True), ft.Text(f"{get_text('promotion_discount')} ({self.applied_promotion.get('name', '')}):", size=12, color="#64748B"), ft.Text(f"-{int(self.promotion_discount_amount):,} KIP", size=13, weight=ft.FontWeight.W_600, color="#10B981")], spacing=8), padding=ft.padding.symmetric(vertical=5, horizontal=10), bgcolor=ft.Colors.GREEN_50)
+            discount_row = ft.Container(content=ft.Row([ft.Container(expand=True), ft.Text(f"{get_text('promotion_discount')} ({self.applied_promotion.get('name', '')}):", size=12, color="#64748B"), ft.Text(f"-{int(self.promotion_discount_amount):,} KIP", size=13, weight=ft.FontWeight.W_600, color="#10B981")], spacing=8), padding=ft.Padding(left=10, right=10, top=5, bottom=5), bgcolor=ft.Colors.GREEN_50)
             self.items_table_body.controls.append(discount_row)
             final_total = subtotal - self.promotion_discount_amount
         
@@ -722,7 +722,7 @@ class QuotationCreateContent:
             ], spacing=6),
             bgcolor=self.primary_color if is_all_active else ft.Colors.GREY_200,
             border_radius=20,
-            padding=ft.padding.symmetric(horizontal=12, vertical=5),
+            padding=ft.Padding(left=12, right=12, top=5, bottom=5),
             ink=True,
             on_click=lambda e: self.filter_by_category(None),
         )
@@ -740,7 +740,7 @@ class QuotationCreateContent:
                     ], spacing=6),
                     bgcolor=self.primary_color if is_active else ft.Colors.GREY_200,
                     border_radius=20,
-                    padding=ft.padding.symmetric(horizontal=12, vertical=5),
+                    padding=ft.Padding(left=12, right=12, top=5, bottom=5),
                     ink=True,
                     on_click=lambda e, cid=cat_id: self.filter_by_category(cid),
                 )
@@ -794,7 +794,7 @@ class QuotationCreateContent:
         
         if not self.filtered_orders:
             self.job_results_list.controls.append(
-                ft.Container(content=ft.Text(get_text("no_orders_found"), size=13, color="#94A3B8"), padding=ft.padding.all(20), alignment=ft.Alignment(0, 0))
+                ft.Container(content=ft.Text(get_text("no_orders_found"), size=13, color="#94A3B8"), padding=ft.Padding(left=20, right=20, top=20, bottom=20), alignment=ft.Alignment(0, 0))
             )
         else:
             for order in self.filtered_orders[:10]:
@@ -805,14 +805,14 @@ class QuotationCreateContent:
                 
                 result_item = ft.Container(
                     content=ft.Row([
-                        ft.Container(content=ft.Icon(ft.Icons.RECEIPT, size=20, color=self.primary_color), bgcolor=ft.Colors.with_opacity(0.1, self.primary_color), border_radius=10, padding=ft.padding.all(8)),
+                        ft.Container(content=ft.Icon(ft.Icons.RECEIPT, size=20, color=self.primary_color), bgcolor=ft.Colors.with_opacity(0.1, self.primary_color), border_radius=10, padding=ft.Padding(left=8, right=8, top=8, bottom=8)),
                         ft.Column([ft.Text(job_no, size=14, weight=ft.FontWeight.W_500, color="#1E293B"), ft.Text(f"{customer_name} | {plate_number}", size=11, color="#64748B")], spacing=2, expand=True),
                         ft.Icon(ft.Icons.CHEVRON_RIGHT, size=20, color="#94A3B8"),
                     ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                    padding=ft.padding.all(10),
+                    padding=ft.Padding(left=10, right=10, top=10, bottom=10),
                     bgcolor=ft.Colors.WHITE,
                     border_radius=10,
-                    border=ft.border.all(1, ft.Colors.GREY_200),
+                    border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_200), right=ft.BorderSide(1, ft.Colors.GREY_200), bottom=ft.BorderSide(1, ft.Colors.GREY_200), left=ft.BorderSide(1, ft.Colors.GREY_200)),
                     ink=True,
                     on_click=lambda e, oid=order_id: self.select_job_order(oid),
                 )
@@ -926,7 +926,7 @@ class QuotationCreateContent:
                         ft.Text(get_text("no_items_found"), size=14, color="#94A3B8"),
                     ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=8),
                     alignment=ft.Alignment(0, 0),
-                    padding=ft.padding.all(40),
+                    padding=ft.Padding(left=40, right=40, top=40, bottom=40),
                 )
                 self.results_list.controls.append(empty_container)
             else:
@@ -951,20 +951,20 @@ class QuotationCreateContent:
                     
                     item_card = ft.Container(
                         content=ft.Row([
-                            ft.Container(content=ft.Icon(ft.Icons.INVENTORY_2, size=28, color=self.primary_color), bgcolor=ft.Colors.with_opacity(0.1, self.primary_color), border_radius=12, padding=ft.padding.all(10)),
+                            ft.Container(content=ft.Icon(ft.Icons.INVENTORY_2, size=28, color=self.primary_color), bgcolor=ft.Colors.with_opacity(0.1, self.primary_color), border_radius=12, padding=ft.Padding(left=10, right=10, top=10, bottom=10)),
                             ft.Column([
                                 ft.Text(part.get("name", "-"), size=14, weight=ft.FontWeight.W_600, color="#1E293B"),
                                 ft.Row([
-                                    ft.Container(content=ft.Text(stock_text, size=11, color=stock_color), bgcolor=stock_bg, border_radius=12, padding=ft.padding.symmetric(horizontal=8, vertical=2)),
+                                    ft.Container(content=ft.Text(stock_text, size=11, color=stock_color), bgcolor=stock_bg, border_radius=12, padding=ft.Padding(left=8, right=8, top=2, bottom=2)),
                                     ft.Text(f"{int(part.get('sell_price', 0)):,} KIP", size=13, weight=ft.FontWeight.W_600, color=self.primary_color),
                                 ], spacing=8),
                             ], expand=True, spacing=4),
                             ft.IconButton(icon=ft.Icons.ADD_CIRCLE_OUTLINE, icon_size=28, icon_color=self.primary_color, on_click=add_callback),
                         ], spacing=12, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                        padding=ft.padding.all(12),
+                        padding=ft.Padding(left=12, right=12, top=12, bottom=12),
                         bgcolor=ft.Colors.WHITE,
                         border_radius=12,
-                        border=ft.border.all(1, ft.Colors.GREY_200),
+                        border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_200), right=ft.BorderSide(1, ft.Colors.GREY_200), bottom=ft.BorderSide(1, ft.Colors.GREY_200), left=ft.BorderSide(1, ft.Colors.GREY_200)),
                     )
                     self.results_list.controls.append(item_card)
         else:
@@ -979,7 +979,7 @@ class QuotationCreateContent:
                         ft.Text(get_text("no_items_found"), size=14, color="#94A3B8"),
                     ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=8),
                     alignment=ft.Alignment(0, 0),
-                    padding=ft.padding.all(40),
+                    padding=ft.Padding(left=40, right=40, top=40, bottom=40),
                 )
                 self.results_list.controls.append(empty_container)
             else:
@@ -988,7 +988,7 @@ class QuotationCreateContent:
                     
                     item_card = ft.Container(
                         content=ft.Row([
-                            ft.Container(content=ft.Icon(ft.Icons.BUILD, size=28, color=self.primary_color), bgcolor=ft.Colors.with_opacity(0.1, self.primary_color), border_radius=12, padding=ft.padding.all(10)),
+                            ft.Container(content=ft.Icon(ft.Icons.BUILD, size=28, color=self.primary_color), bgcolor=ft.Colors.with_opacity(0.1, self.primary_color), border_radius=12, padding=ft.Padding(left=10, right=10, top=10, bottom=10)),
                             ft.Column([
                                 ft.Text(service.get("name", "-"), size=14, weight=ft.FontWeight.W_600, color="#1E293B"),
                                 ft.Row([
@@ -998,10 +998,10 @@ class QuotationCreateContent:
                             ], expand=True, spacing=4),
                             ft.IconButton(icon=ft.Icons.ADD_CIRCLE_OUTLINE, icon_size=28, icon_color=self.primary_color, on_click=add_callback),
                         ], spacing=12, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                        padding=ft.padding.all(12),
+                        padding=ft.Padding(left=12, right=12, top=12, bottom=12),
                         bgcolor=ft.Colors.WHITE,
                         border_radius=12,
-                        border=ft.border.all(1, ft.Colors.GREY_200),
+                        border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_200), right=ft.BorderSide(1, ft.Colors.GREY_200), bottom=ft.BorderSide(1, ft.Colors.GREY_200), left=ft.BorderSide(1, ft.Colors.GREY_200)),
                     )
                     self.results_list.controls.append(item_card)
         

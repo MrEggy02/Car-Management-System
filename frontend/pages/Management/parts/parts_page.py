@@ -25,7 +25,7 @@ class PartsContent:
         self.category_chips = None
         self.current_category_id = None
         self.current_page = 1
-        self.items_per_page = 5
+        self.items_per_page = 25
         self.total_pages = 1
         self.primary_color = "#1565C0"
         self.primary_dark = "#0D47A1"
@@ -71,14 +71,14 @@ class PartsContent:
                             bgcolor=ft.Colors.with_opacity(0.2, ft.Colors.WHITE),
                             shape=ft.RoundedRectangleBorder(radius=10),
                             elevation=0,
-                            padding=ft.padding.symmetric(horizontal=20, vertical=12),
+                            padding=ft.Padding(left=20, right=20, top=12, bottom=12),
                         ),
                     ),
                 ],
                 spacing=16,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(vertical=12, horizontal=24),
+            padding=ft.Padding(left=24, right=24, top=12, bottom=12),
             gradient=ft.LinearGradient(
                 begin=ft.Alignment(-1, -1),
                 end=ft.Alignment(1, 1),
@@ -96,7 +96,7 @@ class PartsContent:
             expand=True,
             on_change=self.filter_parts,
             prefix_icon=ft.Icons.SEARCH,
-            content_padding=ft.padding.symmetric(horizontal=16, vertical=14),
+            content_padding=ft.Padding(left=16, right=16, top=14, bottom=14),
             border_color=ft.Colors.GREY_200,
             focused_border_color=self.primary_color,
         )
@@ -111,7 +111,7 @@ class PartsContent:
                 ft.Container(height=12),
                 self.category_chips,
             ], spacing=0),
-            padding=ft.padding.all(20),
+            padding=ft.Padding(left=20, right=20, top=20, bottom=20),
             bgcolor="#F5F7FA",
         )
         
@@ -122,7 +122,7 @@ class PartsContent:
         table_scroll_container = ft.Container(
             content=self.table_rows,
             expand=True,
-            border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_200)),
+            border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_200)),
             bgcolor=ft.Colors.WHITE,
         )
         
@@ -133,12 +133,12 @@ class PartsContent:
                 ft.Divider(height=1, color=ft.Colors.GREY_300),
                 table_scroll_container,
             ], spacing=0),
-            margin=ft.margin.only(left=20, right=20),
+            margin=ft.Margin(left=20, right=20, top=0, bottom=0),
             bgcolor=ft.Colors.WHITE,
             border_radius=ft.BorderRadius.only(
                 top_left=12, top_right=12, bottom_left=12, bottom_right=12
             ),
-            border=ft.border.all(1, ft.Colors.GREY_200),
+            border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_200), right=ft.BorderSide(1, ft.Colors.GREY_200), bottom=ft.BorderSide(1, ft.Colors.GREY_200), left=ft.BorderSide(1, ft.Colors.GREY_200)),
             expand=True,
         )
         
@@ -168,17 +168,17 @@ class PartsContent:
         return ft.Container(
             content=ft.Row([
                 ft.Container(content=ft.Text("#", size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=40, alignment=ft.Alignment(0, 0)),
-                ft.Container(content=ft.Text(get_text('parts_name'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=160, alignment=ft.Alignment(-1, 0), padding=ft.padding.only(left=8)),
-                ft.Container(content=ft.Text(get_text('category'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=90, alignment=ft.Alignment(-1, 0), padding=ft.padding.only(left=8)),
+                ft.Container(content=ft.Text(get_text('parts_name'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=160, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=8, right=0, top=0, bottom=0)),
+                ft.Container(content=ft.Text(get_text('category'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=90, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=8, right=0, top=0, bottom=0)),
                 ft.Container(content=ft.Text(get_text('parts_stock'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=60, alignment=ft.Alignment(0, 0)),
                 ft.Container(content=ft.Text(get_text('unit'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=50, alignment=ft.Alignment(0, 0)),
-                ft.Container(content=ft.Text(get_text('cost_price'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=90, alignment=ft.Alignment(1, 0), padding=ft.padding.only(right=8)),
-                ft.Container(content=ft.Text(get_text('sell_price'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=90, alignment=ft.Alignment(1, 0), padding=ft.padding.only(right=8)),
-                ft.Container(content=ft.Text(get_text('supplier'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=100, alignment=ft.Alignment(-1, 0), padding=ft.padding.only(left=8)),
+                ft.Container(content=ft.Text(get_text('cost_price'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=90, alignment=ft.Alignment(1, 0), padding=ft.Padding(left=0, right=8, top=0, bottom=0)),
+                ft.Container(content=ft.Text(get_text('sell_price'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=90, alignment=ft.Alignment(1, 0), padding=ft.Padding(left=0, right=8, top=0, bottom=0)),
+                ft.Container(content=ft.Text(get_text('supplier'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=100, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=8, right=0, top=0, bottom=0)),
                 ft.Container(content=ft.Text(get_text('status'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=70, alignment=ft.Alignment(0, 0)),
                 ft.Container(content=ft.Text(get_text('actions'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=90, alignment=ft.Alignment(0, 0)),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
-            padding=ft.padding.symmetric(vertical=12, horizontal=8),
+            padding=ft.Padding(left=8, right=8, top=12, bottom=12),
             bgcolor=ft.Colors.GREY_100,
             border_radius=ft.BorderRadius.only(top_left=12, top_right=12),
         )
@@ -243,7 +243,7 @@ class PartsContent:
                 content=ft.Text(formatted_stock, size=11, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500),
                 bgcolor=ft.Colors.RED_500,
                 border_radius=10,
-                padding=ft.padding.symmetric(horizontal=6, vertical=2),
+                padding=ft.Padding(left=6, right=6, top=2, bottom=2),
                 alignment=ft.Alignment(0, 0),
             )
         elif stock_qty == 0:
@@ -251,7 +251,7 @@ class PartsContent:
                 content=ft.Text(formatted_stock, size=11, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500),
                 bgcolor=ft.Colors.GREY_600,
                 border_radius=10,
-                padding=ft.padding.symmetric(horizontal=6, vertical=2),
+                padding=ft.Padding(left=6, right=6, top=2, bottom=2),
                 alignment=ft.Alignment(0, 0),
             )
         else:
@@ -259,7 +259,7 @@ class PartsContent:
                 content=ft.Text(formatted_stock, size=11, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500),
                 bgcolor=ft.Colors.GREEN_600,
                 border_radius=10,
-                padding=ft.padding.symmetric(horizontal=6, vertical=2),
+                padding=ft.Padding(left=6, right=6, top=2, bottom=2),
                 alignment=ft.Alignment(0, 0),
             )
         
@@ -269,14 +269,14 @@ class PartsContent:
                 content=ft.Text(get_text("low_stock"), size=10, color=ft.Colors.WHITE),
                 bgcolor=ft.Colors.ORANGE_600,
                 border_radius=8,
-                padding=ft.padding.symmetric(horizontal=5, vertical=2),
+                padding=ft.Padding(left=5, right=5, top=2, bottom=2),
             )
         else:
             status_badge = ft.Container(
                 content=ft.Text(get_text("normal"), size=10, color=ft.Colors.WHITE),
                 bgcolor=ft.Colors.GREEN_600,
                 border_radius=8,
-                padding=ft.padding.symmetric(horizontal=5, vertical=2),
+                padding=ft.Padding(left=5, right=5, top=2, bottom=2),
             )
         
         # Action buttons
@@ -315,14 +315,14 @@ class PartsContent:
                     content=ft.Text(display_name, size=12, weight=ft.FontWeight.W_500, color="#1E293B", max_lines=1),
                     width=160,
                     alignment=ft.Alignment(-1, 0),
-                    padding=ft.padding.only(left=8),
+                    padding=ft.Padding(left=8, right=0, top=0, bottom=0),
                     tooltip=name,
                 ),
                 ft.Container(
                     content=ft.Text(display_category, size=11, color="#64748B", max_lines=1),
                     width=90,
                     alignment=ft.Alignment(-1, 0),
-                    padding=ft.padding.only(left=8),
+                    padding=ft.Padding(left=8, right=0, top=0, bottom=0),
                     tooltip=category_name,
                 ),
                 ft.Container(
@@ -340,19 +340,19 @@ class PartsContent:
                     content=ft.Text(self._format_price(cost_price), size=11, color="#64748B"),
                     width=90,
                     alignment=ft.Alignment(1, 0),
-                    padding=ft.padding.only(right=8),
+                    padding=ft.Padding(left=0, right=8, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(self._format_price(sell_price), size=12, weight=ft.FontWeight.W_600, color=ft.Colors.GREEN_700),
                     width=90,
                     alignment=ft.Alignment(1, 0),
-                    padding=ft.padding.only(right=8),
+                    padding=ft.Padding(left=0, right=8, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(display_supplier, size=11, color="#64748B", max_lines=1),
                     width=100,
                     alignment=ft.Alignment(-1, 0),
-                    padding=ft.padding.only(left=8),
+                    padding=ft.Padding(left=8, right=0, top=0, bottom=0),
                     tooltip=supplier_name,
                 ),
                 ft.Container(
@@ -366,7 +366,7 @@ class PartsContent:
                     alignment=ft.Alignment(0, 0),
                 ),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
-            padding=ft.padding.symmetric(vertical=8, horizontal=8),
+            padding=ft.Padding(left=8, right=8, top=8, bottom=8),
             bgcolor=row_bg,
         )
         
@@ -383,7 +383,7 @@ class PartsContent:
                 ft.Text(get_text("no_data"), size=16, color=ft.Colors.GREY_500),
                 ft.Text(get_text("click_add"), size=13, color=ft.Colors.GREY_400),
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-            padding=ft.padding.all(40),
+            padding=ft.Padding(left=40, right=40, top=40, bottom=40),
             expand=True,
         )
     
@@ -416,7 +416,7 @@ class PartsContent:
                         ),
                         ft.Container(
                             content=ft.Text(f"{self.current_page}/{self.total_pages}", size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
-                            padding=ft.padding.symmetric(horizontal=15),
+                            padding=ft.Padding(left=15, right=15, top=0, bottom=0),
                         ),
                         ft.IconButton(
                             icon=ft.Icons.CHEVRON_RIGHT,
@@ -428,10 +428,10 @@ class PartsContent:
                     ]),
                     bgcolor=ft.Colors.WHITE,
                     border_radius=10,
-                    padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                    padding=ft.Padding(left=8, right=8, top=4, bottom=4),
                 ),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
-            padding=ft.padding.symmetric(vertical=16, horizontal=20),
+            padding=ft.Padding(left=20, right=20, top=16, bottom=16),
             bgcolor="#F5F7FA",
         )
         self.page.update()
@@ -492,7 +492,7 @@ class PartsContent:
             ], spacing=6),
             bgcolor=self.primary_color if self.current_category_id is None else ft.Colors.GREY_200,
             border_radius=20,
-            padding=ft.padding.symmetric(horizontal=12, vertical=5),
+            padding=ft.Padding(left=12, right=12, top=5, bottom=5),
             ink=True,
             on_click=lambda e: self.filter_by_category(None),
         )
@@ -510,7 +510,7 @@ class PartsContent:
                     ], spacing=6),
                     bgcolor=self.primary_color if is_active else ft.Colors.GREY_200,
                     border_radius=20,
-                    padding=ft.padding.symmetric(horizontal=12, vertical=5),
+                    padding=ft.Padding(left=12, right=12, top=5, bottom=5),
                     ink=True,
                     on_click=lambda e, cid=cat.get('id'): self.filter_by_category(cid),
                 )

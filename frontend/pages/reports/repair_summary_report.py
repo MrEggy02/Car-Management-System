@@ -87,7 +87,7 @@ class RepairSummaryReportContent:
                 spacing=16,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(vertical=12, horizontal=24),
+            padding=ft.Padding(left=24, right=24, top=12, bottom=12),
             gradient=ft.LinearGradient(
                 begin=ft.Alignment(-1, -1),
                 end=ft.Alignment(1, 1),
@@ -126,7 +126,7 @@ class RepairSummaryReportContent:
             style=ft.ButtonStyle(
                 bgcolor=self.primary_color,
                 shape=ft.RoundedRectangleBorder(radius=10),
-                padding=ft.padding.symmetric(horizontal=20, vertical=12),
+                padding=ft.Padding(left=20, right=20, top=12, bottom=12),
             ),
         )
         
@@ -155,10 +155,10 @@ class RepairSummaryReportContent:
                     refresh_btn,
                 ], spacing=12),
             ]),
-            padding=ft.padding.all(20),
+            padding=ft.Padding(left=20, right=20, top=20, bottom=20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
-            margin=ft.margin.only(left=24, right=24, top=10, bottom=10),
+            margin=ft.Margin(left=24, right=24, top=10, bottom=10),
             shadow=ft.BoxShadow(
                 blur_radius=10,
                 color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
@@ -342,10 +342,10 @@ class RepairSummaryReportContent:
                         ft.Text(status_texts.get(status_name, status_name), size=13, color="#64748B"),
                         ft.Text(f"{percentage:.1f}%", size=11, color="#94A3B8"),
                     ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=2),
-                    padding=ft.padding.symmetric(vertical=14, horizontal=20),
+                    padding=ft.Padding(left=20, right=20, top=14, bottom=14),
                     bgcolor=ft.Colors.WHITE,
                     border_radius=12,
-                    border=ft.border.all(1, ft.Colors.GREY_200),
+                    border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_200), right=ft.BorderSide(1, ft.Colors.GREY_200), bottom=ft.BorderSide(1, ft.Colors.GREY_200), left=ft.BorderSide(1, ft.Colors.GREY_200)),
                     expand=True,
                 )
             )
@@ -356,10 +356,10 @@ class RepairSummaryReportContent:
                 ft.Container(height=12),
                 cards_row,
             ]),
-            padding=ft.padding.all(20),
+            padding=ft.Padding(left=20, right=20, top=20, bottom=20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
-            margin=ft.margin.only(left=24, right=24, top=0, bottom=0),
+            margin=ft.Margin(left=24, right=24, top=0, bottom=0),
             shadow=ft.BoxShadow(
                 blur_radius=10,
                 color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
@@ -397,17 +397,17 @@ class RepairSummaryReportContent:
                             content=ft.Icon(icon, size=20, color=ft.Colors.WHITE),
                             bgcolor=color,
                             border_radius=10,
-                            padding=ft.padding.all(8),
+                            padding=ft.Padding(left=8, right=8, top=8, bottom=8),
                         ),
                         ft.Column([
                             ft.Text(value, size=18, weight=ft.FontWeight.BOLD, color="#1E293B"),
                             ft.Text(label, size=12, color="#64748B"),
                         ], spacing=2, expand=True),
                     ], spacing=12, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                    padding=ft.padding.symmetric(vertical=10, horizontal=14),
+                    padding=ft.Padding(left=14, right=14, top=10, bottom=10),
                     bgcolor=ft.Colors.WHITE,
                     border_radius=12,
-                    border=ft.border.all(1, ft.Colors.GREY_100),
+                    border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_100), right=ft.BorderSide(1, ft.Colors.GREY_100), bottom=ft.BorderSide(1, ft.Colors.GREY_100), left=ft.BorderSide(1, ft.Colors.GREY_100)),
                     expand=True,
                 )
             )
@@ -434,10 +434,10 @@ class RepairSummaryReportContent:
                     ft.Text(f"{get_text('paused')}: {paused}", size=11, color="#64748B"),
                 ], spacing=16),
             ]),
-            padding=ft.padding.all(14),
+            padding=ft.Padding(left=14, right=14, top=14, bottom=14),
             bgcolor=ft.Colors.GREY_50,
             border_radius=10,
-            margin=ft.margin.only(top=10),
+            margin=ft.Margin(left=0, right=0, top=10, bottom=0),
         )
         
         return ft.Container(
@@ -448,10 +448,10 @@ class RepairSummaryReportContent:
                 ft.Container(height=16),
                 progress_bar,
             ]),
-            padding=ft.padding.all(20),
+            padding=ft.Padding(left=20, right=20, top=20, bottom=20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
-            margin=ft.margin.only(left=24, right=24, top=0, bottom=0),
+            margin=ft.Margin(left=24, right=24, top=0, bottom=0),
             shadow=ft.BoxShadow(
                 blur_radius=10,
                 color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
@@ -470,16 +470,16 @@ class RepairSummaryReportContent:
                     ft.Container(height=12),
                     ft.Container(
                         content=ft.Text(get_text("no_data"), size=14, color="#64748B"),
-                        padding=ft.padding.all(40),
+                        padding=ft.Padding(left=40, right=40, top=40, bottom=40),
                         bgcolor=ft.Colors.GREY_50,
                         border_radius=12,
                         alignment=ft.Alignment(0, 0),
                     ),
                 ]),
-                padding=ft.padding.all(20),
+                padding=ft.Padding(left=20, right=20, top=20, bottom=20),
                 bgcolor=ft.Colors.WHITE,
                 border_radius=16,
-                margin=ft.margin.only(left=24, right=24, top=0, bottom=0),
+                margin=ft.Margin(left=24, right=24, top=0, bottom=0),
                 shadow=ft.BoxShadow(
                     blur_radius=10,
                     color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
@@ -495,7 +495,7 @@ class RepairSummaryReportContent:
                 ft.Text(get_text("completed"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=100),
                 ft.Text(get_text("avg_hours"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=100),
             ]),
-            padding=ft.padding.symmetric(vertical=12, horizontal=16),
+            padding=ft.Padding(left=16, right=16, top=12, bottom=12),
             bgcolor=ft.Colors.GREY_100,
             border_radius=ft.BorderRadius.only(top_left=12, top_right=12),
         )
@@ -513,7 +513,7 @@ class RepairSummaryReportContent:
                         ft.Text(str(vehicle.get('completed_count', 0)), size=13, color="#10B981", width=100),
                         ft.Text(f"{vehicle.get('avg_hours', 0):.1f}h", size=13, color="#64748B", width=100),
                     ]),
-                    padding=ft.padding.symmetric(vertical=12, horizontal=16),
+                    padding=ft.Padding(left=16, right=16, top=12, bottom=12),
                     bgcolor=bg,
                 )
             )
@@ -525,10 +525,10 @@ class RepairSummaryReportContent:
                 header,
                 table_body,
             ]),
-            padding=ft.padding.all(20),
+            padding=ft.Padding(left=20, right=20, top=20, bottom=20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
-            margin=ft.margin.only(left=24, right=24, top=0, bottom=0),
+            margin=ft.Margin(left=24, right=24, top=0, bottom=0),
             shadow=ft.BoxShadow(
                 blur_radius=10,
                 color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
@@ -547,16 +547,16 @@ class RepairSummaryReportContent:
                     ft.Container(height=12),
                     ft.Container(
                         content=ft.Text(get_text("no_data"), size=14, color="#64748B"),
-                        padding=ft.padding.all(40),
+                        padding=ft.Padding(left=40, right=40, top=40, bottom=40),
                         bgcolor=ft.Colors.GREY_50,
                         border_radius=12,
                         alignment=ft.Alignment(0, 0),
                     ),
                 ]),
-                padding=ft.padding.all(20),
+                padding=ft.Padding(left=20, right=20, top=20, bottom=20),
                 bgcolor=ft.Colors.WHITE,
                 border_radius=16,
-                margin=ft.margin.only(left=24, right=24, top=0, bottom=0),
+                margin=ft.Margin(left=24, right=24, top=0, bottom=0),
                 shadow=ft.BoxShadow(
                     blur_radius=10,
                     color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
@@ -572,7 +572,7 @@ class RepairSummaryReportContent:
                 ft.Text(get_text("completed"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=100),
                 ft.Text(get_text("avg_hours_per_repair"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=120),
             ]),
-            padding=ft.padding.symmetric(vertical=12, horizontal=16),
+            padding=ft.Padding(left=16, right=16, top=12, bottom=12),
             bgcolor=ft.Colors.GREY_100,
             border_radius=ft.BorderRadius.only(top_left=12, top_right=12),
         )
@@ -596,7 +596,7 @@ class RepairSummaryReportContent:
                         ft.Text(str(completed_count), size=13, color="#10B981", width=100),
                         ft.Text(f"{avg_hours:.1f}h ({completion_rate:.0f}%)", size=13, color="#64748B", width=120),
                     ]),
-                    padding=ft.padding.symmetric(vertical=12, horizontal=16),
+                    padding=ft.Padding(left=16, right=16, top=12, bottom=12),
                     bgcolor=bg,
                 )
             )
@@ -608,10 +608,10 @@ class RepairSummaryReportContent:
                 header,
                 table_body,
             ]),
-            padding=ft.padding.all(20),
+            padding=ft.Padding(left=20, right=20, top=20, bottom=20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
-            margin=ft.margin.only(left=24, right=24, top=0, bottom=0),
+            margin=ft.Margin(left=24, right=24, top=0, bottom=0),
             shadow=ft.BoxShadow(
                 blur_radius=10,
                 color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
@@ -634,7 +634,7 @@ class RepairSummaryReportContent:
                 ft.Text(get_text("completed"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=100),
                 ft.Text(get_text("in_progress"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=100),
             ]),
-            padding=ft.padding.symmetric(vertical=12, horizontal=16),
+            padding=ft.Padding(left=16, right=16, top=12, bottom=12),
             bgcolor=ft.Colors.GREY_100,
             border_radius=ft.BorderRadius.only(top_left=12, top_right=12),
         )
@@ -660,7 +660,7 @@ class RepairSummaryReportContent:
                         ft.Text(str(daily_completed), size=13, color=completed_color, width=100),
                         ft.Text(str(daily_in_progress), size=13, color=progress_color, width=100),
                     ]),
-                    padding=ft.padding.symmetric(vertical=12, horizontal=16),
+                    padding=ft.Padding(left=16, right=16, top=12, bottom=12),
                     bgcolor=bg,
                 )
             )
@@ -672,10 +672,10 @@ class RepairSummaryReportContent:
                 header,
                 table_body,
             ]),
-            padding=ft.padding.all(20),
+            padding=ft.Padding(left=20, right=20, top=20, bottom=20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
-            margin=ft.margin.only(left=24, right=24, top=0, bottom=24),
+            margin=ft.Margin(left=24, right=24, top=0, bottom=24),
             shadow=ft.BoxShadow(
                 blur_radius=10,
                 color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),

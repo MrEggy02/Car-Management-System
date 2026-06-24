@@ -17,7 +17,7 @@ class StockMovementContent:
         self.movements = []
         self.filtered_movements = []
         self.current_page = 1
-        self.items_per_page = 5
+        self.items_per_page = 20
         self.total_pages = 1
         self.search_field = None
         self.type_filter = None
@@ -28,7 +28,7 @@ class StockMovementContent:
         header = self._build_header()
         search_bar = self._build_search_bar()
         table = self._build_table()
-        self.pagination_container = ft.Container(padding=ft.padding.symmetric(vertical=12, horizontal=20))
+        self.pagination_container = ft.Container(padding=ft.Padding(left=20, right=20, top=12, bottom=12))
         
         content_area = ft.Container(
             content=ft.Column([
@@ -37,7 +37,7 @@ class StockMovementContent:
                 self.pagination_container,
             ], expand=True),
             expand=True,
-            padding=ft.padding.all(24),
+            padding=ft.Padding(left=24, right=24, top=24, bottom=24),
             bgcolor="#F5F7FA",
         )
         
@@ -84,7 +84,7 @@ class StockMovementContent:
                 spacing=16,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(vertical=12, horizontal=24),
+            padding=ft.Padding(left=24, right=24, top=12, bottom=12),
             gradient=ft.LinearGradient(
                 begin=ft.Alignment(-1, -1),
                 end=ft.Alignment(1, 1),
@@ -115,7 +115,7 @@ class StockMovementContent:
             bgcolor=ft.Colors.WHITE,
             filled=True,
             prefix_icon=ft.Icons.SEARCH,
-            content_padding=ft.padding.symmetric(horizontal=16, vertical=14),
+            content_padding=ft.Padding(left=16, right=16, top=14, bottom=14),
             expand=True,
         )
         self.search_field.on_change = self.search_movements
@@ -133,7 +133,7 @@ class StockMovementContent:
         
         return ft.Container(
             content=ft.Row([self.type_filter, self.search_field, refresh_button], spacing=10),
-            margin=ft.margin.only(bottom=16),
+            margin=ft.Margin(left=0, right=0, top=0, bottom=16),
         )
     
     def _build_table(self):
@@ -142,17 +142,17 @@ class StockMovementContent:
                 ft.Container(
                     content=ft.Text(get_text("date"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
                     width=130,
-                    padding=ft.padding.only(left=10),
+                    padding=ft.Padding(left=10, right=0, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(get_text("part_id"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
                     width=80,
-                    padding=ft.padding.only(left=10),
+                    padding=ft.Padding(left=10, right=0, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(get_text("part_name"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
                     width=180,
-                    padding=ft.padding.only(left=10),
+                    padding=ft.Padding(left=10, right=0, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(get_text("type"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
@@ -163,7 +163,7 @@ class StockMovementContent:
                     content=ft.Text(get_text("quantity"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
                     width=100,
                     alignment=ft.Alignment(1, 0),
-                    padding=ft.padding.only(right=10),
+                    padding=ft.Padding(left=0, right=10, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(get_text("reference"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
@@ -171,7 +171,7 @@ class StockMovementContent:
                     alignment=ft.Alignment(0, 0),
                 ),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
-            padding=ft.padding.symmetric(vertical=14, horizontal=10),
+            padding=ft.Padding(left=10, right=10, top=14, bottom=14),
             bgcolor=ft.Colors.GREY_100,
             border_radius=ft.BorderRadius.only(top_left=12, top_right=12),
         )
@@ -184,10 +184,10 @@ class StockMovementContent:
                 ft.Divider(height=1, color=ft.Colors.GREY_300),
                 self.table_rows,
             ], spacing=0),
-            margin=ft.margin.only(left=20, right=20),
+            margin=ft.Margin(left=20, right=20, top=0, bottom=0),
             bgcolor=ft.Colors.WHITE,
             border_radius=12,
-            border=ft.border.all(1, ft.Colors.GREY_200),
+            border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_200), right=ft.BorderSide(1, ft.Colors.GREY_200), bottom=ft.BorderSide(1, ft.Colors.GREY_200), left=ft.BorderSide(1, ft.Colors.GREY_200)),
             expand=True,
         )
     
@@ -211,7 +211,7 @@ class StockMovementContent:
                         ft.Icon(ft.Icons.ERROR_OUTLINE, size=48, color=ft.Colors.RED_400),
                         ft.Text(f"Error: {str(ex)}", size=14, color=ft.Colors.RED_600),
                     ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-                    padding=ft.padding.all(40),
+                    padding=ft.Padding(left=40, right=40, top=40, bottom=40),
                 )
             )
             self.page.update()
@@ -254,7 +254,7 @@ class StockMovementContent:
                         ft.Icon(ft.Icons.HISTORY, size=48, color=ft.Colors.GREY_400),
                         ft.Text(get_text("no_stock_movements"), size=16, color=ft.Colors.GREY_500),
                     ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-                    padding=ft.padding.all(40),
+                    padding=ft.Padding(left=40, right=40, top=40, bottom=40),
                 )
             )
             self.update_pagination()
@@ -305,7 +305,7 @@ class StockMovementContent:
                 ], spacing=4),
                 bgcolor=ft.Colors.GREEN_600,
                 border_radius=12,
-                padding=ft.padding.symmetric(horizontal=10, vertical=4),
+                padding=ft.Padding(left=10, right=10, top=4, bottom=4),
             )
             qty_color = ft.Colors.GREEN_700
             qty_prefix = "+"
@@ -317,7 +317,7 @@ class StockMovementContent:
                 ], spacing=4),
                 bgcolor=ft.Colors.RED_600,
                 border_radius=12,
-                padding=ft.padding.symmetric(horizontal=10, vertical=4),
+                padding=ft.Padding(left=10, right=10, top=4, bottom=4),
             )
             qty_color = ft.Colors.RED_700
             qty_prefix = "-"
@@ -335,17 +335,17 @@ class StockMovementContent:
                 ft.Container(
                     content=ft.Text(date, size=12, color="#64748B"),
                     width=130,
-                    padding=ft.padding.only(left=10),
+                    padding=ft.Padding(left=10, right=0, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(part_id_display, size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
                     width=80,
-                    padding=ft.padding.only(left=10),
+                    padding=ft.Padding(left=10, right=0, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(part_name, size=13, color="#1E293B", max_lines=1),
                     width=180,
-                    padding=ft.padding.only(left=10),
+                    padding=ft.Padding(left=10, right=0, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=type_badge,
@@ -356,7 +356,7 @@ class StockMovementContent:
                     content=ft.Text(f"{qty_prefix}{qty}", size=13, weight=ft.FontWeight.BOLD, color=qty_color),
                     width=100,
                     alignment=ft.Alignment(1, 0),
-                    padding=ft.padding.only(right=10),
+                    padding=ft.Padding(left=0, right=10, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(ref_text, size=12, color="#64748B"),
@@ -364,7 +364,7 @@ class StockMovementContent:
                     alignment=ft.Alignment(0, 0),
                 ),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
-            padding=ft.padding.symmetric(vertical=12, horizontal=10),
+            padding=ft.Padding(left=10, right=10, top=12, bottom=12),
             bgcolor=row_bg,
         )
         
@@ -396,7 +396,7 @@ class StockMovementContent:
                         ),
                         ft.Container(
                             content=ft.Text(f"{self.current_page}/{self.total_pages}", size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
-                            padding=ft.padding.symmetric(horizontal=15),
+                            padding=ft.Padding(left=15, right=15, top=0, bottom=0),
                         ),
                         ft.IconButton(
                             icon=ft.Icons.CHEVRON_RIGHT,
@@ -408,7 +408,7 @@ class StockMovementContent:
                     ]),
                     bgcolor=ft.Colors.WHITE,
                     border_radius=10,
-                    padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                    padding=ft.Padding(left=8, right=8, top=4, bottom=4),
                 ),
             ],
             vertical_alignment=ft.CrossAxisAlignment.CENTER,

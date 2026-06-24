@@ -28,7 +28,7 @@ class CustomerListContent:
         self.all_vehicles = []  # Cache all vehicles for detail dialogs
         self.search_input = None
         self.current_page = 1
-        self.items_per_page = 5
+        self.items_per_page = 10
         self.total_pages = 1
         self.primary_color = "#1565C0"
         self.primary_dark = "#0D47A1"
@@ -67,14 +67,14 @@ class CustomerListContent:
                             bgcolor=ft.Colors.with_opacity(0.2, ft.Colors.WHITE),
                             shape=ft.RoundedRectangleBorder(radius=10),
                             elevation=0,
-                            padding=ft.padding.symmetric(horizontal=20, vertical=12),
+                            padding=ft.Padding(left=20, right=20, top=12, bottom=12),
                         ),
                     ),
                 ],
                 spacing=16,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(vertical=12, horizontal=24),
+            padding=ft.Padding(left=24, right=24, top=12, bottom=12),
             gradient=ft.LinearGradient(
                 begin=ft.Alignment(-1, -1),
                 end=ft.Alignment(1, 1),
@@ -92,7 +92,7 @@ class CustomerListContent:
             expand=True,
             on_change=self.filter_customers,
             prefix_icon=ft.Icons.SEARCH,
-            content_padding=ft.padding.symmetric(horizontal=16, vertical=14),
+            content_padding=ft.Padding(left=16, right=16, top=14, bottom=14),
             border_color=ft.Colors.GREY_200,
             focused_border_color=self.primary_color,
         )
@@ -104,7 +104,7 @@ class CustomerListContent:
         
         control_bar = ft.Container(
             content=search_container,
-            padding=ft.padding.all(20),
+            padding=ft.Padding(left=20, right=20, top=20, bottom=20),
             bgcolor="#F5F7FA",
         )
         
@@ -113,7 +113,7 @@ class CustomerListContent:
         table_scroll_container = ft.Container(
             content=self.table_rows,
             expand=True,
-            border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_200)),
+            border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_200)),
             bgcolor=ft.Colors.WHITE,
         )
         
@@ -123,12 +123,12 @@ class CustomerListContent:
                 ft.Divider(height=1, color=ft.Colors.GREY_300),
                 table_scroll_container,
             ], spacing=0),
-            margin=ft.margin.only(left=20, right=20),
+            margin=ft.Margin(left=20, right=20, top=0, bottom=0),
             bgcolor=ft.Colors.WHITE,
             border_radius=ft.BorderRadius.only(
                 top_left=12, top_right=12, bottom_left=12, bottom_right=12
             ),
-            border=ft.border.all(1, ft.Colors.GREY_200),
+            border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_200), right=ft.BorderSide(1, ft.Colors.GREY_200), bottom=ft.BorderSide(1, ft.Colors.GREY_200), left=ft.BorderSide(1, ft.Colors.GREY_200)),
             expand=True,
         )
         
@@ -169,7 +169,7 @@ class CustomerListContent:
                     content=ft.Text(get_text('customer_name'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
                     width=180,
                     alignment=ft.Alignment(-1, 0),
-                    padding=ft.padding.only(left=10),
+                    padding=ft.Padding(left=10, right=0, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(get_text('customer_phone'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
@@ -180,7 +180,7 @@ class CustomerListContent:
                     content=ft.Text(get_text('customer_address'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
                     width=250,
                     alignment=ft.Alignment(-1, 0),
-                    padding=ft.padding.only(left=10),
+                    padding=ft.Padding(left=10, right=0, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(get_text('vehicles'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
@@ -193,7 +193,7 @@ class CustomerListContent:
                     alignment=ft.Alignment(0, 0),
                 ),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
-            padding=ft.padding.symmetric(vertical=14, horizontal=10),
+            padding=ft.Padding(left=10, right=10, top=14, bottom=14),
             bgcolor=ft.Colors.GREY_100,
             border_radius=ft.BorderRadius.only(top_left=12, top_right=12),
         )
@@ -218,7 +218,7 @@ class CustomerListContent:
                 ft.Text(get_text("view"), size=12, color=self.primary_color),
             ], spacing=4),
             on_click=lambda e, cid=customer_id: self.show_detail_dialog(cid),
-            padding=ft.padding.symmetric(horizontal=8, vertical=4),
+            padding=ft.Padding(left=8, right=8, top=4, bottom=4),
             border_radius=6,
         )
         
@@ -228,7 +228,7 @@ class CustomerListContent:
                 ft.Text(get_text("edit"), size=12, color=self.primary_color),
             ], spacing=4),
             on_click=lambda e, cid=customer_id: self.show_edit_dialog(cid),
-            padding=ft.padding.symmetric(horizontal=8, vertical=4),
+            padding=ft.Padding(left=8, right=8, top=4, bottom=4),
             border_radius=6,
         )
         
@@ -238,7 +238,7 @@ class CustomerListContent:
                 ft.Text(get_text("delete"), size=12, color=ft.Colors.RED_600),
             ], spacing=4),
             on_click=lambda e, cid=customer_id, cname=name: self.show_delete_dialog(cid, cname),
-            padding=ft.padding.symmetric(horizontal=8, vertical=4),
+            padding=ft.Padding(left=8, right=8, top=4, bottom=4),
             border_radius=6,
         )
         
@@ -248,7 +248,7 @@ class CustomerListContent:
                 ft.Container(
                     content=ft.Container(
                         content=ft.Text(str(row_number), size=13, weight=ft.FontWeight.W_500, color=self.primary_color),
-                        padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                        padding=ft.Padding(left=8, right=8, top=4, bottom=4),
                         bgcolor=ft.Colors.BLUE_50,
                         border_radius=6,
                         alignment=ft.Alignment(0, 0),
@@ -261,7 +261,7 @@ class CustomerListContent:
                     content=ft.Text(name, size=13, weight=ft.FontWeight.W_500, color="#1E293B", max_lines=1),
                     width=180,
                     alignment=ft.Alignment(-1, 0),
-                    padding=ft.padding.only(left=10),
+                    padding=ft.Padding(left=10, right=0, top=0, bottom=0),
                     tooltip=name,
                 ),
                 # Phone column
@@ -275,14 +275,14 @@ class CustomerListContent:
                     content=ft.Text(address_display, size=12, color="#64748B", max_lines=2),
                     width=250,
                     alignment=ft.Alignment(-1, 0),
-                    padding=ft.padding.only(left=10),
+                    padding=ft.Padding(left=10, right=0, top=0, bottom=0),
                     tooltip=address if len(address) > 30 else None,
                 ),
                 # Vehicles count
                 ft.Container(
                     content=ft.Container(
                         content=ft.Text(str(vehicle_count), size=13, weight=ft.FontWeight.W_500, color=self.primary_color),
-                        padding=ft.padding.symmetric(horizontal=10, vertical=4),
+                        padding=ft.Padding(left=10, right=10, top=4, bottom=4),
                         bgcolor=ft.Colors.BLUE_50,
                         border_radius=12,
                         alignment=ft.Alignment(0, 0),
@@ -297,7 +297,7 @@ class CustomerListContent:
                     alignment=ft.Alignment(0, 0),
                 ),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
-            padding=ft.padding.symmetric(vertical=12, horizontal=10),
+            padding=ft.Padding(left=10, right=10, top=12, bottom=12),
             bgcolor=row_bg,
         )
         
@@ -315,7 +315,7 @@ class CustomerListContent:
                 ft.Text(get_text("no_data"), size=16, color=ft.Colors.GREY_500),
                 ft.Text(get_text("click_add_to_register"), size=13, color=ft.Colors.GREY_400),
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, alignment=ft.Alignment(0, 0)),
-            padding=ft.padding.all(40),
+            padding=ft.Padding(left=40, right=40, top=40, bottom=40),
             expand=True,
         )
     
@@ -349,7 +349,7 @@ class CustomerListContent:
                         ),
                         ft.Container(
                             content=ft.Text(f"{self.current_page}/{self.total_pages}", size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
-                            padding=ft.padding.symmetric(horizontal=15),
+                            padding=ft.Padding(left=15, right=15, top=0, bottom=0),
                         ),
                         ft.IconButton(
                             icon=ft.Icons.CHEVRON_RIGHT,
@@ -361,10 +361,10 @@ class CustomerListContent:
                     ]),
                     bgcolor=ft.Colors.WHITE,
                     border_radius=10,
-                    padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                    padding=ft.Padding(left=8, right=8, top=4, bottom=4),
                 ),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
-            padding=ft.padding.symmetric(vertical=16, horizontal=20),
+            padding=ft.Padding(left=20, right=20, top=16, bottom=16),
             bgcolor="#F5F7FA",
         )
         self.page.update()

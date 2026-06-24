@@ -29,10 +29,8 @@ class JobOrderListContent:
         self.search_field = None
         self.current_status_filter = "all"  # Changed from status_filter dropdown
         self.current_page = 1
-        self.items_per_page = 5
+        self.items_per_page = 10
         self.total_pages = 1
-        self.active_upload_job_order_id = None
-        self.file_picker = None
         
         # Status colors
         self.status_colors = {
@@ -66,18 +64,6 @@ class JobOrderListContent:
         self.pagination_container = ft.Container()
 
     def build(self):
-        # Setup file picker
-        def on_file_picked(e):
-            if e.files and self.active_upload_job_order_id:
-                file_path = e.files[0].path
-                self.upload_signed_receipt(self.active_upload_job_order_id, file_path)
-                
-        self.file_picker = ft.FilePicker()
-        self.file_picker.on_result = on_file_picked
-        if self.file_picker not in self.page.overlay:
-            self.page.overlay.append(self.file_picker)
-            self.page.update()
-            
         header = ft.Container(
             content=ft.Row(
                 [
@@ -103,14 +89,14 @@ class JobOrderListContent:
                             bgcolor=ft.Colors.with_opacity(0.2, ft.Colors.WHITE),
                             shape=ft.RoundedRectangleBorder(radius=10),
                             elevation=0,
-                            padding=ft.padding.symmetric(horizontal=20, vertical=12),
+                            padding=ft.Padding(left=20, right=20, top=12, bottom=12),
                         ),
                     ),
                 ],
                 spacing=16,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(vertical=12, horizontal=24),
+            padding=ft.Padding(left=24, right=24, top=12, bottom=12),
             gradient=ft.LinearGradient(
                 begin=ft.Alignment(-1, -1),
                 end=ft.Alignment(1, 1),
@@ -126,7 +112,7 @@ class JobOrderListContent:
             bgcolor=ft.Colors.WHITE,
             filled=True,
             prefix_icon=ft.Icons.SEARCH,
-            content_padding=ft.padding.symmetric(horizontal=16, vertical=14),
+            content_padding=ft.Padding(left=16, right=16, top=14, bottom=14),
             expand=True,
             on_change=self.apply_filters_from_event,
             border_color=ft.Colors.GREY_200,
@@ -147,7 +133,7 @@ class JobOrderListContent:
         # Control bar with search only
         control_bar = ft.Container(
             content=ft.Row([self.search_field, refresh_button], spacing=10),
-            padding=ft.padding.all(20),
+            padding=ft.Padding(left=20, right=20, top=20, bottom=20),
             bgcolor="#F5F7FA",
         )
         
@@ -156,7 +142,7 @@ class JobOrderListContent:
         table_scroll_container = ft.Container(
             content=self.table_rows,
             expand=True,
-            border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_200)),
+            border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_200)),
             bgcolor=ft.Colors.WHITE,
         )
         
@@ -166,10 +152,10 @@ class JobOrderListContent:
                 ft.Divider(height=1, color=ft.Colors.GREY_300),
                 table_scroll_container,
             ], spacing=0),
-            margin=ft.margin.only(left=20, right=20),
+            margin=ft.Margin(left=20, right=20, top=0, bottom=0),
             bgcolor=ft.Colors.WHITE,
             border_radius=ft.BorderRadius.only(top_left=12, top_right=12, bottom_left=12, bottom_right=12),
-            border=ft.border.all(1, ft.Colors.GREY_200),
+            border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_200), right=ft.BorderSide(1, ft.Colors.GREY_200), bottom=ft.BorderSide(1, ft.Colors.GREY_200), left=ft.BorderSide(1, ft.Colors.GREY_200)),
             expand=True,
         )
         
@@ -180,7 +166,7 @@ class JobOrderListContent:
                 ft.Text(get_text("loading"), size=14, color="#64748B"),
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
             alignment=Alignment.CENTER,
-            padding=ft.padding.all(40),
+            padding=ft.Padding(left=40, right=40, top=40, bottom=40),
             visible=False,
         )
         
@@ -201,7 +187,7 @@ class JobOrderListContent:
                 ),
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
             alignment=Alignment.CENTER,
-            padding=ft.padding.all(60),
+            padding=ft.Padding(left=60, right=60, top=60, bottom=60),
             visible=False,
         )
         
@@ -214,7 +200,7 @@ class JobOrderListContent:
                 self.empty_state,
             ], expand=True),
             expand=True,
-            padding=ft.padding.only(bottom=24, left=24, right=24),
+            padding=ft.Padding(left=24, right=24, top=0, bottom=24),
             bgcolor="#F5F7FA",
         )
         
@@ -234,13 +220,13 @@ class JobOrderListContent:
     def _create_table_header(self):
         return ft.Container(
             content=ft.Row([
-                ft.Container(content=ft.Text(get_text("job_no"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=140, alignment=ft.Alignment(-1, 0), padding=ft.padding.only(left=10)),
-                ft.Container(content=ft.Text(get_text("customer_name"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=200, alignment=ft.Alignment(-1, 0), padding=ft.padding.only(left=10)),
-                ft.Container(content=ft.Text(get_text("plate_number"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=130, alignment=ft.Alignment(-1, 0), padding=ft.padding.only(left=10)),
+                ft.Container(content=ft.Text(get_text("job_no"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=140, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=10, right=0, top=0, bottom=0)),
+                ft.Container(content=ft.Text(get_text("customer_name"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=200, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=10, right=0, top=0, bottom=0)),
+                ft.Container(content=ft.Text(get_text("plate_number"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=130, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=10, right=0, top=0, bottom=0)),
                 ft.Container(content=ft.Text(get_text("receive_date"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=120, alignment=ft.Alignment(0, 0)),
                 ft.Container(content=ft.Text(get_text("actions"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=200, alignment=ft.Alignment(0, 0)),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
-            padding=ft.padding.symmetric(vertical=14, horizontal=10),
+            padding=ft.Padding(left=10, right=10, top=14, bottom=14),
             bgcolor=ft.Colors.GREY_100,
             border_radius=ft.BorderRadius.only(top_left=12, top_right=12),
         )
@@ -265,33 +251,33 @@ class JobOrderListContent:
         view_btn = ft.Container(
             content=ft.Row([ft.Icon(ft.Icons.VISIBILITY_OUTLINED, size=16, color=self.primary_color), ft.Text(get_text("view"), size=12, color=self.primary_color)], spacing=4),
             on_click=lambda e, oid=order_id: self.show_detail_dialog(oid),
-            padding=ft.padding.symmetric(horizontal=8, vertical=4),
+            padding=ft.Padding(left=8, right=8, top=4, bottom=4),
             border_radius=6,
         )
         
         print_btn = ft.Container(
             content=ft.Row([ft.Icon(ft.Icons.PRINT_OUTLINED, size=16, color=self.primary_color), ft.Text(get_text("print"), size=12, color=self.primary_color)], spacing=4),
             on_click=lambda e, oid=order_id: self.print_job_order(oid),
-            padding=ft.padding.symmetric(horizontal=8, vertical=4),
+            padding=ft.Padding(left=8, right=8, top=4, bottom=4),
             border_radius=6,
         )
         
         delete_btn = ft.Container(
             content=ft.Row([ft.Icon(ft.Icons.DELETE_OUTLINE, size=16, color=ft.Colors.RED_600), ft.Text(get_text("delete"), size=12, color=ft.Colors.RED_600)], spacing=4),
             on_click=lambda e, oid=order_id, jno=job_no: self.confirm_delete(oid, jno),
-            padding=ft.padding.symmetric(horizontal=8, vertical=4),
+            padding=ft.Padding(left=8, right=8, top=4, bottom=4),
             border_radius=6,
         )
         
         row = ft.Container(
             content=ft.Row([
-                ft.Container(content=ft.Text(job_no, size=13, weight=ft.FontWeight.W_500, color="#1E293B"), width=140, alignment=ft.Alignment(-1, 0), padding=ft.padding.only(left=10)),
-                ft.Container(content=ft.Text(customer_name, size=13, color="#1E293B", max_lines=1), width=200, alignment=ft.Alignment(-1, 0), padding=ft.padding.only(left=10)),
-                ft.Container(content=ft.Text(plate_number, size=12, color="#64748B", max_lines=1), width=130, alignment=ft.Alignment(-1, 0), padding=ft.padding.only(left=10)),
+                ft.Container(content=ft.Text(job_no, size=13, weight=ft.FontWeight.W_500, color="#1E293B"), width=140, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=10, right=0, top=0, bottom=0)),
+                ft.Container(content=ft.Text(customer_name, size=13, color="#1E293B", max_lines=1), width=200, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=10, right=0, top=0, bottom=0)),
+                ft.Container(content=ft.Text(plate_number, size=12, color="#64748B", max_lines=1), width=130, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=10, right=0, top=0, bottom=0)),
                 ft.Container(content=ft.Text(receive_date, size=12, color="#64748B"), width=120, alignment=ft.Alignment(0, 0)),
                 ft.Container(content=ft.Row([view_btn, print_btn, delete_btn], spacing=4), width=200, alignment=ft.Alignment(0, 0)),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
-            padding=ft.padding.symmetric(vertical=12, horizontal=10),
+            padding=ft.Padding(left=10, right=10, top=12, bottom=12),
             bgcolor=row_bg,
         )
         
@@ -334,7 +320,7 @@ class JobOrderListContent:
                             ft.Icon(ft.Icons.ERROR_OUTLINE, size=48, color=ft.Colors.RED_400),
                             ft.Text(f"Error: {str(ex)}", size=14, color=ft.Colors.RED_600),
                         ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-                        padding=ft.padding.all(40),
+                        padding=ft.Padding(left=40, right=40, top=40, bottom=40),
                     )
                 )
                 self.page.update()
@@ -389,7 +375,7 @@ class JobOrderListContent:
                         ),
                         ft.Container(
                             content=ft.Text(f"{self.current_page}/{self.total_pages}", size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
-                            padding=ft.padding.symmetric(horizontal=15),
+                            padding=ft.Padding(left=15, right=15, top=0, bottom=0),
                         ),
                         ft.IconButton(
                             icon=ft.Icons.CHEVRON_RIGHT,
@@ -401,10 +387,10 @@ class JobOrderListContent:
                     ]),
                     bgcolor=ft.Colors.WHITE,
                     border_radius=10,
-                    padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                    padding=ft.Padding(left=8, right=8, top=4, bottom=4),
                 ),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
-            padding=ft.padding.symmetric(vertical=16, horizontal=20),
+            padding=ft.Padding(left=20, right=20, top=16, bottom=16),
             bgcolor="#F5F7FA",
         )
         self.page.update()
@@ -449,34 +435,9 @@ class JobOrderListContent:
             order, 
             self.primary_color, 
             self._close_dialog,
-            on_print=lambda oid: self.print_job_order(oid),
-            on_upload_click=self.on_upload_click
+            on_print=lambda oid: self.print_job_order(oid)
         )
         self._open_dialog(dialog)
-        
-    def on_upload_click(self, order_id):
-        self.active_upload_job_order_id = order_id
-        self.page.run_task(
-            self.file_picker.pick_files,
-            allow_multiple=False,
-            file_type=ft.FilePickerFileType.IMAGE,
-        )
-        
-    def upload_signed_receipt(self, order_id, file_path):
-        self.show_snack_bar(get_text("loading"), is_error=False)
-        try:
-            self.client.update_job_order(order_id, signed_receipt_image_path=file_path)
-            self.show_snack_bar(get_text("upload_success"), is_error=False)
-            self.load_orders()
-            self.page.run_task(self._reopen_detail_dialog_async, order_id)
-        except Exception as ex:
-            print(f"Error uploading receipt: {ex}")
-            self.show_snack_bar(f"{get_text('error')}: {str(ex)}", is_error=True)
-            
-    async def _reopen_detail_dialog_async(self, order_id):
-        import asyncio
-        await asyncio.sleep(0.3)
-        self.show_detail_dialog(order_id)
     
     def confirm_delete(self, order_id, job_no):
         """Show confirmation dialog before deleting a job order."""

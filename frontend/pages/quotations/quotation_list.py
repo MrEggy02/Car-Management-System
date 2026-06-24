@@ -32,7 +32,7 @@ class QuotationListContent:
         self.detail_dialog = None
         self.search_field = None
         self.current_page = 1
-        self.items_per_page = 5
+        self.items_per_page = 10
         self.total_pages = 1
         self.current_dialog = None
         self.parts_list = []
@@ -65,14 +65,14 @@ class QuotationListContent:
                             bgcolor=ft.Colors.with_opacity(0.2, ft.Colors.WHITE),
                             shape=ft.RoundedRectangleBorder(radius=10),
                             elevation=0,
-                            padding=ft.padding.symmetric(horizontal=20, vertical=12),
+                            padding=ft.Padding(left=20, right=20, top=12, bottom=12),
                         ),
                     ),
                 ],
                 spacing=16,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(vertical=12, horizontal=24),
+            padding=ft.Padding(left=24, right=24, top=12, bottom=12),
             gradient=ft.LinearGradient(
                 begin=ft.Alignment(-1, -1),
                 end=ft.Alignment(1, 1),
@@ -88,7 +88,7 @@ class QuotationListContent:
             bgcolor=ft.Colors.WHITE,
             filled=True,
             prefix_icon=ft.Icons.SEARCH,
-            content_padding=ft.padding.symmetric(horizontal=16, vertical=14),
+            content_padding=ft.Padding(left=16, right=16, top=14, bottom=14),
             expand=True,
             on_change=self.filter_quotations,
             border_color=ft.Colors.GREY_200,
@@ -119,16 +119,16 @@ class QuotationListContent:
                 ft.Divider(height=1, color=ft.Colors.GREY_300),
                 self.table_rows,
             ], spacing=0),
-            margin=ft.margin.only(left=20, right=20),
+            margin=ft.Margin(left=20, right=20, top=0, bottom=0),
             bgcolor=ft.Colors.WHITE,
             border_radius=ft.BorderRadius.only(top_left=12, top_right=12, bottom_left=12, bottom_right=12),
-            border=ft.border.all(1, ft.Colors.GREY_200),
+            border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_200), right=ft.BorderSide(1, ft.Colors.GREY_200), bottom=ft.BorderSide(1, ft.Colors.GREY_200), left=ft.BorderSide(1, ft.Colors.GREY_200)),
             expand=True,
         )
         
         # ส่วนแบ่งหน้า
         self.pagination_container = ft.Container(
-            padding=ft.padding.symmetric(vertical=12, horizontal=20),
+            padding=ft.Padding(left=20, right=20, top=12, bottom=12),
             bgcolor="#F5F7FA",
         )
         
@@ -140,7 +140,7 @@ class QuotationListContent:
                 ft.Text(get_text("loading"), size=14, color="#64748B"),
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
             alignment=Alignment.CENTER,
-            padding=ft.padding.all(40),
+            padding=ft.Padding(left=40, right=40, top=40, bottom=40),
             visible=False,
         )
         
@@ -162,7 +162,7 @@ class QuotationListContent:
                 ),
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
             alignment=Alignment.CENTER,
-            padding=ft.padding.all(60),
+            padding=ft.Padding(left=60, right=60, top=60, bottom=60),
             visible=False,
         )
         
@@ -171,7 +171,7 @@ class QuotationListContent:
             content=ft.Column([
                 ft.Container(
                     content=ft.Row([self.search_field, refresh_button], spacing=10),
-                    margin=ft.margin.only(bottom=16),
+                    margin=ft.Margin(left=0, right=0, top=0, bottom=16),
                 ),
                 table_container,
                 self.pagination_container,
@@ -179,7 +179,7 @@ class QuotationListContent:
                 self.empty_state,
             ], expand=True),
             expand=True,
-            padding=ft.padding.all(24),
+            padding=ft.Padding(left=24, right=24, top=24, bottom=24),
             bgcolor="#F5F7FA",
         )
         
@@ -201,25 +201,25 @@ class QuotationListContent:
                     content=ft.Text(get_text("quotation_no"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
                     width=100,
                     alignment=ft.Alignment(-1, 0),
-                    padding=ft.padding.only(left=10),
+                    padding=ft.Padding(left=10, right=0, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(get_text("customer_name"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
                     width=150,
                     alignment=ft.Alignment(-1, 0),
-                    padding=ft.padding.only(left=10),
+                    padding=ft.Padding(left=10, right=0, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(get_text("plate_number"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
                     width=120,
                     alignment=ft.Alignment(-1, 0),
-                    padding=ft.padding.only(left=10),
+                    padding=ft.Padding(left=10, right=0, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(get_text("total"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
                     width=120,
                     alignment=ft.Alignment(1, 0),
-                    padding=ft.padding.only(right=10),
+                    padding=ft.Padding(left=0, right=10, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(get_text("status"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
@@ -237,7 +237,7 @@ class QuotationListContent:
                     alignment=ft.Alignment(0, 0),
                 ),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
-            padding=ft.padding.symmetric(vertical=14, horizontal=10),
+            padding=ft.Padding(left=10, right=10, top=14, bottom=14),
             bgcolor=ft.Colors.GREY_100,
             border_radius=ft.BorderRadius.only(top_left=12, top_right=12),
         )
@@ -276,7 +276,7 @@ class QuotationListContent:
                 ], spacing=4),
                 bgcolor=status_colors.get(status, "#607D8B"),
                 border_radius=12,
-                padding=ft.padding.symmetric(horizontal=10, vertical=4),
+                padding=ft.Padding(left=10, right=10, top=4, bottom=4),
                 # No on_click for approved status
             )
         else:
@@ -289,7 +289,7 @@ class QuotationListContent:
                 ], spacing=4),
                 bgcolor=status_colors.get(status, "#607D8B"),
                 border_radius=12,
-                padding=ft.padding.symmetric(horizontal=10, vertical=4),
+                padding=ft.Padding(left=10, right=10, top=4, bottom=4),
                 on_click=lambda e, qid=quote_id, cur_status=status: self.show_update_status_dialog(qid, cur_status),
             )
         
@@ -299,7 +299,7 @@ class QuotationListContent:
                 ft.Text(get_text("view"), size=12, color="#1565C0"),
             ], spacing=4),
             on_click=lambda e, qid=quote_id: self.show_quotation_detail(qid),
-            padding=ft.padding.symmetric(horizontal=8, vertical=4),
+            padding=ft.Padding(left=8, right=8, top=4, bottom=4),
             border_radius=6,
         )
         
@@ -309,7 +309,7 @@ class QuotationListContent:
                 ft.Text(get_text("print"), size=12, color="#1565C0"),
             ], spacing=4),
             on_click=lambda e, qid=quote_id: self.print_quotation(qid),
-            padding=ft.padding.symmetric(horizontal=8, vertical=4),
+            padding=ft.Padding(left=8, right=8, top=4, bottom=4),
             border_radius=6,
         )
         
@@ -320,7 +320,7 @@ class QuotationListContent:
                     ft.Icon(ft.Icons.DELETE_OUTLINE, size=16, color=ft.Colors.GREY_400),
                     ft.Text(get_text("delete"), size=12, color=ft.Colors.GREY_400),
                 ], spacing=4),
-                padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                padding=ft.Padding(left=8, right=8, top=4, bottom=4),
                 border_radius=6,
                 tooltip=get_text("cannot_delete_approved_quotation"),
             )
@@ -331,7 +331,7 @@ class QuotationListContent:
                     ft.Text(get_text("delete"), size=12, color=ft.Colors.RED_600),
                 ], spacing=4),
                 on_click=lambda e, qid=quote_id: self.delete_quotation(qid),
-                padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                padding=ft.Padding(left=8, right=8, top=4, bottom=4),
                 border_radius=6,
             )
         
@@ -341,25 +341,25 @@ class QuotationListContent:
                     content=ft.Text(f"QT-{quote_id:04d}", size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
                     width=100,
                     alignment=ft.Alignment(-1, 0),
-                    padding=ft.padding.only(left=10),
+                    padding=ft.Padding(left=10, right=0, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(customer_name, size=13, weight=ft.FontWeight.W_500, color="#1E293B", max_lines=1),
                     width=150,
                     alignment=ft.Alignment(-1, 0),
-                    padding=ft.padding.only(left=10),
+                    padding=ft.Padding(left=10, right=0, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(plate_number, size=12, color="#64748B", max_lines=1),
                     width=120,
                     alignment=ft.Alignment(-1, 0),
-                    padding=ft.padding.only(left=10),
+                    padding=ft.Padding(left=10, right=0, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(f"{int(total_price):,} KIP", size=13, weight=ft.FontWeight.W_500, color=ft.Colors.GREEN_700),
                     width=120,
                     alignment=ft.Alignment(1, 0),
-                    padding=ft.padding.only(right=10),
+                    padding=ft.Padding(left=0, right=10, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=status_badge,
@@ -377,7 +377,7 @@ class QuotationListContent:
                     alignment=ft.Alignment(0, 0),
                 ),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
-            padding=ft.padding.symmetric(vertical=12, horizontal=10),
+            padding=ft.Padding(left=10, right=10, top=12, bottom=12),
             bgcolor=row_bg,
         )
         
@@ -473,7 +473,7 @@ class QuotationListContent:
                         ),
                         ft.Container(
                             content=ft.Text(f"{self.current_page}/{self.total_pages}", size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
-                            padding=ft.padding.symmetric(horizontal=15),
+                            padding=ft.Padding(left=15, right=15, top=0, bottom=0),
                         ),
                         ft.IconButton(
                             icon=ft.Icons.CHEVRON_RIGHT,
@@ -485,7 +485,7 @@ class QuotationListContent:
                     ]),
                     bgcolor=ft.Colors.WHITE,
                     border_radius=10,
-                    padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                    padding=ft.Padding(left=8, right=8, top=4, bottom=4),
                 ),
             ],
             vertical_alignment=ft.CrossAxisAlignment.CENTER,

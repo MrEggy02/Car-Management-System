@@ -18,7 +18,7 @@ class PurchaseOrderListContent:
         self.filtered_orders = []
         self.low_stock_parts = []
         self.current_page = 1
-        self.items_per_page = 5
+        self.items_per_page = 10
         self.total_pages = 1
         self.search_field = None
         self.current_status_filter = "all"
@@ -34,7 +34,7 @@ class PurchaseOrderListContent:
         
         search_bar = self._build_search_bar()
         table = self._build_table()
-        self.pagination_container = ft.Container(padding=ft.padding.symmetric(vertical=12, horizontal=20))
+        self.pagination_container = ft.Container(padding=ft.Padding(left=20, right=20, top=12, bottom=12))
         
         content_area = ft.Container(
             content=ft.Column([
@@ -43,7 +43,7 @@ class PurchaseOrderListContent:
                 self.pagination_container,
             ], spacing=0, scroll=ft.ScrollMode.AUTO, expand=True),
             expand=True,
-            padding=ft.padding.all(24),
+            padding=ft.Padding(left=24, right=24, top=24, bottom=24),
             bgcolor="#F5F7FA",
         )
         
@@ -82,11 +82,11 @@ class PurchaseOrderListContent:
                     ),
                     bgcolor="#EF4444" if has_notification else ft.Colors.TRANSPARENT,
                     border_radius=10,
-                    padding=ft.padding.symmetric(horizontal=6, vertical=2),
+                    padding=ft.Padding(left=6, right=6, top=2, bottom=2),
                     visible=has_notification,
                 ),
             ], spacing=4),
-            padding=ft.padding.symmetric(horizontal=12, vertical=8),
+            padding=ft.Padding(left=12, right=12, top=8, bottom=8),
             bgcolor=ft.Colors.with_opacity(0.2, ft.Colors.WHITE),
             border_radius=10,
             on_click=self.show_low_stock_dialog,
@@ -123,7 +123,7 @@ class PurchaseOrderListContent:
                                 bgcolor=ft.Colors.with_opacity(0.2, ft.Colors.WHITE),
                                 shape=ft.RoundedRectangleBorder(radius=10),
                                 elevation=0,
-                                padding=ft.padding.symmetric(horizontal=20, vertical=12),
+                                padding=ft.Padding(left=20, right=20, top=12, bottom=12),
                             ),
                         ),
                         ft.ElevatedButton(
@@ -136,7 +136,7 @@ class PurchaseOrderListContent:
                                 bgcolor=ft.Colors.with_opacity(0.2, ft.Colors.WHITE),
                                 shape=ft.RoundedRectangleBorder(radius=10),
                                 elevation=0,
-                                padding=ft.padding.symmetric(horizontal=20, vertical=12),
+                                padding=ft.Padding(left=20, right=20, top=12, bottom=12),
                             ),
                         ),
                     ], spacing=8),
@@ -144,7 +144,7 @@ class PurchaseOrderListContent:
                 spacing=16,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(vertical=12, horizontal=24),
+            padding=ft.Padding(left=24, right=24, top=12, bottom=12),
             gradient=ft.LinearGradient(
                 begin=ft.Alignment(-1, -1),
                 end=ft.Alignment(1, 1),
@@ -184,7 +184,7 @@ class PurchaseOrderListContent:
                                 bgcolor=ft.Colors.with_opacity(0.2, ft.Colors.WHITE),
                                 shape=ft.RoundedRectangleBorder(radius=10),
                                 elevation=0,
-                                padding=ft.padding.symmetric(horizontal=20, vertical=12),
+                                padding=ft.Padding(left=20, right=20, top=12, bottom=12),
                             ),
                         ),
                         ft.ElevatedButton(
@@ -197,7 +197,7 @@ class PurchaseOrderListContent:
                                 bgcolor=ft.Colors.with_opacity(0.2, ft.Colors.WHITE),
                                 shape=ft.RoundedRectangleBorder(radius=10),
                                 elevation=0,
-                                padding=ft.padding.symmetric(horizontal=20, vertical=12),
+                                padding=ft.Padding(left=20, right=20, top=12, bottom=12),
                             ),
                         ),
                     ], spacing=8),
@@ -229,7 +229,7 @@ class PurchaseOrderListContent:
                                color=ft.Colors.WHITE if is_active else "#64748B"),
                 bgcolor=self.primary_color if is_active else ft.Colors.GREY_200,
                 border_radius=20,
-                padding=ft.padding.symmetric(horizontal=12, vertical=6),
+                padding=ft.Padding(left=12, right=12, top=6, bottom=6),
                 ink=True,
                 on_click=lambda e, sid=status["id"]: self.filter_by_status(sid),
             )
@@ -252,7 +252,7 @@ class PurchaseOrderListContent:
             bgcolor=ft.Colors.WHITE,
             filled=True,
             prefix_icon=ft.Icons.SEARCH,
-            content_padding=ft.padding.symmetric(horizontal=16, vertical=14),
+            content_padding=ft.Padding(left=16, right=16, top=14, bottom=14),
             expand=True,
         )
         self.search_field.on_change = self.on_search_change
@@ -274,7 +274,7 @@ class PurchaseOrderListContent:
                 ft.Container(height=12),
                 self.status_chips,
             ], spacing=0),
-            margin=ft.margin.only(bottom=16),
+            margin=ft.Margin(left=0, right=0, top=0, bottom=16),
         )
     
     def _build_table(self):
@@ -283,12 +283,12 @@ class PurchaseOrderListContent:
                 ft.Container(
                     content=ft.Text(get_text("po_no"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
                     width=110,
-                    padding=ft.padding.only(left=8),
+                    padding=ft.Padding(left=8, right=0, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(get_text("supplier"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
                     width=140,
-                    padding=ft.padding.only(left=8),
+                    padding=ft.Padding(left=8, right=0, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(get_text("order_date"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
@@ -299,7 +299,7 @@ class PurchaseOrderListContent:
                     content=ft.Text(get_text("total_amount"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
                     width=100,
                     alignment=ft.Alignment(1, 0),
-                    padding=ft.padding.only(right=8),
+                    padding=ft.Padding(left=0, right=8, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(get_text("status"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
@@ -309,7 +309,7 @@ class PurchaseOrderListContent:
                 ft.Container(
                     content=ft.Text(get_text("created_by"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
                     width=100,
-                    padding=ft.padding.only(left=8),
+                    padding=ft.Padding(left=8, right=0, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(get_text("actions"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
@@ -317,7 +317,7 @@ class PurchaseOrderListContent:
                     alignment=ft.Alignment(0, 0),
                 ),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
-            padding=ft.padding.symmetric(vertical=12, horizontal=8),
+            padding=ft.Padding(left=8, right=8, top=12, bottom=12),
             bgcolor=ft.Colors.GREY_100,
             border_radius=ft.BorderRadius.only(top_left=12, top_right=12),
         )
@@ -337,10 +337,10 @@ class PurchaseOrderListContent:
         
         return ft.Container(
             content=ft.Row([table_scroll], scroll=ft.ScrollMode.AUTO),
-            margin=ft.margin.only(left=20, right=20),
+            margin=ft.Margin(left=20, right=20, top=0, bottom=0),
             bgcolor=ft.Colors.WHITE,
             border_radius=12,
-            border=ft.border.all(1, ft.Colors.GREY_200),
+            border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_200), right=ft.BorderSide(1, ft.Colors.GREY_200), bottom=ft.BorderSide(1, ft.Colors.GREY_200), left=ft.BorderSide(1, ft.Colors.GREY_200)),
             expand=True,
         )
     
@@ -370,7 +370,7 @@ class PurchaseOrderListContent:
                                 content=ft.Icon(ft.Icons.CHECK_CIRCLE, size=24, color=ft.Colors.WHITE),
                                 bgcolor="#10B981",
                                 border_radius=12,
-                                padding=ft.padding.all(8),
+                                padding=ft.Padding(left=8, right=8, top=8, bottom=8),
                             ),
                             ft.Text(
                                 get_text("low_stock"),
@@ -382,15 +382,15 @@ class PurchaseOrderListContent:
                         spacing=12,
                         vertical_alignment=ft.CrossAxisAlignment.CENTER,
                     ),
-                    padding=ft.padding.symmetric(horizontal=20, vertical=16),
-                    border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
+                    padding=ft.Padding(left=20, right=20, top=16, bottom=16),
+                    border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
                 ),
                 content=ft.Container(
                     content=ft.Column([
                         ft.Icon(ft.Icons.INBOX, size=48, color="#CBD5E1"),
                         ft.Text(get_text("no_low_stock_parts"), size=14, color="#94A3B8"),
                     ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=12),
-                    padding=ft.padding.all(40),
+                    padding=ft.Padding(left=40, right=40, top=40, bottom=40),
                     width=400,
                 ),
                 actions=[
@@ -430,7 +430,7 @@ class PurchaseOrderListContent:
                         ft.Text(status, size=10, color=color),
                     ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=2),
                 ], spacing=12, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                padding=ft.padding.symmetric(vertical=8, horizontal=12),
+                padding=ft.Padding(left=12, right=12, top=8, bottom=8),
                 bgcolor=ft.Colors.GREY_50,
                 border_radius=8,
             )
@@ -447,7 +447,7 @@ class PurchaseOrderListContent:
                             content=ft.Icon(ft.Icons.WARNING, size=24, color=ft.Colors.WHITE),
                             bgcolor="#F59E0B",
                             border_radius=12,
-                            padding=ft.padding.all(8),
+                            padding=ft.Padding(left=8, right=8, top=8, bottom=8),
                         ),
                         ft.Text(
                             f"{get_text('low_stock')} ({len(self.low_stock_parts)})",
@@ -459,8 +459,8 @@ class PurchaseOrderListContent:
                     spacing=12,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
-                padding=ft.padding.symmetric(horizontal=20, vertical=16),
-                border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
+                padding=ft.Padding(left=20, right=20, top=16, bottom=16),
+                border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
             ),
             content=ft.Container(
                 content=ft.Column([
@@ -468,7 +468,7 @@ class PurchaseOrderListContent:
                     ft.Container(height=8),
                     parts_list,
                 ]),
-                padding=ft.padding.all(20),
+                padding=ft.Padding(left=20, right=20, top=20, bottom=20),
                 width=450,
                 height=450,
             ),
@@ -551,7 +551,7 @@ class PurchaseOrderListContent:
                     input_filter=ft.NumbersOnlyInputFilter(),
                     border_radius=8,
                     bgcolor=ft.Colors.WHITE,
-                    content_padding=ft.padding.symmetric(horizontal=8, vertical=6),
+                    content_padding=ft.Padding(left=8, right=8, top=6, bottom=6),
                 )
                 qty_fields[idx] = qty_field
                 
@@ -562,7 +562,7 @@ class PurchaseOrderListContent:
                     input_filter=ft.NumbersOnlyInputFilter(),
                     border_radius=8,
                     bgcolor=ft.Colors.WHITE,
-                    content_padding=ft.padding.symmetric(horizontal=8, vertical=6),
+                    content_padding=ft.Padding(left=8, right=8, top=6, bottom=6),
                 )
                 cost_fields[idx] = cost_field
                 
@@ -595,7 +595,7 @@ class PurchaseOrderListContent:
                         qty_field,
                         ft.Text(f"{get_text('remaining')}: {item['remaining']}", size=11, color="#F59E0B", width=80),
                     ], spacing=12, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                    padding=ft.padding.symmetric(vertical=8, horizontal=12),
+                    padding=ft.Padding(left=12, right=12, top=8, bottom=8),
                     bgcolor=bg_color,
                     border_radius=8,
                 )
@@ -615,7 +615,7 @@ class PurchaseOrderListContent:
                                 content=ft.Icon(ft.Icons.INVENTORY_2, size=24, color=ft.Colors.WHITE),
                                 bgcolor="#10B981",
                                 border_radius=12,
-                                padding=ft.padding.all(8),
+                                padding=ft.Padding(left=8, right=8, top=8, bottom=8),
                             ),
                             ft.Text(
                                 f"{get_text('receive')}: {po_no}",
@@ -627,8 +627,8 @@ class PurchaseOrderListContent:
                         spacing=12,
                         vertical_alignment=ft.CrossAxisAlignment.CENTER,
                     ),
-                    padding=ft.padding.symmetric(horizontal=20, vertical=16),
-                    border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
+                    padding=ft.Padding(left=20, right=20, top=16, bottom=16),
+                    border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
                 ),
                 content=ft.Container(
                     content=ft.Column([
@@ -644,7 +644,7 @@ class PurchaseOrderListContent:
                         ft.Divider(height=1, color=ft.Colors.GREY_200),
                         items_column,
                     ]),
-                    padding=ft.padding.all(20),
+                    padding=ft.Padding(left=20, right=20, top=20, bottom=20),
                     width=650,
                     height=450,
                 ),
@@ -742,7 +742,7 @@ class PurchaseOrderListContent:
                             content=ft.Icon(ft.Icons.WARNING, size=24, color=ft.Colors.WHITE),
                             bgcolor="#EF4444",
                             border_radius=12,
-                            padding=ft.padding.all(8),
+                            padding=ft.Padding(left=8, right=8, top=8, bottom=8),
                         ),
                         ft.Text(
                             get_text("confirm_cancel"),
@@ -754,8 +754,8 @@ class PurchaseOrderListContent:
                     spacing=12,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
-                padding=ft.padding.symmetric(horizontal=20, vertical=16),
-                border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
+                padding=ft.Padding(left=20, right=20, top=16, bottom=16),
+                border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
             ),
             content=ft.Container(
                 content=ft.Column([
@@ -773,7 +773,7 @@ class PurchaseOrderListContent:
                         text_align=ft.TextAlign.CENTER,
                     ),
                 ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=4),
-                padding=ft.padding.all(24),
+                padding=ft.Padding(left=24, right=24, top=24, bottom=24),
                 width=380,
             ),
             actions=[
@@ -821,7 +821,7 @@ class PurchaseOrderListContent:
                         ft.Icon(ft.Icons.ERROR_OUTLINE, size=48, color=ft.Colors.RED_400),
                         ft.Text(f"Error: {str(ex)}", size=14, color=ft.Colors.RED_600),
                     ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-                    padding=ft.padding.all(40),
+                    padding=ft.Padding(left=40, right=40, top=40, bottom=40),
                 )
             )
             self.page.update()
@@ -861,7 +861,7 @@ class PurchaseOrderListContent:
                         ft.Icon(ft.Icons.LOCAL_SHIPPING, size=48, color=ft.Colors.GREY_400),
                         ft.Text(get_text("no_purchase_orders"), size=16, color=ft.Colors.GREY_500),
                     ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-                    padding=ft.padding.all(40),
+                    padding=ft.Padding(left=40, right=40, top=40, bottom=40),
                 )
             )
             self.update_pagination()
@@ -921,7 +921,7 @@ class PurchaseOrderListContent:
             ], spacing=4),
             bgcolor=status_colors.get(status, "#607D8B"),
             border_radius=12,
-            padding=ft.padding.symmetric(horizontal=8, vertical=4),
+            padding=ft.Padding(left=8, right=8, top=4, bottom=4),
         )
         
         # View button
@@ -966,12 +966,12 @@ class PurchaseOrderListContent:
                 ft.Container(
                     content=ft.Text(po_no, size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
                     width=110,
-                    padding=ft.padding.only(left=8),
+                    padding=ft.Padding(left=8, right=0, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(supplier_name, size=13, color="#1E293B", max_lines=1),
                     width=140,
-                    padding=ft.padding.only(left=8),
+                    padding=ft.Padding(left=8, right=0, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(order_date, size=12, color="#64748B"),
@@ -982,7 +982,7 @@ class PurchaseOrderListContent:
                     content=ft.Text(f"{int(total_amount):,}", size=13, weight=ft.FontWeight.W_500, color=ft.Colors.GREEN_700),
                     width=100,
                     alignment=ft.Alignment(1, 0),
-                    padding=ft.padding.only(right=8),
+                    padding=ft.Padding(left=0, right=8, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=status_badge,
@@ -992,7 +992,7 @@ class PurchaseOrderListContent:
                 ft.Container(
                     content=ft.Text(created_by, size=12, color="#64748B", max_lines=1),
                     width=100,
-                    padding=ft.padding.only(left=8),
+                    padding=ft.Padding(left=8, right=0, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Row(actions, spacing=2),
@@ -1000,7 +1000,7 @@ class PurchaseOrderListContent:
                     alignment=ft.Alignment(0, 0),
                 ),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
-            padding=ft.padding.symmetric(vertical=10, horizontal=8),
+            padding=ft.Padding(left=8, right=8, top=10, bottom=10),
             bgcolor=row_bg,
         )
         
@@ -1032,7 +1032,7 @@ class PurchaseOrderListContent:
                         ),
                         ft.Container(
                             content=ft.Text(f"{self.current_page}/{self.total_pages}", size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
-                            padding=ft.padding.symmetric(horizontal=15),
+                            padding=ft.Padding(left=15, right=15, top=0, bottom=0),
                         ),
                         ft.IconButton(
                             icon=ft.Icons.CHEVRON_RIGHT,
@@ -1044,7 +1044,7 @@ class PurchaseOrderListContent:
                     ]),
                     bgcolor=ft.Colors.WHITE,
                     border_radius=10,
-                    padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                    padding=ft.Padding(left=8, right=8, top=4, bottom=4),
                 ),
             ],
             vertical_alignment=ft.CrossAxisAlignment.CENTER,

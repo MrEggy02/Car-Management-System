@@ -92,7 +92,7 @@ class RevenueReportContent:
                 spacing=16,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(vertical=12, horizontal=24),
+            padding=ft.Padding(left=24, right=24, top=12, bottom=12),
             gradient=ft.LinearGradient(
                 begin=ft.Alignment(-1, -1),
                 end=ft.Alignment(1, 1),
@@ -131,7 +131,7 @@ class RevenueReportContent:
             style=ft.ButtonStyle(
                 bgcolor=self.primary_color,
                 shape=ft.RoundedRectangleBorder(radius=10),
-                padding=ft.padding.symmetric(horizontal=20, vertical=12),
+                padding=ft.Padding(left=20, right=20, top=12, bottom=12),
             ),
         )
         
@@ -180,10 +180,10 @@ class RevenueReportContent:
                     refresh_btn,
                 ], spacing=12),
             ]),
-            padding=ft.padding.all(20),
+            padding=ft.Padding(left=20, right=20, top=20, bottom=20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
-            margin=ft.margin.symmetric(horizontal=24, vertical=10),
+            margin=ft.Margin(left=24, right=24, top=10, bottom=10),
             shadow=ft.BoxShadow(
                 blur_radius=10,
                 color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
@@ -384,7 +384,7 @@ class RevenueReportContent:
                         content=ft.Icon(icon, size=20 if small else 24, color=ft.Colors.WHITE),
                         bgcolor=color,
                         border_radius=10,
-                        padding=ft.padding.all(8),
+                        padding=ft.Padding(left=8, right=8, top=8, bottom=8),
                     ),
                     ft.Container(expand=True),
                     ft.Text(
@@ -402,7 +402,7 @@ class RevenueReportContent:
             padding=padding,
             bgcolor=ft.Colors.WHITE,
             border_radius=12,
-            border=ft.border.all(1, ft.Colors.GREY_100),
+            border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_100), right=ft.BorderSide(1, ft.Colors.GREY_100), bottom=ft.BorderSide(1, ft.Colors.GREY_100), left=ft.BorderSide(1, ft.Colors.GREY_100)),
             expand=True,
         )
     
@@ -412,7 +412,7 @@ class RevenueReportContent:
         if not daily_revenue:
             return ft.Container(
                 content=ft.Text(get_text("no_data"), size=14, color="#64748B"),
-                padding=ft.padding.all(40),
+                padding=ft.Padding(left=40, right=40, top=40, bottom=40),
                 bgcolor=ft.Colors.WHITE,
                 border_radius=16,
                 alignment=ft.Alignment(0, 0),
@@ -458,15 +458,15 @@ class RevenueReportContent:
                 ft.Container(height=16),
                 ft.Container(
                     content=chart_bars,
-                    padding=ft.padding.all(20),
+                    padding=ft.Padding(left=20, right=20, top=20, bottom=20),
                     bgcolor=ft.Colors.WHITE,
                     border_radius=12,
                 ),
             ]),
-            padding=ft.padding.all(20),
+            padding=ft.Padding(left=20, right=20, top=20, bottom=20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
-            margin=ft.margin.symmetric(horizontal=24, vertical=0),
+            margin=ft.Margin(left=24, right=24, top=0, bottom=0),
             shadow=ft.BoxShadow(
                 blur_radius=10,
                 color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
@@ -496,13 +496,13 @@ class RevenueReportContent:
                             content=ft.Icon(icon, size=20, color=self.primary_color),
                             bgcolor=ft.Colors.with_opacity(0.1, self.primary_color),
                             border_radius=10,
-                            padding=ft.padding.all(8),
+                            padding=ft.Padding(left=8, right=8, top=8, bottom=8),
                         ),
                         ft.Text(method_name.capitalize(), size=14, weight=ft.FontWeight.W_500, color="#1E293B", expand=True),
                         ft.Text(f"{count} {get_text('invoices')}", size=12, color="#64748B"),
                         ft.Text(self._format_currency(amount), size=14, weight=ft.FontWeight.BOLD, color="#1E293B"),
                     ], spacing=16, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                    padding=ft.padding.symmetric(vertical=12, horizontal=16),
+                    padding=ft.Padding(left=16, right=16, top=12, bottom=12),
                     bgcolor=ft.Colors.GREY_50,
                     border_radius=10,
                 )
@@ -514,10 +514,10 @@ class RevenueReportContent:
                 ft.Container(height=12),
                 table_rows,
             ]),
-            padding=ft.padding.all(20),
+            padding=ft.Padding(left=20, right=20, top=20, bottom=20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
-            margin=ft.margin.symmetric(horizontal=24, vertical=0),
+            margin=ft.Margin(left=24, right=24, top=0, bottom=0),
             shadow=ft.BoxShadow(
                 blur_radius=10,
                 color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
@@ -537,7 +537,7 @@ class RevenueReportContent:
                 ft.Text(get_text("revenue"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", expand=True),
                 ft.Text(get_text("invoices"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=100),
             ]),
-            padding=ft.padding.symmetric(vertical=12, horizontal=16),
+            padding=ft.Padding(left=16, right=16, top=12, bottom=12),
             bgcolor=ft.Colors.GREY_100,
             border_radius=ft.BorderRadius.only(top_left=12, top_right=12),
         )
@@ -554,7 +554,7 @@ class RevenueReportContent:
                         ft.Text(self._format_currency(day.get('daily_revenue', 0)), size=13, weight=ft.FontWeight.W_500, color="#1E293B", expand=True),
                         ft.Text(str(day.get('daily_count', 0)), size=13, color="#64748B", width=100),
                     ]),
-                    padding=ft.padding.symmetric(vertical=12, horizontal=16),
+                    padding=ft.Padding(left=16, right=16, top=12, bottom=12),
                     bgcolor=bg,
                 )
             )
@@ -566,10 +566,10 @@ class RevenueReportContent:
                 header,
                 table_body,
             ]),
-            padding=ft.padding.all(20),
+            padding=ft.Padding(left=20, right=20, top=20, bottom=20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
-            margin=ft.margin.symmetric(horizontal=24, vertical=0),
+            margin=ft.Margin(left=24, right=24, top=0, bottom=0),
             shadow=ft.BoxShadow(
                 blur_radius=10,
                 color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),

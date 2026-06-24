@@ -54,8 +54,8 @@ def login_page(page: ft.Page, on_login_success):
             ),
             bgcolor=ft.Colors.WHITE,
         )
-        page.dialog = loading_dialog
         loading_dialog.open = True
+        page.overlay.append(loading_dialog)
         page.update()
 
     def hide_loading():
@@ -248,7 +248,7 @@ def login_page(page: ft.Page, on_login_success):
         focused_border_color=PRIMARY_BLUE,
         focused_bgcolor=LIGHT_BLUE,
         text_size=15,
-        content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
+        content_padding=ft.Padding.symmetric(horizontal=16, vertical=12),
         bgcolor=ft.Colors.WHITE,
         color=TEXT_DARK,
         label_style=ft.TextStyle(color=TEXT_GRAY, size=13),
@@ -268,7 +268,7 @@ def login_page(page: ft.Page, on_login_success):
         focused_border_color=PRIMARY_BLUE,
         focused_bgcolor=LIGHT_BLUE,
         text_size=15,
-        content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
+        content_padding=ft.Padding.symmetric(horizontal=16, vertical=12),
         bgcolor=ft.Colors.WHITE,
         color=TEXT_DARK,
         label_style=ft.TextStyle(color=TEXT_GRAY, size=13),
@@ -348,7 +348,7 @@ def login_page(page: ft.Page, on_login_success):
                         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                         spacing=12,
                     ),
-                    padding=ft.padding.only(top=40, bottom=10, left=20, right=20),
+                    padding=ft.Padding.only(top=40, bottom=10, left=20, right=20),
                 ),
                 ft.Container(
                     content=ft.Column(
@@ -364,7 +364,7 @@ def login_page(page: ft.Page, on_login_success):
                         spacing=8,
                         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     ),
-                    padding=ft.padding.symmetric(horizontal=30, vertical=20),
+                    padding=ft.Padding.symmetric(horizontal=30, vertical=20),
                 ),
                 ft.Container(
                     content=ft.Row(
@@ -374,7 +374,7 @@ def login_page(page: ft.Page, on_login_success):
                         alignment=ft.MainAxisAlignment.CENTER,
                         spacing=8,
                     ),
-                    padding=ft.padding.only(bottom=35, top=10),
+                    padding=ft.Padding.only(bottom=35, top=10),
                 ),
             ],
             spacing=0,
@@ -405,7 +405,7 @@ def login_page(page: ft.Page, on_login_success):
     # Add blur effect overlay
     blur_overlay = ft.Container(
         expand=True,
-        bgcolor=ft.Colors.with_opacity(0.3, ft.Colors.WHITE_30),
+        bgcolor=ft.Colors.with_opacity(0.3, ft.Colors.WHITE),
         blur=ft.Blur(0, 5),
     )
     

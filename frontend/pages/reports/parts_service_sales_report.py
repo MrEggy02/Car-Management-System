@@ -85,7 +85,7 @@ class PartsServiceSalesReportContent:
                 spacing=16,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(vertical=12, horizontal=24),
+            padding=ft.Padding(left=24, right=24, top=12, bottom=12),
             gradient=ft.LinearGradient(
                 begin=ft.Alignment(-1, -1),
                 end=ft.Alignment(1, 1),
@@ -124,7 +124,7 @@ class PartsServiceSalesReportContent:
             style=ft.ButtonStyle(
                 bgcolor=self.primary_color,
                 shape=ft.RoundedRectangleBorder(radius=10),
-                padding=ft.padding.symmetric(horizontal=20, vertical=12),
+                padding=ft.Padding(left=20, right=20, top=12, bottom=12),
             ),
         )
         
@@ -153,10 +153,10 @@ class PartsServiceSalesReportContent:
                     refresh_btn,
                 ], spacing=12),
             ]),
-            padding=ft.padding.all(20),
+            padding=ft.Padding(left=20, right=20, top=20, bottom=20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
-            margin=ft.margin.only(left=24, right=24, top=10, bottom=10),
+            margin=ft.Margin(left=24, right=24, top=10, bottom=10),
             shadow=ft.BoxShadow(
                 blur_radius=10,
                 color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
@@ -318,7 +318,7 @@ class PartsServiceSalesReportContent:
                 ft.Container(height=10),
                 profit_cards
             ]),
-            margin=ft.margin.symmetric(horizontal=24),
+            margin=ft.Margin(left=24, right=24, top=0, bottom=0),
         )
     
     def _build_stat_card(self, title, value, icon, color, subtitle=""):
@@ -328,7 +328,7 @@ class PartsServiceSalesReportContent:
                     content=ft.Icon(icon, size=20, color=ft.Colors.WHITE),
                     bgcolor=color,
                     border_radius=10,
-                    padding=ft.padding.all(8),
+                    padding=ft.Padding(left=8, right=8, top=8, bottom=8),
                 ),
                 ft.Column([
                     ft.Text(value, size=18, weight=ft.FontWeight.BOLD, color="#1E293B"),
@@ -336,10 +336,10 @@ class PartsServiceSalesReportContent:
                     ft.Text(subtitle, size=10, color="#94A3B8") if subtitle else ft.Container(),
                 ], spacing=2, expand=True),
             ], spacing=12, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-            padding=ft.padding.all(12),
+            padding=ft.Padding(left=12, right=12, top=12, bottom=12),
             bgcolor=ft.Colors.WHITE,
             border_radius=12,
-            border=ft.border.all(1, ft.Colors.GREY_100),
+            border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_100), right=ft.BorderSide(1, ft.Colors.GREY_100), bottom=ft.BorderSide(1, ft.Colors.GREY_100), left=ft.BorderSide(1, ft.Colors.GREY_100)),
             expand=True,
         )
     
@@ -353,16 +353,16 @@ class PartsServiceSalesReportContent:
                     ft.Container(height=12),
                     ft.Container(
                         content=ft.Text(get_text("no_data"), size=14, color="#64748B"),
-                        padding=ft.padding.all(40),
+                        padding=ft.Padding(left=40, right=40, top=40, bottom=40),
                         bgcolor=ft.Colors.GREY_50,
                         border_radius=12,
                         alignment=ft.Alignment(0, 0),
                     ),
                 ]),
-                padding=ft.padding.all(20),
+                padding=ft.Padding(left=20, right=20, top=20, bottom=20),
                 bgcolor=ft.Colors.WHITE,
                 border_radius=16,
-                margin=ft.margin.only(left=24, right=24),
+                margin=ft.Margin(left=24, right=24, top=0, bottom=0),
                 shadow=ft.BoxShadow(
                     blur_radius=10,
                     color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
@@ -377,7 +377,7 @@ class PartsServiceSalesReportContent:
                 ft.Text("ລາຄາສະເລ່ຍ", size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=150),
                 ft.Text("ຍອດຂາຍລວມ", size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=150),
             ]),
-            padding=ft.padding.symmetric(vertical=12, horizontal=16),
+            padding=ft.Padding(left=16, right=16, top=12, bottom=12),
             bgcolor=ft.Colors.GREY_100,
             border_radius=ft.BorderRadius.only(top_left=12, top_right=12),
         )
@@ -395,7 +395,7 @@ class PartsServiceSalesReportContent:
                         ft.Text(self._format_currency(s.get('avg_unit_price', 0)), size=13, color="#1E293B", width=150),
                         ft.Text(self._format_currency(s.get('total_sales_amount', 0)), size=13, weight=ft.FontWeight.BOLD, color="#1E293B", width=150),
                     ]),
-                    padding=ft.padding.symmetric(vertical=12, horizontal=16),
+                    padding=ft.Padding(left=16, right=16, top=12, bottom=12),
                     bgcolor=bg,
                 )
             )
@@ -407,10 +407,10 @@ class PartsServiceSalesReportContent:
                 header,
                 table_body,
             ]),
-            padding=ft.padding.all(20),
+            padding=ft.Padding(left=20, right=20, top=20, bottom=20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
-            margin=ft.margin.only(left=24, right=24),
+            margin=ft.Margin(left=24, right=24, top=0, bottom=0),
             shadow=ft.BoxShadow(
                 blur_radius=10,
                 color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
@@ -428,16 +428,16 @@ class PartsServiceSalesReportContent:
                     ft.Container(height=12),
                     ft.Container(
                         content=ft.Text(get_text("no_data"), size=14, color="#64748B"),
-                        padding=ft.padding.all(40),
+                        padding=ft.Padding(left=40, right=40, top=40, bottom=40),
                         bgcolor=ft.Colors.GREY_50,
                         border_radius=12,
                         alignment=ft.Alignment(0, 0),
                     ),
                 ]),
-                padding=ft.padding.all(20),
+                padding=ft.Padding(left=20, right=20, top=20, bottom=20),
                 bgcolor=ft.Colors.WHITE,
                 border_radius=16,
-                margin=ft.margin.only(left=24, right=24, bottom=24),
+                margin=ft.Margin(left=24, right=24, top=0, bottom=24),
                 shadow=ft.BoxShadow(
                     blur_radius=10,
                     color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
@@ -455,7 +455,7 @@ class PartsServiceSalesReportContent:
                 ft.Text("ຍອດຂາຍລວມ", size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=120),
                 ft.Text("ກຳໄລ", size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=120),
             ]),
-            padding=ft.padding.symmetric(vertical=12, horizontal=16),
+            padding=ft.Padding(left=16, right=16, top=12, bottom=12),
             bgcolor=ft.Colors.GREY_100,
             border_radius=ft.BorderRadius.only(top_left=12, top_right=12),
         )
@@ -476,7 +476,7 @@ class PartsServiceSalesReportContent:
                         ft.Text(self._format_currency(p.get('total_sales_amount', 0)), size=13, weight=ft.FontWeight.BOLD, color="#1E293B", width=120),
                         ft.Text(self._format_currency(p.get('profit', 0)), size=13, weight=ft.FontWeight.BOLD, color="#10B981", width=120),
                     ]),
-                    padding=ft.padding.symmetric(vertical=12, horizontal=16),
+                    padding=ft.Padding(left=16, right=16, top=12, bottom=12),
                     bgcolor=bg,
                 )
             )
@@ -488,10 +488,10 @@ class PartsServiceSalesReportContent:
                 header,
                 table_body,
             ]),
-            padding=ft.padding.all(20),
+            padding=ft.Padding(left=20, right=20, top=20, bottom=20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
-            margin=ft.margin.only(left=24, right=24, bottom=24),
+            margin=ft.Margin(left=24, right=24, top=0, bottom=24),
             shadow=ft.BoxShadow(
                 blur_radius=10,
                 color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),

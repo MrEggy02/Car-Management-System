@@ -61,7 +61,7 @@ class InvoiceCreateContent:
                 bgcolor=ft.Colors.with_opacity(0.2, ft.Colors.WHITE),
                 shape=ft.RoundedRectangleBorder(radius=10),
                 elevation=0,
-                padding=ft.padding.symmetric(horizontal=20, vertical=12),
+                padding=ft.Padding(left=20, right=20, top=12, bottom=12),
             ),
         )
         
@@ -101,7 +101,7 @@ class InvoiceCreateContent:
                 spacing=12,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(vertical=14, horizontal=24),
+            padding=ft.Padding(left=24, right=24, top=14, bottom=14),
             gradient=ft.LinearGradient(
                 begin=ft.Alignment(-1, -1),
                 end=ft.Alignment(1, 1),
@@ -118,7 +118,7 @@ class InvoiceCreateContent:
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
             alignment=ft.Alignment(0, 0),
             expand=True,
-            padding=ft.padding.all(40),
+            padding=ft.Padding(left=40, right=40, top=40, bottom=40),
         )
         
         main_content = ft.Container(
@@ -174,7 +174,7 @@ class InvoiceCreateContent:
             bgcolor=ft.Colors.WHITE,
             filled=True,
             prefix_icon=ft.Icons.SEARCH,
-            content_padding=ft.padding.symmetric(horizontal=16, vertical=14),
+            content_padding=ft.Padding(left=16, right=16, top=14, bottom=14),
             expand=True,
             on_change=self.on_search_job,
             border_color=ft.Colors.GREY_200,
@@ -193,9 +193,9 @@ class InvoiceCreateContent:
         self.job_results_list = ft.Column(spacing=6, scroll=ft.ScrollMode.AUTO, height=200)
         self.job_results_container = ft.Container(
             content=self.job_results_list,
-            border=ft.border.all(1, ft.Colors.GREY_200),
+            border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_200), right=ft.BorderSide(1, ft.Colors.GREY_200), bottom=ft.BorderSide(1, ft.Colors.GREY_200), left=ft.BorderSide(1, ft.Colors.GREY_200)),
             border_radius=12,
-            padding=ft.padding.all(8),
+            padding=ft.Padding(left=8, right=8, top=8, bottom=8),
             bgcolor=ft.Colors.WHITE,
             visible=False,
         )
@@ -218,11 +218,11 @@ class InvoiceCreateContent:
                         tooltip=get_text("clear_selection"),
                     ),
                 ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                padding=ft.padding.symmetric(horizontal=12, vertical=8),
+                padding=ft.Padding(left=12, right=12, top=8, bottom=8),
             ),
             bgcolor=ft.Colors.WHITE,
             border_radius=12,
-            margin=ft.margin.only(top=8),
+            margin=ft.Margin(left=0, right=0, top=8, bottom=0),
             visible=False,
         )
         
@@ -232,7 +232,7 @@ class InvoiceCreateContent:
                 ft.Text(get_text("no_jobs_ready_for_invoice"), size=16, color="#64748B", text_align=ft.TextAlign.CENTER),
                 ft.Text(get_text("complete_repair_first"), size=12, color="#94A3B8", text_align=ft.TextAlign.CENTER),
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=12),
-            padding=ft.padding.all(40),
+            padding=ft.Padding(left=40, right=40, top=40, bottom=40),
             bgcolor=ft.Colors.WHITE,
             border_radius=12,
         )
@@ -259,7 +259,7 @@ class InvoiceCreateContent:
                 self.job_results_container,
                 self.selected_job_card,
             ]),
-            padding=ft.padding.all(16),
+            padding=ft.Padding(left=16, right=16, top=16, bottom=16),
             bgcolor=ft.Colors.WHITE,
             border_radius=12,
             shadow=ft.BoxShadow(blur_radius=4, color=ft.Colors.with_opacity(0.05, ft.Colors.BLACK)),
@@ -290,7 +290,7 @@ class InvoiceCreateContent:
             self.job_results_list.controls.append(
                 ft.Container(
                     content=ft.Text(get_text("no_orders_found"), size=13, color="#94A3B8"),
-                    padding=ft.padding.all(20),
+                    padding=ft.Padding(left=20, right=20, top=20, bottom=20),
                     alignment=ft.Alignment(0, 0),
                 )
             )
@@ -307,7 +307,7 @@ class InvoiceCreateContent:
                             content=ft.Icon(ft.Icons.RECEIPT, size=20, color=self.primary_color),
                             bgcolor=ft.Colors.with_opacity(0.1, self.primary_color),
                             border_radius=10,
-                            padding=ft.padding.all(8),
+                            padding=ft.Padding(left=8, right=8, top=8, bottom=8),
                         ),
                         ft.Column([
                             ft.Text(job_no, size=14, weight=ft.FontWeight.W_500, color="#1E293B"),
@@ -315,10 +315,10 @@ class InvoiceCreateContent:
                         ], spacing=2, expand=True),
                         ft.Icon(ft.Icons.CHEVRON_RIGHT, size=20, color="#94A3B8"),
                     ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                    padding=ft.padding.all(10),
+                    padding=ft.Padding(left=10, right=10, top=10, bottom=10),
                     bgcolor=ft.Colors.WHITE,
                     border_radius=10,
-                    border=ft.border.all(1, ft.Colors.GREY_200),
+                    border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_200), right=ft.BorderSide(1, ft.Colors.GREY_200), bottom=ft.BorderSide(1, ft.Colors.GREY_200), left=ft.BorderSide(1, ft.Colors.GREY_200)),
                     ink=True,
                     on_click=lambda e, jid=job_id: self.select_job(jid),
                 )
@@ -369,7 +369,7 @@ class InvoiceCreateContent:
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
             alignment=ft.Alignment(0, 0),
             expand=True,
-            padding=ft.padding.all(40),
+            padding=ft.Padding(left=40, right=40, top=40, bottom=40),
         )
         self.page.update()
         
@@ -402,7 +402,7 @@ class InvoiceCreateContent:
                     style=ft.ButtonStyle(bgcolor=self.primary_color, color=ft.Colors.WHITE),
                 ),
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=8),
-            padding=ft.padding.all(40),
+            padding=ft.Padding(left=40, right=40, top=40, bottom=40),
             bgcolor=ft.Colors.WHITE,
             border_radius=12,
         )
@@ -415,8 +415,8 @@ class InvoiceCreateContent:
                 ft.Text(label, size=12, color="#64748B", width=110),
                 ft.Text(value, size=13, color="#1E293B", weight=ft.FontWeight.W_500, expand=True),
             ], spacing=12),
-            padding=ft.padding.symmetric(vertical=5),
-            border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_50)),
+            padding=ft.Padding(left=0, right=0, top=5, bottom=5),
+            border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_50)),
         )
     
     def _build_invoice_form(self):
@@ -435,11 +435,11 @@ class InvoiceCreateContent:
                 self._create_info_row(get_text("plate_number"), self.selected_job_data.get('plate_number', '-')),
                 self._create_info_row(get_text("car_brand_model"), f"{self.selected_job_data.get('brand', '')} {self.selected_job_data.get('model', '')}"),
             ], spacing=0),
-            padding=ft.padding.all(16),
+            padding=ft.Padding(left=16, right=16, top=16, bottom=16),
             bgcolor=ft.Colors.WHITE,
             border_radius=12,
             shadow=ft.BoxShadow(blur_radius=4, color=ft.Colors.with_opacity(0.05, ft.Colors.BLACK)),
-            margin=ft.margin.only(bottom=16),
+            margin=ft.Margin(left=0, right=0, top=0, bottom=16),
         )
         
         # Items List (Clean Card)
@@ -454,7 +454,7 @@ class InvoiceCreateContent:
             total = service.get('total', qty * unit_price)
             total_amount += total
             
-            border_bottom = ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_50)) if idx < len(self.services) - 1 else None
+            border_bottom = ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_50)) if idx < len(self.services) - 1 else None
             
             item_row = ft.Container(
                 content=ft.Row([
@@ -464,7 +464,7 @@ class InvoiceCreateContent:
                     ft.Text(self._format_currency(unit_price), size=12, color="#64748B", width=100, text_align=ft.TextAlign.RIGHT),
                     ft.Text(self._format_currency(total), size=13, weight=ft.FontWeight.W_600, color=self.primary_color, width=120, text_align=ft.TextAlign.RIGHT),
                 ], spacing=8, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                padding=ft.padding.symmetric(vertical=8, horizontal=0),
+                padding=ft.Padding(left=0, right=0, top=8, bottom=8),
                 border=border_bottom,
             )
             items_list.controls.append(item_row)
@@ -477,7 +477,7 @@ class InvoiceCreateContent:
             total = part.get('total', qty * unit_price)
             total_amount += total
             
-            border_bottom = ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_50)) if idx < len(self.parts) - 1 else None
+            border_bottom = ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_50)) if idx < len(self.parts) - 1 else None
             
             item_row = ft.Container(
                 content=ft.Row([
@@ -487,7 +487,7 @@ class InvoiceCreateContent:
                     ft.Text(self._format_currency(unit_price), size=12, color="#64748B", width=100, text_align=ft.TextAlign.RIGHT),
                     ft.Text(self._format_currency(total), size=13, weight=ft.FontWeight.W_600, color=self.primary_color, width=120, text_align=ft.TextAlign.RIGHT),
                 ], spacing=8, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                padding=ft.padding.symmetric(vertical=8, horizontal=0),
+                padding=ft.Padding(left=0, right=0, top=8, bottom=8),
                 border=border_bottom,
             )
             items_list.controls.append(item_row)
@@ -499,10 +499,10 @@ class InvoiceCreateContent:
                 ft.Text(get_text("subtotal") + ":", size=13, weight=ft.FontWeight.W_600, color="#64748B"),
                 ft.Text(self._format_currency(total_amount), size=14, weight=ft.FontWeight.W_700, color=self.primary_color),
             ], spacing=12),
-            padding=ft.padding.symmetric(vertical=10, horizontal=0),
+            padding=ft.Padding(left=0, right=0, top=10, bottom=10),
             bgcolor="#F8FAFC",
             border_radius=8,
-            margin=ft.margin.only(top=8),
+            margin=ft.Margin(left=0, right=0, top=8, bottom=0),
         )
         items_list.controls.append(subtotal_row)
         
@@ -514,10 +514,10 @@ class InvoiceCreateContent:
                     ft.Text(get_text("discount") + ":", size=13, weight=ft.FontWeight.W_600, color="#64748B"),
                     ft.Text(f"-{self._format_currency(self.discount_amount)}", size=14, weight=ft.FontWeight.W_700, color=ft.Colors.RED_600),
                 ], spacing=12),
-                padding=ft.padding.symmetric(vertical=8, horizontal=0),
+                padding=ft.Padding(left=0, right=0, top=8, bottom=8),
                 bgcolor=ft.Colors.with_opacity(0.1, ft.Colors.RED_600),
                 border_radius=8,
-                margin=ft.margin.only(top=4),
+                margin=ft.Margin(left=0, right=0, top=4, bottom=0),
             )
             items_list.controls.append(discount_row)
             total_amount -= self.discount_amount
@@ -529,10 +529,10 @@ class InvoiceCreateContent:
                 ft.Text(get_text("final_total") + ":", size=15, weight=ft.FontWeight.W_700, color="#1E293B"),
                 ft.Text(self._format_currency(total_amount), size=18, weight=ft.FontWeight.W_800, color=self.success_color),
             ], spacing=12),
-            padding=ft.padding.symmetric(vertical=12, horizontal=0),
+            padding=ft.Padding(left=0, right=0, top=12, bottom=12),
             bgcolor=ft.Colors.with_opacity(0.1, self.success_color),
             border_radius=8,
-            margin=ft.margin.only(top=8),
+            margin=ft.Margin(left=0, right=0, top=8, bottom=0),
         )
         items_list.controls.append(final_total_row)
         
@@ -547,7 +547,7 @@ class InvoiceCreateContent:
                             ft.Icon(ft.Icons.ATTACH_MONEY, size=14, color=self.success_color),
                             ft.Text(self._format_currency(total_amount), size=14, weight=ft.FontWeight.W_700, color=self.success_color),
                         ], spacing=4),
-                        padding=ft.padding.symmetric(horizontal=10, vertical=4),
+                        padding=ft.Padding(left=10, right=10, top=4, bottom=4),
                         bgcolor=ft.Colors.with_opacity(0.1, self.success_color),
                         border_radius=16,
                     ),
@@ -565,11 +565,11 @@ class InvoiceCreateContent:
                 ft.Container(height=4),
                 items_list,
             ], spacing=0),
-            padding=ft.padding.all(16),
+            padding=ft.Padding(left=16, right=16, top=16, bottom=16),
             bgcolor=ft.Colors.WHITE,
             border_radius=12,
             shadow=ft.BoxShadow(blur_radius=4, color=ft.Colors.with_opacity(0.05, ft.Colors.BLACK)),
-            margin=ft.margin.only(bottom=16),
+            margin=ft.Margin(left=0, right=0, top=0, bottom=16),
         )
         
         # Payment Section (Clean Card)
@@ -584,7 +584,7 @@ class InvoiceCreateContent:
             border_radius=12,
             bgcolor=ft.Colors.WHITE,
             filled=True,
-            content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
+            content_padding=ft.Padding(left=16, right=16, top=12, bottom=12),
         )
         
         self.received_field = ft.TextField(
@@ -595,7 +595,7 @@ class InvoiceCreateContent:
             border_radius=12,
             bgcolor=ft.Colors.WHITE,
             filled=True,
-            content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
+            content_padding=ft.Padding(left=16, right=16, top=12, bottom=12),
         )
         
         self.change_text = ft.Text("0 KIP", size=16, weight=ft.FontWeight.BOLD, color=self.success_color, text_align=ft.TextAlign.RIGHT)
@@ -632,7 +632,7 @@ class InvoiceCreateContent:
                     self.change_text,
                 ]),
             ], spacing=0),
-            padding=ft.padding.all(16),
+            padding=ft.Padding(left=16, right=16, top=16, bottom=16),
             bgcolor=ft.Colors.WHITE,
             border_radius=12,
             shadow=ft.BoxShadow(blur_radius=4, color=ft.Colors.with_opacity(0.05, ft.Colors.BLACK)),
@@ -661,7 +661,7 @@ class InvoiceCreateContent:
         
         main_card = ft.Container(
             content=two_columns,
-            padding=ft.padding.symmetric(horizontal=20, vertical=20),
+            padding=ft.Padding(left=20, right=20, top=20, bottom=20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
             expand=True,
@@ -738,7 +738,7 @@ class InvoiceCreateContent:
                             content=ft.Icon(ft.Icons.CHECK_CIRCLE, size=28, color=ft.Colors.WHITE),
                             bgcolor=self.success_color,
                             border_radius=12,
-                            padding=ft.padding.all(8),
+                            padding=ft.Padding(left=8, right=8, top=8, bottom=8),
                         ),
                         ft.Text(
                             get_text("success"),
@@ -750,8 +750,8 @@ class InvoiceCreateContent:
                     spacing=12,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
-                padding=ft.padding.symmetric(horizontal=20, vertical=16),
-                border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
+                padding=ft.Padding(left=20, right=20, top=16, bottom=16),
+                border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
             ),
             content=ft.Container(
                 content=ft.Column([
@@ -774,7 +774,7 @@ class InvoiceCreateContent:
                                 color=self.primary_color,
                             ),
                         ], spacing=6, alignment=ft.MainAxisAlignment.CENTER),
-                        padding=ft.padding.all(12),
+                        padding=ft.Padding(left=12, right=12, top=12, bottom=12),
                         bgcolor=ft.Colors.with_opacity(0.1, self.primary_color),
                         border_radius=10,
                     ),
@@ -786,7 +786,7 @@ class InvoiceCreateContent:
                         text_align=ft.TextAlign.CENTER,
                     ),
                 ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=8),
-                padding=ft.padding.all(24),
+                padding=ft.Padding(left=24, right=24, top=24, bottom=24),
                 width=380,
             ),
             actions=[
@@ -807,7 +807,7 @@ class InvoiceCreateContent:
                                 bgcolor=self.primary_color,
                                 color=ft.Colors.WHITE,
                                 shape=ft.RoundedRectangleBorder(radius=8),
-                                padding=ft.padding.symmetric(horizontal=20, vertical=10),
+                                padding=ft.Padding(left=20, right=20, top=10, bottom=10),
                             ),
                         ),
                     ], spacing=12, alignment=ft.MainAxisAlignment.CENTER),

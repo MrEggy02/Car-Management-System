@@ -625,7 +625,7 @@ class AppLayout:
                             ),
                             bgcolor=ft.Colors.with_opacity(0.1, "#EF4444"),
                             border_radius=50,
-                            padding=ft.padding.all(16),
+                            padding=ft.Padding(left=16, right=16, top=16, bottom=16),
                         ),
                         ft.Container(height=16),
                         # Title
@@ -649,7 +649,7 @@ class AppLayout:
                     spacing=0,
                 ),
                 width=380,
-                padding=ft.padding.all(28),
+                padding=ft.Padding(left=28, right=28, top=28, bottom=28),
             ),
             actions=[
                 ft.Container(
@@ -682,7 +682,7 @@ class AppLayout:
                                     color=ft.Colors.WHITE,
                                     shape=ft.RoundedRectangleBorder(radius=10),
                                     elevation=0,
-                                    padding=ft.padding.symmetric(horizontal=20, vertical=12),
+                                    padding=ft.Padding(left=20, right=20, top=12, bottom=12),
                                 ),
                                 expand=True,
                             ),
@@ -690,7 +690,7 @@ class AppLayout:
                         spacing=12,
                         alignment=ft.MainAxisAlignment.CENTER,
                     ),
-                    padding=ft.padding.symmetric(horizontal=20, vertical=16),
+                    padding=ft.Padding(left=20, right=20, top=16, bottom=16),
                 ),
             ],
             actions_alignment=ft.MainAxisAlignment.CENTER,

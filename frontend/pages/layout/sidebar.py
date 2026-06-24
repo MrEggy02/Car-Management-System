@@ -77,7 +77,7 @@ class SidebarManager:
                             scroll=ft.ScrollMode.AUTO,
                         ),
                         expand=True,
-                        padding=ft.padding.only(top=0, left=0, right=0),
+                        padding=ft.Padding(left=0, right=0, top=0, bottom=0),
                     ),
                 ],
                 spacing=0,
@@ -124,8 +124,8 @@ class SidebarManager:
         ]
         
         data_menu_container = ft.Container(
-            padding=ft.padding.symmetric(vertical=2, horizontal=0),
-            margin=ft.margin.symmetric(horizontal=0, vertical=0),
+            padding=ft.Padding(left=0, right=0, top=2, bottom=2),
+            margin=ft.Margin(left=0, right=0, top=0, bottom=0),
         )
         
         # Main button with arrow
@@ -148,8 +148,8 @@ class SidebarManager:
                 ],
                 spacing=16,
             ),
-            padding=ft.padding.symmetric(vertical=10, horizontal=16),
-            margin=ft.margin.symmetric(horizontal=12, vertical=2),
+            padding=ft.Padding(left=16, right=16, top=10, bottom=10),
+            margin=ft.Margin(left=12, right=12, top=2, bottom=2),
             border_radius=12,
             ink=True,
             on_click=lambda e: self.parent.toggle_data_menu(),
@@ -190,8 +190,8 @@ class SidebarManager:
                 ],
                 spacing=16,
             ),
-            padding=ft.padding.symmetric(vertical=10, horizontal=16),
-            margin=ft.margin.symmetric(horizontal=12, vertical=2),
+            padding=ft.Padding(left=16, right=16, top=10, bottom=10),
+            margin=ft.Margin(left=12, right=12, top=2, bottom=2),
             border_radius=12,
             ink=True,
             data="customer_menu",
@@ -218,8 +218,8 @@ class SidebarManager:
                 ],
                 spacing=16,
             ),
-            padding=ft.padding.symmetric(vertical=10, horizontal=16),
-            margin=ft.margin.symmetric(horizontal=12, vertical=2),
+            padding=ft.Padding(left=16, right=16, top=10, bottom=10),
+            margin=ft.Margin(left=12, right=12, top=2, bottom=2),
             border_radius=12,
             ink=True,
             data="job_order_menu",
@@ -246,8 +246,8 @@ class SidebarManager:
                 ],
                 spacing=16,
             ),
-            padding=ft.padding.symmetric(vertical=10, horizontal=16),
-            margin=ft.margin.symmetric(horizontal=12, vertical=2),
+            padding=ft.Padding(left=16, right=16, top=10, bottom=10),
+            margin=ft.Margin(left=12, right=12, top=2, bottom=2),
             border_radius=12,
             ink=True,
             data="quotation_menu",
@@ -274,8 +274,8 @@ class SidebarManager:
                 ],
                 spacing=16,
             ),
-            padding=ft.padding.symmetric(vertical=10, horizontal=16),
-            margin=ft.margin.symmetric(horizontal=12, vertical=2),
+            padding=ft.Padding(left=16, right=16, top=10, bottom=10),
+            margin=ft.Margin(left=12, right=12, top=2, bottom=2),
             border_radius=12,
             ink=True,
             data="repair_menu",
@@ -302,8 +302,8 @@ class SidebarManager:
                 ],
                 spacing=16,
             ),
-            padding=ft.padding.symmetric(vertical=10, horizontal=16),
-            margin=ft.margin.symmetric(horizontal=12, vertical=2),
+            padding=ft.Padding(left=16, right=16, top=10, bottom=10),
+            margin=ft.Margin(left=12, right=12, top=2, bottom=2),
             border_radius=12,
             ink=True,
             data="invoice_menu",
@@ -330,8 +330,8 @@ class SidebarManager:
                 ],
                 spacing=16,
             ),
-            padding=ft.padding.symmetric(vertical=10, horizontal=16),
-            margin=ft.margin.symmetric(horizontal=12, vertical=2),
+            padding=ft.Padding(left=16, right=16, top=10, bottom=10),
+            margin=ft.Margin(left=12, right=12, top=2, bottom=2),
             border_radius=12,
             ink=True,
             data="purchase_menu",
@@ -352,8 +352,8 @@ class SidebarManager:
         ]
         
         reports_menu_container = ft.Container(
-            padding=ft.padding.symmetric(vertical=2, horizontal=0),
-            margin=ft.margin.symmetric(horizontal=0, vertical=0),
+            padding=ft.Padding(left=0, right=0, top=2, bottom=2),
+            margin=ft.Margin(left=0, right=0, top=0, bottom=0),
         )
         
         reports_main_btn = ft.Container(
@@ -375,8 +375,8 @@ class SidebarManager:
                 ],
                 spacing=16,
             ),
-            padding=ft.padding.symmetric(vertical=10, horizontal=16),
-            margin=ft.margin.symmetric(horizontal=12, vertical=2),
+            padding=ft.Padding(left=16, right=16, top=10, bottom=10),
+            margin=ft.Margin(left=12, right=12, top=2, bottom=2),
             border_radius=12,
             ink=True,
             on_click=lambda e: self.parent.toggle_reports_menu(),
@@ -403,8 +403,8 @@ class SidebarManager:
     def _create_nav_button(self, item, idx):
         """สร้างปุ่มนำทางหลัก"""
         btn_container = ft.Container(
-            padding=ft.padding.symmetric(vertical=10, horizontal=16),
-            margin=ft.margin.symmetric(horizontal=12, vertical=2),
+            padding=ft.Padding(left=16, right=16, top=10, bottom=10),
+            margin=ft.Margin(left=12, right=12, top=2, bottom=2),
             border_radius=12,
             ink=True,
             data=idx,
@@ -421,7 +421,7 @@ class SidebarManager:
             icon.color = self.parent.selected_color
             label.color = self.parent.selected_color
             btn_container.bgcolor = ft.Colors.with_opacity(0.1, self.parent.selected_color)
-            btn_container.border = ft.border.only(left=ft.border.BorderSide(3, self.parent.selected_color))
+            btn_container.border = ft.Border(left=ft.BorderSide(3, self.parent.selected_color))
             icon.src = item["selected_icon"]
         
         return btn_container, icon, label
@@ -429,8 +429,8 @@ class SidebarManager:
     def _create_submenu_button(self, item):
         """สร้างปุ่มซับเมนูสำหรับ Data Management"""
         btn_container = ft.Container(
-            padding=ft.padding.symmetric(vertical=6, horizontal=16),
-            margin=ft.margin.symmetric(horizontal=12, vertical=1),
+            padding=ft.Padding(left=16, right=16, top=6, bottom=6),
+            margin=ft.Margin(left=12, right=12, top=1, bottom=1),
             border_radius=10,
             ink=True,
             data=item["index"],
@@ -455,8 +455,8 @@ class SidebarManager:
     def _create_reports_submenu_button(self, item):
         """สร้างปุ่มซับเมนูสำหรับ Reports Management"""
         btn_container = ft.Container(
-            padding=ft.padding.symmetric(vertical=6, horizontal=16),
-            margin=ft.margin.symmetric(horizontal=12, vertical=1),
+            padding=ft.Padding(left=16, right=16, top=6, bottom=6),
+            margin=ft.Margin(left=12, right=12, top=1, bottom=1),
             border_radius=10,
             ink=True,
             data=item["index"],
@@ -533,7 +533,7 @@ class SidebarManager:
         if selected:
             selected["label"].color = self.parent.selected_color
             selected["container"].bgcolor = ft.Colors.with_opacity(0.1, self.parent.selected_color)
-            selected["container"].border = ft.border.only(left=ft.border.BorderSide(3, self.parent.selected_color))
+            selected["container"].border = ft.Border(left=ft.BorderSide(3, self.parent.selected_color))
         elif current in [11, 13, 15, 17, 20, 23]:
             # Single item menu
             btn_map = {
@@ -552,14 +552,14 @@ class SidebarManager:
                     elif isinstance(child, ft.Text):
                         child.color = self.parent.selected_color
                 btn.bgcolor = ft.Colors.with_opacity(0.1, self.parent.selected_color)
-                btn.border = ft.border.only(left=ft.border.BorderSide(3, self.parent.selected_color))
+                btn.border = ft.Border(left=ft.BorderSide(3, self.parent.selected_color))
         elif current < len(self.nav_buttons):
             # Dashboard
             main_btn = self.nav_buttons[current]
             main_btn["icon"].color = self.parent.selected_color
             main_btn["label"].color = self.parent.selected_color
             main_btn["container"].bgcolor = ft.Colors.with_opacity(0.1, self.parent.selected_color)
-            main_btn["container"].border = ft.border.only(left=ft.border.BorderSide(3, self.parent.selected_color))
+            main_btn["container"].border = ft.Border(left=ft.BorderSide(3, self.parent.selected_color))
             if "selected_icon_path" in main_btn:
                 main_btn["icon"].src = main_btn["selected_icon_path"]
     

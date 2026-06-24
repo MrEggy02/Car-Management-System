@@ -2,29 +2,6 @@ import flet as ft
 from api_client import APIClient
 import re
 
-# Patch layout helper modules with their class equivalents to support lowercase modules across the codebase
-# padding
-ft.padding.symmetric = ft.Padding.symmetric
-ft.padding.all = ft.Padding.all
-ft.padding.only = ft.Padding.only
-ft.padding.zero = ft.Padding.zero
-
-# margin
-ft.margin.symmetric = ft.Margin.symmetric
-ft.margin.all = ft.Margin.all
-ft.margin.only = ft.Margin.only
-
-# border
-ft.border.all = ft.Border.all
-ft.border.only = ft.Border.only
-ft.border.symmetric = ft.Border.symmetric
-
-# border_radius
-ft.border_radius.all = ft.BorderRadius.all
-ft.border_radius.only = ft.BorderRadius.only
-ft.border_radius.horizontal = ft.BorderRadius.horizontal
-ft.border_radius.vertical = ft.BorderRadius.vertical
-
 def mask_text(text):
     if text is None:
         return None

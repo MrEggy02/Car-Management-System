@@ -29,7 +29,7 @@ class PromotionsContent:
         self.filtered_promotions = []
         self.search_input = None
         self.current_page = 1
-        self.items_per_page = 5
+        self.items_per_page = 10
         self.total_pages = 1
         self.primary_color = "#1565C0"
         self.primary_dark = "#0D47A1"
@@ -63,14 +63,14 @@ class PromotionsContent:
                             bgcolor=ft.Colors.with_opacity(0.2, ft.Colors.WHITE),
                             shape=ft.RoundedRectangleBorder(radius=10),
                             elevation=0,
-                            padding=ft.padding.symmetric(horizontal=16, vertical=10),
+                            padding=ft.Padding(left=16, right=16, top=10, bottom=10),
                         ),
                     ),
                 ],
                 spacing=16,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(vertical=12, horizontal=24),
+            padding=ft.Padding(left=24, right=24, top=12, bottom=12),
             gradient=ft.LinearGradient(
                 begin=ft.Alignment(-1, -1),
                 end=ft.Alignment(1, 1),
@@ -87,14 +87,14 @@ class PromotionsContent:
             expand=True,
             on_change=self.filter_promotions,
             prefix_icon=ft.Icons.SEARCH,
-            content_padding=ft.padding.symmetric(horizontal=14, vertical=10),
+            content_padding=ft.Padding(left=14, right=14, top=10, bottom=10),
             border_color=ft.Colors.GREY_200,
             focused_border_color=self.primary_color,
         )
         
         control_bar = ft.Container(
             content=self.search_input,
-            padding=ft.padding.all(16),
+            padding=ft.Padding(left=16, right=16, top=16, bottom=16),
             bgcolor="#F5F7FA",
         )
         
@@ -103,16 +103,16 @@ class PromotionsContent:
         table_scroll_container = ft.Container(
             content=self.table_rows,
             expand=True,
-            border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_200)),
+            border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_200)),
             bgcolor=ft.Colors.WHITE,
         )
         
         table_container = ft.Container(
             content=ft.Column([table_header, ft.Divider(height=1, color=ft.Colors.GREY_300), table_scroll_container], spacing=0),
-            margin=ft.margin.only(left=16, right=16),
+            margin=ft.Margin(left=16, right=16, top=0, bottom=0),
             bgcolor=ft.Colors.WHITE,
             border_radius=ft.BorderRadius.only(top_left=12, top_right=12, bottom_left=12, bottom_right=12),
-            border=ft.border.all(1, ft.Colors.GREY_200),
+            border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_200), right=ft.BorderSide(1, ft.Colors.GREY_200), bottom=ft.BorderSide(1, ft.Colors.GREY_200), left=ft.BorderSide(1, ft.Colors.GREY_200)),
             expand=True,
         )
         
@@ -132,14 +132,14 @@ class PromotionsContent:
         return ft.Container(
             content=ft.Row([
                 ft.Container(content=ft.Text("#", size=11, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=45, alignment=ft.Alignment(0, 0)),
-                ft.Container(content=ft.Text(get_text('promo_name'), size=11, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=200, alignment=ft.Alignment(-1, 0), padding=ft.padding.only(left=8)),
-                ft.Container(content=ft.Text(get_text('discount_type'), size=11, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=100, alignment=ft.Alignment(-1, 0), padding=ft.padding.only(left=8)),
-                ft.Container(content=ft.Text(get_text('discount_value'), size=11, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=110, alignment=ft.Alignment(1, 0), padding=ft.padding.only(right=8)),
+                ft.Container(content=ft.Text(get_text('promo_name'), size=11, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=200, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=8, right=0, top=0, bottom=0)),
+                ft.Container(content=ft.Text(get_text('discount_type'), size=11, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=100, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=8, right=0, top=0, bottom=0)),
+                ft.Container(content=ft.Text(get_text('discount_value'), size=11, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=110, alignment=ft.Alignment(1, 0), padding=ft.Padding(left=0, right=8, top=0, bottom=0)),
                 ft.Container(content=ft.Text(get_text('period'), size=11, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=160, alignment=ft.Alignment(0, 0)),
                 ft.Container(content=ft.Text(get_text('status'), size=11, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=80, alignment=ft.Alignment(0, 0)),
                 ft.Container(content=ft.Text(get_text('actions'), size=11, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=200, alignment=ft.Alignment(0, 0)),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
-            padding=ft.padding.symmetric(vertical=10, horizontal=8),
+            padding=ft.Padding(left=8, right=8, top=10, bottom=10),
             bgcolor=ft.Colors.GREY_100,
             border_radius=ft.BorderRadius.only(top_left=12, top_right=12),
         )
@@ -179,7 +179,7 @@ class PromotionsContent:
                 ], spacing=4),
                 bgcolor="#E8F5E9",
                 border_radius=12,
-                padding=ft.padding.symmetric(horizontal=6, vertical=2),
+                padding=ft.Padding(left=6, right=6, top=2, bottom=2),
             )
         else:
             return ft.Container(
@@ -189,7 +189,7 @@ class PromotionsContent:
                 ], spacing=4),
                 bgcolor="#FFEEEE",
                 border_radius=12,
-                padding=ft.padding.symmetric(horizontal=6, vertical=2),
+                padding=ft.Padding(left=6, right=6, top=2, bottom=2),
             )
     
     def _create_table_row(self, promo, index, row_number):
@@ -236,7 +236,7 @@ class PromotionsContent:
             icon_color="#1565C0",
             on_click=lambda e, pid=promo_id, pname=name: self.show_detail_dialog(pid, pname),
             tooltip=get_text("detail"),
-            style=ft.ButtonStyle(padding=ft.padding.all(4)),
+            style=ft.ButtonStyle(padding=ft.Padding(left=4, right=4, top=4, bottom=4)),
         )
         
         edit_btn = ft.IconButton(
@@ -245,7 +245,7 @@ class PromotionsContent:
             icon_color="#1565C0",
             on_click=lambda e, pid=promo_id: self._safe_edit(pid),
             tooltip=get_text("edit"),
-            style=ft.ButtonStyle(padding=ft.padding.all(4)),
+            style=ft.ButtonStyle(padding=ft.Padding(left=4, right=4, top=4, bottom=4)),
         )
         
         delete_btn = ft.IconButton(
@@ -254,7 +254,7 @@ class PromotionsContent:
             icon_color=ft.Colors.RED_600,
             on_click=lambda e, pid=promo_id: self._safe_delete(pid),
             tooltip=get_text("delete"),
-            style=ft.ButtonStyle(padding=ft.padding.all(4)),
+            style=ft.ButtonStyle(padding=ft.Padding(left=4, right=4, top=4, bottom=4)),
         )
         
         row = ft.Container(
@@ -262,7 +262,7 @@ class PromotionsContent:
                 ft.Container(
                     content=ft.Container(
                         content=ft.Text(str(row_number), size=12, weight=ft.FontWeight.W_500, color="#1565C0"),
-                        padding=ft.padding.symmetric(horizontal=6, vertical=2),
+                        padding=ft.Padding(left=6, right=6, top=2, bottom=2),
                         bgcolor=ft.Colors.BLUE_50,
                         border_radius=4,
                         alignment=ft.Alignment(0, 0),
@@ -277,7 +277,7 @@ class PromotionsContent:
                     ], spacing=1),
                     width=200,
                     alignment=ft.Alignment(-1, 0),
-                    padding=ft.padding.only(left=8),
+                    padding=ft.Padding(left=8, right=0, top=0, bottom=0),
                     tooltip=name,
                 ),
                 ft.Container(
@@ -285,17 +285,17 @@ class PromotionsContent:
                         content=ft.Text(discount_type_label, size=11, color="#64748B"),
                         bgcolor=ft.Colors.GREY_100,
                         border_radius=4,
-                        padding=ft.padding.symmetric(horizontal=6, vertical=2),
+                        padding=ft.Padding(left=6, right=6, top=2, bottom=2),
                     ),
                     width=100,
                     alignment=ft.Alignment(-1, 0),
-                    padding=ft.padding.only(left=8),
+                    padding=ft.Padding(left=8, right=0, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(discount_display, size=12, weight=ft.FontWeight.W_600, color=ft.Colors.ORANGE_700),
                     width=110,
                     alignment=ft.Alignment(1, 0),
-                    padding=ft.padding.only(right=8),
+                    padding=ft.Padding(left=0, right=8, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(period_display, size=10, color=ft.Colors.GREY_600, max_lines=1),
@@ -313,7 +313,7 @@ class PromotionsContent:
                     alignment=ft.Alignment(0, 0),
                 ),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
-            padding=ft.padding.symmetric(vertical=8, horizontal=8),
+            padding=ft.Padding(left=8, right=8, top=8, bottom=8),
             bgcolor=row_bg,
         )
         
@@ -327,7 +327,7 @@ class PromotionsContent:
                 ft.Text(get_text("no_data"), size=14, color=ft.Colors.GREY_500),
                 ft.Text(get_text("click_add"), size=12, color=ft.Colors.GREY_400),
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, alignment=ft.Alignment(0, 0)),
-            padding=ft.padding.all(30),
+            padding=ft.Padding(left=30, right=30, top=30, bottom=30),
             expand=True,
         )
     
@@ -352,15 +352,15 @@ class PromotionsContent:
                 ft.Container(
                     content=ft.Row([
                         ft.IconButton(icon=ft.Icons.CHEVRON_LEFT, icon_size=18, on_click=self.prev_page, disabled=prev_disabled, style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=6))),
-                        ft.Container(content=ft.Text(f"{self.current_page}/{self.total_pages}", size=12, weight=ft.FontWeight.W_500, color="#1E293B"), padding=ft.padding.symmetric(horizontal=12)),
+                        ft.Container(content=ft.Text(f"{self.current_page}/{self.total_pages}", size=12, weight=ft.FontWeight.W_500, color="#1E293B"), padding=ft.Padding(left=12, right=12, top=0, bottom=0)),
                         ft.IconButton(icon=ft.Icons.CHEVRON_RIGHT, icon_size=18, on_click=self.next_page, disabled=next_disabled, style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=6))),
                     ]),
                     bgcolor=ft.Colors.WHITE,
                     border_radius=8,
-                    padding=ft.padding.symmetric(horizontal=6, vertical=2),
+                    padding=ft.Padding(left=6, right=6, top=2, bottom=2),
                 ),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
-            padding=ft.padding.symmetric(vertical=12, horizontal=16),
+            padding=ft.Padding(left=16, right=16, top=12, bottom=12),
             bgcolor="#F5F7FA",
         )
         self.page.update()

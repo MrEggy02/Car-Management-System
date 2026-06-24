@@ -19,7 +19,7 @@ def show_create_quotation_dialog(primary_color, parts_list, services_list, pendi
         border_radius=10,
         bgcolor=ft.Colors.WHITE,
         filled=True,
-        content_padding=ft.padding.symmetric(horizontal=14, vertical=10),
+        content_padding=ft.Padding(left=14, right=14, top=10, bottom=10),
         options=[
             ft.dropdown.Option(
                 str(o.get("id")), 
@@ -37,7 +37,7 @@ def show_create_quotation_dialog(primary_color, parts_list, services_list, pendi
             ft.Text(get_text("selected_job"), size=11, weight=ft.FontWeight.W_500, color="#64748B"),
             job_info_text,
         ]),
-        padding=ft.padding.all(10),
+        padding=ft.Padding(left=10, right=10, top=10, bottom=10),
         bgcolor=ft.Colors.GREY_50,
         border_radius=8,
         visible=False,
@@ -48,14 +48,14 @@ def show_create_quotation_dialog(primary_color, parts_list, services_list, pendi
         content=ft.Text(get_text("parts"), size=13, weight=ft.FontWeight.W_500, color=ft.Colors.WHITE),
         bgcolor=primary_color,
         border_radius=8,
-        padding=ft.padding.symmetric(horizontal=16, vertical=6),
+        padding=ft.Padding(left=16, right=16, top=6, bottom=6),
     )
     
     services_btn = ft.Container(
         content=ft.Text(get_text("services"), size=13, weight=ft.FontWeight.W_500, color="#64748B"),
         bgcolor=ft.Colors.GREY_200,
         border_radius=8,
-        padding=ft.padding.symmetric(horizontal=16, vertical=6),
+        padding=ft.Padding(left=16, right=16, top=6, bottom=6),
     )
     
     # Search field
@@ -65,7 +65,7 @@ def show_create_quotation_dialog(primary_color, parts_list, services_list, pendi
         bgcolor=ft.Colors.WHITE,
         filled=True,
         prefix_icon=ft.Icons.SEARCH,
-        content_padding=ft.padding.symmetric(horizontal=12, vertical=8),
+        content_padding=ft.Padding(left=12, right=12, top=8, bottom=8),
         expand=True,
     )
     
@@ -123,7 +123,7 @@ def show_create_quotation_dialog(primary_color, parts_list, services_list, pendi
                         on_click=lambda e, tid=item.get("temp_id"): remove_item(tid),
                     ),
                 ], spacing=8, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                padding=ft.padding.symmetric(vertical=4, horizontal=8),
+                padding=ft.Padding(left=8, right=8, top=4, bottom=4),
                 bgcolor=ft.Colors.GREY_50,
                 border_radius=6,
             )
@@ -213,7 +213,7 @@ def show_create_quotation_dialog(primary_color, parts_list, services_list, pendi
                             on_click=lambda e, pid=part.get('id'), pname=part.get('name'), pprice=sell_price: add_item("part", pid, pname, pprice),
                         ),
                     ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                    padding=ft.padding.symmetric(vertical=6, horizontal=10),
+                    padding=ft.Padding(left=10, right=10, top=6, bottom=6),
                     bgcolor=ft.Colors.GREY_50,
                     border_radius=6,
                 )
@@ -243,7 +243,7 @@ def show_create_quotation_dialog(primary_color, parts_list, services_list, pendi
                             on_click=lambda e, sid=service.get('id'), sname=service.get('name'), sprice=price: add_item("service", sid, sname, sprice),
                         ),
                     ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                    padding=ft.padding.symmetric(vertical=6, horizontal=10),
+                    padding=ft.Padding(left=10, right=10, top=6, bottom=6),
                     bgcolor=ft.Colors.GREY_50,
                     border_radius=6,
                 )
@@ -253,7 +253,7 @@ def show_create_quotation_dialog(primary_color, parts_list, services_list, pendi
             results_list.controls.append(
                 ft.Container(
                     content=ft.Text(get_text("no_items_found"), size=12, color="#64748B"),
-                    padding=ft.padding.all(20),
+                    padding=ft.Padding(left=20, right=20, top=20, bottom=20),
                     alignment=ft.Alignment(0, 0),
                 )
             )
@@ -294,15 +294,15 @@ def show_create_quotation_dialog(primary_color, parts_list, services_list, pendi
                         content=ft.Icon(ft.Icons.REQUEST_QUOTE, size=20, color=ft.Colors.WHITE),
                         bgcolor=primary_color,
                         border_radius=10,
-                        padding=ft.padding.all(5),
+                        padding=ft.Padding(left=5, right=5, top=5, bottom=5),
                     ),
                     ft.Text(get_text("new_quotation"), size=15, weight=ft.FontWeight.BOLD, color="#1E293B"),
                 ],
                 spacing=8,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(horizontal=16, vertical=10),
-            border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
+            padding=ft.Padding(left=16, right=16, top=10, bottom=10),
+            border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
         ),
         content=ft.Container(
             content=ft.Column([
@@ -325,7 +325,7 @@ def show_create_quotation_dialog(primary_color, parts_list, services_list, pendi
             ], spacing=8, scroll=ft.ScrollMode.AUTO),
             width=550,
             height=580,
-            padding=ft.padding.all(16),
+            padding=ft.Padding(left=16, right=16, top=16, bottom=16),
         ),
         actions=[
             ft.Container(
@@ -342,7 +342,7 @@ def show_create_quotation_dialog(primary_color, parts_list, services_list, pendi
                             bgcolor=primary_color,
                             shape=ft.RoundedRectangleBorder(radius=6),
                             elevation=0,
-                            padding=ft.padding.symmetric(horizontal=16, vertical=6),
+                            padding=ft.Padding(left=16, right=16, top=6, bottom=6),
                         ),
                     ),
                     ft.ElevatedButton(
@@ -355,12 +355,12 @@ def show_create_quotation_dialog(primary_color, parts_list, services_list, pendi
                             bgcolor=ft.Colors.GREEN_600,
                             shape=ft.RoundedRectangleBorder(radius=6),
                             elevation=0,
-                            padding=ft.padding.symmetric(horizontal=16, vertical=6),
+                            padding=ft.Padding(left=16, right=16, top=6, bottom=6),
                         ),
                     ),
                 ], spacing=8, alignment=ft.MainAxisAlignment.END),
-                padding=ft.padding.symmetric(horizontal=16, vertical=10),
-                border=ft.border.only(top=ft.BorderSide(1, ft.Colors.GREY_100)),
+                padding=ft.Padding(left=16, right=16, top=10, bottom=10),
+                border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_100)),
             ),
         ],
         actions_alignment=ft.MainAxisAlignment.END,
@@ -389,7 +389,7 @@ def show_quotation_detail_dialog(quotation, primary_color, on_print, on_close):
         items_column.controls.append(
             ft.Container(
                 content=ft.Text(get_text("no_items"), size=14, color="#64748B"),
-                padding=ft.padding.all(20),
+                padding=ft.Padding(left=20, right=20, top=20, bottom=20),
                 alignment=ft.Alignment(0, 0),
             )
         )
@@ -429,7 +429,7 @@ def show_quotation_detail_dialog(quotation, primary_color, on_print, on_close):
                     ], spacing=2, expand=True),
                     ft.Text(f"{int(item_total):,} KIP", size=13, weight=ft.FontWeight.BOLD, color="#1E293B"),
                 ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                padding=ft.padding.symmetric(vertical=6, horizontal=10),
+                padding=ft.Padding(left=10, right=10, top=6, bottom=6),
                 bgcolor=ft.Colors.GREY_50,
                 border_radius=8,
             )
@@ -449,7 +449,7 @@ def show_quotation_detail_dialog(quotation, primary_color, on_print, on_close):
                     content=ft.Icon(ft.Icons.REQUEST_QUOTE, size=24, color=primary_color),
                     bgcolor="#E3F2FD",
                     border_radius=10,
-                    padding=ft.padding.all(8),
+                    padding=ft.Padding(left=8, right=8, top=8, bottom=8),
                 ),
                 ft.Column([
                     ft.Text(f"{get_text('quotation')} #{quotation.get('id')}", size=16, weight=ft.FontWeight.BOLD),
@@ -483,9 +483,9 @@ def show_quotation_detail_dialog(quotation, primary_color, on_print, on_close):
             ft.Container(
                 content=items_column,
                 height=250,
-                border=ft.border.all(1, ft.Colors.GREY_200),
+                border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_200), right=ft.BorderSide(1, ft.Colors.GREY_200), bottom=ft.BorderSide(1, ft.Colors.GREY_200), left=ft.BorderSide(1, ft.Colors.GREY_200)),
                 border_radius=8,
-                padding=ft.padding.all(8),
+                padding=ft.Padding(left=8, right=8, top=8, bottom=8),
             ),
             ft.Divider(height=1, color=ft.Colors.GREY_200),
             ft.Row([
@@ -503,7 +503,7 @@ def show_quotation_detail_dialog(quotation, primary_color, on_print, on_close):
         content=scrollable_content,
         width=520,
         height=480,
-        padding=ft.padding.all(16),
+        padding=ft.Padding(left=16, right=16, top=16, bottom=16),
     )
     
     dialog = ft.AlertDialog(
@@ -517,15 +517,15 @@ def show_quotation_detail_dialog(quotation, primary_color, on_print, on_close):
                         content=ft.Icon(ft.Icons.INFO, size=20, color=ft.Colors.WHITE),
                         bgcolor=primary_color,
                         border_radius=10,
-                        padding=ft.padding.all(5),
+                        padding=ft.Padding(left=5, right=5, top=5, bottom=5),
                     ),
                     ft.Text(get_text("quotation_details"), size=15, weight=ft.FontWeight.BOLD, color="#1E293B"),
                 ],
                 spacing=8,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(horizontal=16, vertical=10),
-            border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
+            padding=ft.Padding(left=16, right=16, top=10, bottom=10),
+            border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
         ),
         content=dialog_content,
         actions=[
@@ -580,15 +580,15 @@ def show_update_status_dialog(quotation_id, current_status, primary_color, on_up
                         content=ft.Icon(ft.Icons.EDIT, size=20, color=ft.Colors.WHITE),
                         bgcolor=primary_color,
                         border_radius=10,
-                        padding=ft.padding.all(5),
+                        padding=ft.Padding(left=5, right=5, top=5, bottom=5),
                     ),
                     ft.Text(get_text("update_quotation_status"), size=15, weight=ft.FontWeight.BOLD, color="#1E293B"),
                 ],
                 spacing=8,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(horizontal=16, vertical=10),
-            border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
+            padding=ft.Padding(left=16, right=16, top=10, bottom=10),
+            border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
         ),
         content=ft.Container(
             content=ft.Column([
@@ -596,7 +596,7 @@ def show_update_status_dialog(quotation_id, current_status, primary_color, on_up
                 ft.Container(height=12),
                 status_dropdown,
             ]),
-            padding=ft.padding.all(16),
+            padding=ft.Padding(left=16, right=16, top=16, bottom=16),
             width=350,
         ),
         actions=[
@@ -614,12 +614,12 @@ def show_update_status_dialog(quotation_id, current_status, primary_color, on_up
                             bgcolor=primary_color,
                             shape=ft.RoundedRectangleBorder(radius=6),
                             elevation=0,
-                            padding=ft.padding.symmetric(horizontal=16, vertical=6),
+                            padding=ft.Padding(left=16, right=16, top=6, bottom=6),
                         ),
                     ),
                 ], spacing=8, alignment=ft.MainAxisAlignment.END),
-                padding=ft.padding.symmetric(horizontal=16, vertical=10),
-                border=ft.border.only(top=ft.BorderSide(1, ft.Colors.GREY_100)),
+                padding=ft.Padding(left=16, right=16, top=10, bottom=10),
+                border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_100)),
             ),
         ],
         actions_alignment=ft.MainAxisAlignment.END,
@@ -645,15 +645,15 @@ def show_delete_quotation_dialog(quotation_name, on_confirm, on_close):
                         content=ft.Icon(ft.Icons.WARNING_AMBER, size=20, color=ft.Colors.WHITE),
                         bgcolor=ft.Colors.RED_600,
                         border_radius=10,
-                        padding=ft.padding.all(5),
+                        padding=ft.Padding(left=5, right=5, top=5, bottom=5),
                     ),
                     ft.Text(get_text("confirm"), size=15, weight=ft.FontWeight.BOLD, color="#1E293B"),
                 ],
                 spacing=8,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(horizontal=16, vertical=10),
-            border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
+            padding=ft.Padding(left=16, right=16, top=10, bottom=10),
+            border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
         ),
         content=ft.Container(
             content=ft.Column([
@@ -661,7 +661,7 @@ def show_delete_quotation_dialog(quotation_name, on_confirm, on_close):
                 ft.Container(height=4),
                 ft.Text(get_text("delete_warning"), size=12, color="#64748B", text_align=ft.TextAlign.CENTER),
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=4),
-            padding=ft.padding.all(20),
+            padding=ft.Padding(left=20, right=20, top=20, bottom=20),
             width=320,
         ),
         actions=[
@@ -679,12 +679,12 @@ def show_delete_quotation_dialog(quotation_name, on_confirm, on_close):
                             bgcolor=ft.Colors.RED_600,
                             shape=ft.RoundedRectangleBorder(radius=6),
                             elevation=0,
-                            padding=ft.padding.symmetric(horizontal=16, vertical=6),
+                            padding=ft.Padding(left=16, right=16, top=6, bottom=6),
                         ),
                     ),
                 ], spacing=8, alignment=ft.MainAxisAlignment.END),
-                padding=ft.padding.symmetric(horizontal=16, vertical=10),
-                border=ft.border.only(top=ft.BorderSide(1, ft.Colors.GREY_100)),
+                padding=ft.Padding(left=16, right=16, top=10, bottom=10),
+                border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_100)),
             ),
         ],
         actions_alignment=ft.MainAxisAlignment.END,

@@ -52,13 +52,13 @@ class PersonalPageContent:
                         content=ft.Icon(ft.Icons.PERSON, size=28, color=ft.Colors.WHITE),
                         bgcolor=ft.Colors.with_opacity(0.2, ft.Colors.WHITE),
                         border_radius=15,
-                        padding=ft.padding.all(8),
+                        padding=ft.Padding(left=8, right=8, top=8, bottom=8),
                     ),
                 ],
                 spacing=16,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(vertical=14, horizontal=26),
+            padding=ft.Padding(left=26, right=26, top=14, bottom=14),
             gradient=ft.LinearGradient(
                 begin=ft.Alignment(-1, -1),
                 end=ft.Alignment(1, 1),
@@ -81,7 +81,7 @@ class PersonalPageContent:
         content_area = ft.Container(
             content=scrollable_content,
             expand=True,
-            padding=ft.padding.all(32),
+            padding=ft.Padding(left=32, right=32, top=32, bottom=32),
             bgcolor="#F5F7FA",
         )
         
@@ -182,7 +182,7 @@ class PersonalPageContent:
                                 content=ft.Icon(ft.Icons.INFO, size=20, color=self.primary_color),
                                 bgcolor=self.primary_light,
                                 border_radius=10,
-                                padding=ft.padding.all(8),
+                                padding=ft.Padding(left=8, right=8, top=8, bottom=8),
                             ),
                             ft.Text(
                                 get_text("personal_information"),
@@ -232,12 +232,12 @@ class PersonalPageContent:
                                 content=ft.Text(role_text, size=12, color=ft.Colors.WHITE),
                                 bgcolor=self.primary_color,
                                 border_radius=12,
-                                padding=ft.padding.symmetric(horizontal=12, vertical=4),
+                                padding=ft.Padding(left=12, right=12, top=4, bottom=4),
                             ),
                         ], spacing=2, expand=True),
                     ], spacing=8),
                 ]),
-                padding=ft.padding.all(20),
+                padding=ft.Padding(left=20, right=20, top=20, bottom=20),
             ),
             elevation=2,
         )
@@ -255,7 +255,7 @@ class PersonalPageContent:
             prefix_icon=ft.Icons.BADGE,
             border_color=ft.Colors.GREY_300,
             focused_border_color=self.primary_color,
-            content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
+            content_padding=ft.Padding(left=16, right=16, top=12, bottom=12),
         )
         
         return ft.Card(
@@ -267,7 +267,7 @@ class PersonalPageContent:
                                 content=ft.Icon(ft.Icons.EDIT, size=20, color=self.primary_color),
                                 bgcolor=self.primary_light,
                                 border_radius=10,
-                                padding=ft.padding.all(8),
+                                padding=ft.Padding(left=8, right=8, top=8, bottom=8),
                             ),
                             ft.Text(
                                 get_text("edit_information"),
@@ -289,7 +289,7 @@ class PersonalPageContent:
                         prefix_icon=ft.Icons.PERSON_OUTLINE,
                         read_only=True,
                         border_color=ft.Colors.GREY_300,
-                        content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
+                        content_padding=ft.Padding(left=16, right=16, top=12, bottom=12),
                     ),
                     ft.Container(height=12),
                     # Fullname (editable)
@@ -303,10 +303,10 @@ class PersonalPageContent:
                         prefix_icon=ft.Icons.WORK,
                         read_only=True,
                         border_color=ft.Colors.GREY_300,
-                        content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
+                        content_padding=ft.Padding(left=16, right=16, top=12, bottom=12),
                     ),
                 ]),
-                padding=ft.padding.all(20),
+                padding=ft.Padding(left=20, right=20, top=20, bottom=20),
             ),
             elevation=2,
         )
@@ -384,7 +384,7 @@ class PersonalPageContent:
                                 content=ft.Icon(ft.Icons.COMPUTER, size=20, color="#64748B"),
                                 bgcolor=ft.Colors.GREY_100,
                                 border_radius=10,
-                                padding=ft.padding.all(8),
+                                padding=ft.Padding(left=8, right=8, top=8, bottom=8),
                             ),
                             ft.Text(
                                 get_text("system_information"),
@@ -431,7 +431,7 @@ class PersonalPageContent:
                         ], spacing=2, expand=True),
                     ], spacing=8),
                 ]),
-                padding=ft.padding.all(20),
+                padding=ft.Padding(left=20, right=20, top=20, bottom=20),
             ),
             elevation=2,
         )
@@ -548,7 +548,7 @@ class PersonalPageContent:
                     ft.Container(height=8),
                     confirm_password_field,
                 ]),
-                padding=ft.padding.all(20),
+                padding=ft.Padding(left=20, right=20, top=20, bottom=20),
                 width=400,
             ),
             actions=[

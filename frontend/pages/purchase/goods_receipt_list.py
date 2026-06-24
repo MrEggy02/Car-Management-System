@@ -17,7 +17,7 @@ class GoodsReceiptListContent:
         self.receipts = []
         self.filtered_receipts = []
         self.current_page = 1
-        self.items_per_page = 5
+        self.items_per_page = 10
         self.total_pages = 1
         self.search_field = None
         self.table_rows = None
@@ -27,7 +27,7 @@ class GoodsReceiptListContent:
         header = self._build_header()
         search_bar = self._build_search_bar()
         table = self._build_table()
-        self.pagination_container = ft.Container(padding=ft.padding.symmetric(vertical=12, horizontal=20))
+        self.pagination_container = ft.Container(padding=ft.Padding(left=20, right=20, top=12, bottom=12))
         
         content_area = ft.Container(
             content=ft.Column([
@@ -36,7 +36,7 @@ class GoodsReceiptListContent:
                 self.pagination_container,
             ], spacing=0, scroll=ft.ScrollMode.AUTO, expand=True),
             expand=True,
-            padding=ft.padding.all(24),
+            padding=ft.Padding(left=24, right=24, top=24, bottom=24),
             bgcolor="#F5F7FA",
         )
         
@@ -81,7 +81,7 @@ class GoodsReceiptListContent:
                 spacing=16,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(vertical=12, horizontal=24),
+            padding=ft.Padding(left=24, right=24, top=12, bottom=12),
             gradient=ft.LinearGradient(
                 begin=ft.Alignment(-1, -1),
                 end=ft.Alignment(1, 1),
@@ -97,7 +97,7 @@ class GoodsReceiptListContent:
             bgcolor=ft.Colors.WHITE,
             filled=True,
             prefix_icon=ft.Icons.SEARCH,
-            content_padding=ft.padding.symmetric(horizontal=16, vertical=14),
+            content_padding=ft.Padding(left=16, right=16, top=14, bottom=14),
             expand=True,
         )
         self.search_field.on_change = self.on_search_change
@@ -115,7 +115,7 @@ class GoodsReceiptListContent:
         
         return ft.Container(
             content=ft.Row([self.search_field, refresh_button], spacing=10),
-            margin=ft.margin.only(bottom=16),
+            margin=ft.Margin(left=0, right=0, top=0, bottom=16),
         )
     
     def _build_table(self):
@@ -124,17 +124,17 @@ class GoodsReceiptListContent:
                 ft.Container(
                     content=ft.Text(get_text("goods_receipt_no"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
                     width=130,
-                    padding=ft.padding.only(left=8),
+                    padding=ft.Padding(left=8, right=0, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(get_text("po_no"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
                     width=120,
-                    padding=ft.padding.only(left=8),
+                    padding=ft.Padding(left=8, right=0, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(get_text("supplier"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
                     width=180,
-                    padding=ft.padding.only(left=8),
+                    padding=ft.Padding(left=8, right=0, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(get_text("receipt_date"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
@@ -145,12 +145,12 @@ class GoodsReceiptListContent:
                     content=ft.Text(get_text("total_amount"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
                     width=120,
                     alignment=ft.Alignment(1, 0),
-                    padding=ft.padding.only(right=8),
+                    padding=ft.Padding(left=0, right=8, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(get_text("received_by"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
                     width=130,
-                    padding=ft.padding.only(left=8),
+                    padding=ft.Padding(left=8, right=0, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(get_text("action"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
@@ -158,7 +158,7 @@ class GoodsReceiptListContent:
                     alignment=ft.Alignment(0, 0),
                 ),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
-            padding=ft.padding.symmetric(vertical=12, horizontal=8),
+            padding=ft.Padding(left=8, right=8, top=12, bottom=12),
             bgcolor=ft.Colors.GREY_100,
             border_radius=ft.BorderRadius.only(top_left=12, top_right=12),
         )
@@ -178,10 +178,10 @@ class GoodsReceiptListContent:
         
         return ft.Container(
             content=ft.Row([table_scroll], scroll=ft.ScrollMode.AUTO),
-            margin=ft.margin.only(left=20, right=20),
+            margin=ft.Margin(left=20, right=20, top=0, bottom=0),
             bgcolor=ft.Colors.WHITE,
             border_radius=12,
-            border=ft.border.all(1, ft.Colors.GREY_200),
+            border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_200), right=ft.BorderSide(1, ft.Colors.GREY_200), bottom=ft.BorderSide(1, ft.Colors.GREY_200), left=ft.BorderSide(1, ft.Colors.GREY_200)),
             expand=True,
         )
     
@@ -202,7 +202,7 @@ class GoodsReceiptListContent:
                         ft.Icon(ft.Icons.ERROR_OUTLINE, size=48, color=ft.Colors.RED_400),
                         ft.Text(f"Error: {str(ex)}", size=14, color=ft.Colors.RED_600),
                     ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-                    padding=ft.padding.all(40),
+                    padding=ft.Padding(left=40, right=40, top=40, bottom=40),
                 )
             )
             self.page.update()
@@ -233,7 +233,7 @@ class GoodsReceiptListContent:
                         ft.Icon(ft.Icons.INBOX, size=48, color=ft.Colors.GREY_400),
                         ft.Text(get_text("no_goods_receipts"), size=16, color=ft.Colors.GREY_500),
                     ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-                    padding=ft.padding.all(40),
+                    padding=ft.Padding(left=40, right=40, top=40, bottom=40),
                 )
             )
             self.update_pagination()
@@ -284,17 +284,17 @@ class GoodsReceiptListContent:
                 ft.Container(
                     content=ft.Text(receipt_no, size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
                     width=130,
-                    padding=ft.padding.only(left=8),
+                    padding=ft.Padding(left=8, right=0, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(po_no, size=13, color="#1E293B"),
                     width=120,
-                    padding=ft.padding.only(left=8),
+                    padding=ft.Padding(left=8, right=0, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(supplier_name, size=13, color="#1E293B", max_lines=1),
                     width=180,
-                    padding=ft.padding.only(left=8),
+                    padding=ft.Padding(left=8, right=0, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(receipt_date, size=12, color="#64748B"),
@@ -305,12 +305,12 @@ class GoodsReceiptListContent:
                     content=ft.Text(f"{int(total_amount):,}", size=13, weight=ft.FontWeight.W_500, color=ft.Colors.GREEN_700),
                     width=120,
                     alignment=ft.Alignment(1, 0),
-                    padding=ft.padding.only(right=8),
+                    padding=ft.Padding(left=0, right=8, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(received_by_name, size=12, color="#64748B", max_lines=1),
                     width=130,
-                    padding=ft.padding.only(left=8),
+                    padding=ft.Padding(left=8, right=0, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=view_btn,
@@ -318,7 +318,7 @@ class GoodsReceiptListContent:
                     alignment=ft.Alignment(0, 0),
                 ),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
-            padding=ft.padding.symmetric(vertical=10, horizontal=8),
+            padding=ft.Padding(left=8, right=8, top=10, bottom=10),
             bgcolor=row_bg,
         )
         
@@ -352,7 +352,7 @@ class GoodsReceiptListContent:
                         ft.Text(f"{int(cost):,}", size=13, color="#64748B", width=100, text_align=ft.TextAlign.RIGHT),
                         ft.Text(f"{int(line_total):,}", size=13, weight=ft.FontWeight.W_500, color=ft.Colors.GREEN_700, width=110, text_align=ft.TextAlign.RIGHT),
                     ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                    padding=ft.padding.symmetric(vertical=8, horizontal=12),
+                    padding=ft.Padding(left=12, right=12, top=8, bottom=8),
                     bgcolor=bg_color,
                     border_radius=8,
                 )
@@ -368,7 +368,7 @@ class GoodsReceiptListContent:
                             content=ft.Icon(ft.Icons.INVENTORY, size=24, color=ft.Colors.WHITE),
                             bgcolor=self.primary_color,
                             border_radius=12,
-                            padding=ft.padding.all(8),
+                            padding=ft.Padding(left=8, right=8, top=8, bottom=8),
                         ),
                         ft.Text(
                             f"{get_text('view_receipt_detail')}: {detail.get('receipt_no', '-')}",
@@ -377,8 +377,8 @@ class GoodsReceiptListContent:
                             color="#1E293B",
                         ),
                     ], spacing=12, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                    padding=ft.padding.symmetric(horizontal=20, vertical=16),
-                    border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
+                    padding=ft.Padding(left=20, right=20, top=16, bottom=16),
+                    border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
                 ),
                 content=ft.Container(
                     content=ft.Column([
@@ -409,7 +409,7 @@ class GoodsReceiptListContent:
                             ft.Text(f"{int(detail.get('total_amount', 0)):,} KIP", size=16, weight=ft.FontWeight.BOLD, color=ft.Colors.GREEN_700),
                         ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
                     ], spacing=10),
-                    padding=ft.padding.all(20),
+                    padding=ft.Padding(left=20, right=20, top=20, bottom=20),
                     width=650,
                     height=450,
                 ),
@@ -459,7 +459,7 @@ class GoodsReceiptListContent:
                         ),
                         ft.Container(
                             content=ft.Text(f"{self.current_page}/{self.total_pages}", size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
-                            padding=ft.padding.symmetric(horizontal=15),
+                            padding=ft.Padding(left=15, right=15, top=0, bottom=0),
                         ),
                         ft.IconButton(
                             icon=ft.Icons.CHEVRON_RIGHT,
@@ -471,7 +471,7 @@ class GoodsReceiptListContent:
                     ]),
                     bgcolor=ft.Colors.WHITE,
                     border_radius=10,
-                    padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                    padding=ft.Padding(left=8, right=8, top=4, bottom=4),
                 ),
             ],
             vertical_alignment=ft.CrossAxisAlignment.CENTER,

@@ -27,7 +27,7 @@ class ServicesContent:
         self.filtered_services = []
         self.search_input = None
         self.current_page = 1
-        self.items_per_page = 5
+        self.items_per_page = 10
         self.total_pages = 1
         self.primary_color = PRIMARY_COLOR
         self.primary_dark = PRIMARY_DARK
@@ -66,14 +66,14 @@ class ServicesContent:
                             bgcolor=ft.Colors.with_opacity(0.2, ft.Colors.WHITE),
                             shape=ft.RoundedRectangleBorder(radius=10),
                             elevation=0,
-                            padding=ft.padding.symmetric(horizontal=20, vertical=12),
+                            padding=ft.Padding(left=20, right=20, top=12, bottom=12),
                         ),
                     ),
                 ],
                 spacing=16,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(vertical=12, horizontal=24),
+            padding=ft.Padding(left=24, right=24, top=12, bottom=12),
             gradient=ft.LinearGradient(
                 begin=ft.Alignment(-1, -1),
                 end=ft.Alignment(1, 1),
@@ -91,7 +91,7 @@ class ServicesContent:
             expand=True,
             on_change=self.filter_services,
             prefix_icon=ft.Icons.SEARCH,
-            content_padding=ft.padding.symmetric(horizontal=16, vertical=14),
+            content_padding=ft.Padding(left=16, right=16, top=14, bottom=14),
             border_color=ft.Colors.GREY_200,
             focused_border_color=self.primary_color,
         )
@@ -103,7 +103,7 @@ class ServicesContent:
         
         control_bar = ft.Container(
             content=search_container,
-            padding=ft.padding.all(20),
+            padding=ft.Padding(left=20, right=20, top=20, bottom=20),
             bgcolor="#F5F7FA",
         )
         
@@ -112,7 +112,7 @@ class ServicesContent:
         table_scroll_container = ft.Container(
             content=self.table_rows,
             expand=True,
-            border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_200)),
+            border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_200)),
             bgcolor=ft.Colors.WHITE,
         )
         
@@ -122,12 +122,12 @@ class ServicesContent:
                 ft.Divider(height=1, color=ft.Colors.GREY_300),
                 table_scroll_container,
             ], spacing=0),
-            margin=ft.margin.only(left=20, right=20),
+            margin=ft.Margin(left=20, right=20, top=0, bottom=0),
             bgcolor=ft.Colors.WHITE,
             border_radius=ft.BorderRadius.only(
                 top_left=12, top_right=12, bottom_left=12, bottom_right=12
             ),
-            border=ft.border.all(1, ft.Colors.GREY_200),
+            border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_200), right=ft.BorderSide(1, ft.Colors.GREY_200), bottom=ft.BorderSide(1, ft.Colors.GREY_200), left=ft.BorderSide(1, ft.Colors.GREY_200)),
             expand=True,
         )
         
@@ -168,19 +168,19 @@ class ServicesContent:
                     content=ft.Text(get_text('services_name'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
                     width=200,
                     alignment=ft.Alignment(-1, 0),
-                    padding=ft.padding.only(left=10),
+                    padding=ft.Padding(left=10, right=0, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(get_text('services_description'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
                     width=250,
                     alignment=ft.Alignment(-1, 0),
-                    padding=ft.padding.only(left=10),
+                    padding=ft.Padding(left=10, right=0, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(get_text('services_price'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
                     width=130,
                     alignment=ft.Alignment(1, 0),
-                    padding=ft.padding.only(right=10),
+                    padding=ft.Padding(left=0, right=10, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(get_text('services_time'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
@@ -193,7 +193,7 @@ class ServicesContent:
                     alignment=ft.Alignment(0, 0),
                 ),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
-            padding=ft.padding.symmetric(vertical=14, horizontal=10),
+            padding=ft.Padding(left=10, right=10, top=14, bottom=14),
             bgcolor=ft.Colors.GREY_100,
             border_radius=ft.BorderRadius.only(top_left=12, top_right=12),
         )
@@ -251,7 +251,7 @@ class ServicesContent:
                 content=ft.Text(price_category, size=9, color=price_color),
                 bgcolor=price_bg,
                 border_radius=4,
-                padding=ft.padding.symmetric(horizontal=6, vertical=1),
+                padding=ft.Padding(left=6, right=6, top=1, bottom=1),
             ),
         ], spacing=3)
         
@@ -259,7 +259,7 @@ class ServicesContent:
             content=ft.Text(desc_display, size=12, color=desc_color, max_lines=2),
             width=250,
             alignment=ft.Alignment(-1, 0),
-            padding=ft.padding.only(left=10),
+            padding=ft.Padding(left=10, right=0, top=0, bottom=0),
         )
         if description and description != '-' and len(description) > 40:
             desc_container.tooltip = description
@@ -270,7 +270,7 @@ class ServicesContent:
                 ft.Text(get_text("edit"), size=12, color=PRIMARY_COLOR),
             ], spacing=4),
             on_click=lambda e, sid=service_id: self._safe_edit(sid, e),
-            padding=ft.padding.symmetric(horizontal=8, vertical=4),
+            padding=ft.Padding(left=8, right=8, top=4, bottom=4),
             border_radius=6,
         )
         
@@ -280,7 +280,7 @@ class ServicesContent:
                 ft.Text(get_text("delete"), size=12, color=ft.Colors.RED_600),
             ], spacing=4),
             on_click=lambda e, sid=service_id: self._safe_delete(sid, e),
-            padding=ft.padding.symmetric(horizontal=8, vertical=4),
+            padding=ft.Padding(left=8, right=8, top=4, bottom=4),
             border_radius=6,
         )
         
@@ -289,7 +289,7 @@ class ServicesContent:
                 ft.Container(
                     content=ft.Container(
                         content=ft.Text(str(row_number), size=13, weight=ft.FontWeight.W_500, color=PRIMARY_COLOR),
-                        padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                        padding=ft.Padding(left=8, right=8, top=4, bottom=4),
                         bgcolor=ft.Colors.BLUE_50,
                         border_radius=6,
                         alignment=ft.Alignment(0, 0),
@@ -301,7 +301,7 @@ class ServicesContent:
                     content=ft.Text(name, size=13, weight=ft.FontWeight.W_500, color=ft.Colors.BLACK, max_lines=1),
                     width=200,
                     alignment=ft.Alignment(-1, 0),
-                    padding=ft.padding.only(left=10),
+                    padding=ft.Padding(left=10, right=0, top=0, bottom=0),
                     tooltip=name,
                 ),
                 desc_container,
@@ -309,7 +309,7 @@ class ServicesContent:
                     content=price_column,
                     width=130,
                     alignment=ft.Alignment(1, 0),
-                    padding=ft.padding.only(right=10),
+                    padding=ft.Padding(left=0, right=10, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Container(
@@ -319,7 +319,7 @@ class ServicesContent:
                         ], spacing=4),
                         bgcolor=ft.Colors.GREY_50,
                         border_radius=6,
-                        padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                        padding=ft.Padding(left=8, right=8, top=4, bottom=4),
                     ),
                     width=120,
                     alignment=ft.Alignment(0, 0),
@@ -330,7 +330,7 @@ class ServicesContent:
                     alignment=ft.Alignment(0, 0),
                 ),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
-            padding=ft.padding.symmetric(vertical=12, horizontal=10),
+            padding=ft.Padding(left=10, right=10, top=12, bottom=12),
             bgcolor=row_bg,
         )
         
@@ -348,7 +348,7 @@ class ServicesContent:
                 ft.Text(get_text("no_data"), size=16, color=ft.Colors.GREY_500),
                 ft.Text(get_text("click_add"), size=13, color=ft.Colors.GREY_400),
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, alignment=ft.Alignment(0, 0)),
-            padding=ft.padding.all(40),
+            padding=ft.Padding(left=40, right=40, top=40, bottom=40),
             expand=True,
         )
     
@@ -382,7 +382,7 @@ class ServicesContent:
                         ),
                         ft.Container(
                             content=ft.Text(f"{self.current_page}/{self.total_pages}", size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
-                            padding=ft.padding.symmetric(horizontal=15),
+                            padding=ft.Padding(left=15, right=15, top=0, bottom=0),
                         ),
                         ft.IconButton(
                             icon=ft.Icons.CHEVRON_RIGHT,
@@ -394,10 +394,10 @@ class ServicesContent:
                     ]),
                     bgcolor=ft.Colors.WHITE,
                     border_radius=10,
-                    padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                    padding=ft.Padding(left=8, right=8, top=4, bottom=4),
                 ),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
-            padding=ft.padding.symmetric(vertical=16, horizontal=20),
+            padding=ft.Padding(left=20, right=20, top=16, bottom=16),
             bgcolor="#F5F7FA",
         )
     
@@ -517,7 +517,7 @@ class ServicesContent:
             border_radius=10,
             bgcolor=ft.Colors.WHITE,
             filled=True,
-            content_padding=ft.padding.symmetric(horizontal=12, vertical=10),
+            content_padding=ft.Padding(left=12, right=12, top=10, bottom=10),
             border_color=ft.Colors.GREY_300,
             focused_border_color=PRIMARY_COLOR,
             expand=True,
@@ -532,7 +532,7 @@ class ServicesContent:
             border_radius=10,
             bgcolor=ft.Colors.WHITE,
             filled=True,
-            content_padding=ft.padding.symmetric(horizontal=12, vertical=10),
+            content_padding=ft.Padding(left=12, right=12, top=10, bottom=10),
             border_color=ft.Colors.GREY_300,
             focused_border_color=PRIMARY_COLOR,
             expand=True,
@@ -545,7 +545,7 @@ class ServicesContent:
             bgcolor=ft.Colors.WHITE,
             filled=True,
             value="0",
-            content_padding=ft.padding.symmetric(horizontal=12, vertical=10),
+            content_padding=ft.Padding(left=12, right=12, top=10, bottom=10),
             border_color=ft.Colors.GREY_300,
             focused_border_color=PRIMARY_COLOR,
             expand=True,
@@ -558,7 +558,7 @@ class ServicesContent:
             bgcolor=ft.Colors.WHITE,
             filled=True,
             value="0",
-            content_padding=ft.padding.symmetric(horizontal=12, vertical=10),
+            content_padding=ft.Padding(left=12, right=12, top=10, bottom=10),
             border_color=ft.Colors.GREY_300,
             focused_border_color=PRIMARY_COLOR,
             expand=True,
@@ -594,15 +594,15 @@ class ServicesContent:
                             content=ft.Icon(ft.Icons.BUILD, size=22, color=ft.Colors.WHITE),
                             bgcolor=PRIMARY_COLOR,
                             border_radius=10,
-                            padding=ft.padding.all(6),
+                            padding=ft.Padding(left=6, right=6, top=6, bottom=6),
                         ),
                         ft.Text(get_text("services_add"), size=16, weight=ft.FontWeight.BOLD, color="#1E293B"),
                     ],
                     spacing=10,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
-                padding=ft.padding.symmetric(horizontal=18, vertical=14),
-                border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
+                padding=ft.Padding(left=18, right=18, top=14, bottom=14),
+                border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
             ),
             content=ft.Container(
                 content=ft.Column([
@@ -612,7 +612,7 @@ class ServicesContent:
                     ft.Container(height=8),
                     ft.Row([price, estimated_time], spacing=12),
                 ], spacing=0),
-                padding=ft.padding.all(18),
+                padding=ft.Padding(left=18, right=18, top=18, bottom=18),
                 width=500,
                 height=420,
             ),
@@ -633,12 +633,12 @@ class ServicesContent:
                                 bgcolor=PRIMARY_COLOR,
                                 shape=ft.RoundedRectangleBorder(radius=8),
                                 elevation=0,
-                                padding=ft.padding.symmetric(horizontal=20, vertical=8),
+                                padding=ft.Padding(left=20, right=20, top=8, bottom=8),
                             ),
                         ),
                     ], spacing=10, alignment=ft.MainAxisAlignment.END),
-                    padding=ft.padding.symmetric(horizontal=18, vertical=12),
-                    border=ft.border.only(top=ft.BorderSide(1, ft.Colors.GREY_100)),
+                    padding=ft.Padding(left=18, right=18, top=12, bottom=12),
+                    border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_100)),
                 ),
             ],
             actions_alignment=ft.MainAxisAlignment.END,
@@ -665,7 +665,7 @@ class ServicesContent:
             border_radius=10,
             bgcolor=ft.Colors.WHITE,
             filled=True,
-            content_padding=ft.padding.symmetric(horizontal=12, vertical=10),
+            content_padding=ft.Padding(left=12, right=12, top=10, bottom=10),
             border_color=ft.Colors.GREY_300,
             focused_border_color=PRIMARY_COLOR,
             expand=True,
@@ -680,7 +680,7 @@ class ServicesContent:
             border_radius=10,
             bgcolor=ft.Colors.WHITE,
             filled=True,
-            content_padding=ft.padding.symmetric(horizontal=12, vertical=10),
+            content_padding=ft.Padding(left=12, right=12, top=10, bottom=10),
             border_color=ft.Colors.GREY_300,
             focused_border_color=PRIMARY_COLOR,
             expand=True,
@@ -692,7 +692,7 @@ class ServicesContent:
             border_radius=10,
             bgcolor=ft.Colors.WHITE,
             filled=True,
-            content_padding=ft.padding.symmetric(horizontal=12, vertical=10),
+            content_padding=ft.Padding(left=12, right=12, top=10, bottom=10),
             border_color=ft.Colors.GREY_300,
             focused_border_color=PRIMARY_COLOR,
             expand=True,
@@ -704,7 +704,7 @@ class ServicesContent:
             border_radius=10,
             bgcolor=ft.Colors.WHITE,
             filled=True,
-            content_padding=ft.padding.symmetric(horizontal=12, vertical=10),
+            content_padding=ft.Padding(left=12, right=12, top=10, bottom=10),
             border_color=ft.Colors.GREY_300,
             focused_border_color=PRIMARY_COLOR,
             expand=True,
@@ -741,15 +741,15 @@ class ServicesContent:
                             content=ft.Icon(ft.Icons.EDIT, size=22, color=ft.Colors.WHITE),
                             bgcolor=PRIMARY_COLOR,
                             border_radius=10,
-                            padding=ft.padding.all(6),
+                            padding=ft.Padding(left=6, right=6, top=6, bottom=6),
                         ),
                         ft.Text(get_text("services_edit"), size=16, weight=ft.FontWeight.BOLD, color="#1E293B"),
                     ],
                     spacing=10,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
-                padding=ft.padding.symmetric(horizontal=18, vertical=14),
-                border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
+                padding=ft.Padding(left=18, right=18, top=14, bottom=14),
+                border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
             ),
             content=ft.Container(
                 content=ft.Column([
@@ -759,7 +759,7 @@ class ServicesContent:
                     ft.Container(height=8),
                     ft.Row([price, estimated_time], spacing=12),
                 ], spacing=0),
-                padding=ft.padding.all(18),
+                padding=ft.Padding(left=18, right=18, top=18, bottom=18),
                 width=500,
                 height=420,
             ),
@@ -780,12 +780,12 @@ class ServicesContent:
                                 bgcolor=PRIMARY_COLOR,
                                 shape=ft.RoundedRectangleBorder(radius=8),
                                 elevation=0,
-                                padding=ft.padding.symmetric(horizontal=20, vertical=8),
+                                padding=ft.Padding(left=20, right=20, top=8, bottom=8),
                             ),
                         ),
                     ], spacing=10, alignment=ft.MainAxisAlignment.END),
-                    padding=ft.padding.symmetric(horizontal=18, vertical=12),
-                    border=ft.border.only(top=ft.BorderSide(1, ft.Colors.GREY_100)),
+                    padding=ft.Padding(left=18, right=18, top=12, bottom=12),
+                    border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_100)),
                 ),
             ],
             actions_alignment=ft.MainAxisAlignment.END,
@@ -826,15 +826,15 @@ class ServicesContent:
                             content=ft.Icon(ft.Icons.WARNING_AMBER, size=22, color=ft.Colors.WHITE),
                             bgcolor=WARNING_COLOR,
                             border_radius=10,
-                            padding=ft.padding.all(6),
+                            padding=ft.Padding(left=6, right=6, top=6, bottom=6),
                         ),
                         ft.Text(get_text("confirm"), size=16, weight=ft.FontWeight.BOLD, color="#1E293B"),
                     ],
                     spacing=10,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
-                padding=ft.padding.symmetric(horizontal=18, vertical=14),
-                border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
+                padding=ft.Padding(left=18, right=18, top=14, bottom=14),
+                border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
             ),
             content=ft.Container(
                 content=ft.Column([
@@ -854,7 +854,7 @@ class ServicesContent:
                         text_align=ft.TextAlign.CENTER,
                     ),
                 ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=2),
-                padding=ft.padding.all(20),
+                padding=ft.Padding(left=20, right=20, top=20, bottom=20),
                 width=320,
             ),
             actions=[
@@ -874,12 +874,12 @@ class ServicesContent:
                                 bgcolor=WARNING_COLOR,
                                 shape=ft.RoundedRectangleBorder(radius=8),
                                 elevation=0,
-                                padding=ft.padding.symmetric(horizontal=20, vertical=8),
+                                padding=ft.Padding(left=20, right=20, top=8, bottom=8),
                             ),
                         ),
                     ], spacing=10, alignment=ft.MainAxisAlignment.END),
-                    padding=ft.padding.symmetric(horizontal=18, vertical=12),
-                    border=ft.border.only(top=ft.BorderSide(1, ft.Colors.GREY_100)),
+                    padding=ft.Padding(left=18, right=18, top=12, bottom=12),
+                    border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_100)),
                 ),
             ],
             actions_alignment=ft.MainAxisAlignment.END,

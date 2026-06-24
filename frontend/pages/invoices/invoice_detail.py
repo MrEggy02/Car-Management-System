@@ -52,7 +52,7 @@ class InvoiceDetailContent:
         content_area = ft.Container(
             content=scrollable_content,
             expand=True,
-            padding=ft.padding.all(24),
+            padding=ft.Padding(left=24, right=24, top=24, bottom=24),
             bgcolor="#F0F2F5",
         )
         
@@ -100,7 +100,7 @@ class InvoiceDetailContent:
                 spacing=12,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(vertical=14, horizontal=24),
+            padding=ft.Padding(left=24, right=24, top=14, bottom=14),
             gradient=ft.LinearGradient(
                 begin=ft.Alignment(-1, -1),
                 end=ft.Alignment(1, 1),
@@ -161,7 +161,7 @@ class InvoiceDetailContent:
             content=ft.Text(status_texts.get(payment_status, payment_status), size=13, color=ft.Colors.WHITE, weight=ft.FontWeight.W_600),
             bgcolor=status_colors.get(payment_status, "#607D8B"),
             border_radius=20,
-            padding=ft.padding.symmetric(horizontal=16, vertical=6),
+            padding=ft.Padding(left=16, right=16, top=6, bottom=6),
         )
         
         # ========== INVOICE INFO CARD ==========
@@ -174,7 +174,7 @@ class InvoiceDetailContent:
                                 content=ft.Icon(ft.Icons.RECEIPT, size=20, color=self.primary_color),
                                 bgcolor=ft.Colors.with_opacity(0.1, self.primary_color),
                                 border_radius=10,
-                                padding=ft.padding.all(8),
+                                padding=ft.Padding(left=8, right=8, top=8, bottom=8),
                             ),
                             ft.Text(get_text("invoice_info"), size=16, weight=ft.FontWeight.BOLD, color="#1E293B"),
                         ],
@@ -213,10 +213,10 @@ class InvoiceDetailContent:
                         ], spacing=4, expand=True),
                     ]),
                 ]),
-                padding=ft.padding.all(20),
+                padding=ft.Padding(left=20, right=20, top=20, bottom=20),
             ),
             elevation=2,
-            margin=ft.margin.only(bottom=16),
+            margin=ft.Margin(left=0, right=0, top=0, bottom=16),
         )
         
         # ========== JOB ORDER INFO CARD ==========
@@ -229,7 +229,7 @@ class InvoiceDetailContent:
                                 content=ft.Icon(ft.Icons.RECEIPT, size=20, color=self.primary_color),
                                 bgcolor=ft.Colors.with_opacity(0.1, self.primary_color),
                                 border_radius=10,
-                                padding=ft.padding.all(8),
+                                padding=ft.Padding(left=8, right=8, top=8, bottom=8),
                             ),
                             ft.Text(get_text("job_order_info"), size=16, weight=ft.FontWeight.BOLD, color="#1E293B"),
                         ],
@@ -264,10 +264,10 @@ class InvoiceDetailContent:
                         ], spacing=4, expand=True),
                     ]),
                 ]),
-                padding=ft.padding.all(20),
+                padding=ft.Padding(left=20, right=20, top=20, bottom=20),
             ),
             elevation=2,
-            margin=ft.margin.only(bottom=16),
+            margin=ft.Margin(left=0, right=0, top=0, bottom=16),
         )
         
         # ========== PAYMENT SUMMARY CARD ==========
@@ -280,7 +280,7 @@ class InvoiceDetailContent:
                                 content=ft.Icon(ft.Icons.PAYMENT, size=20, color=self.primary_color),
                                 bgcolor=ft.Colors.with_opacity(0.1, self.primary_color),
                                 border_radius=10,
-                                padding=ft.padding.all(8),
+                                padding=ft.Padding(left=8, right=8, top=8, bottom=8),
                             ),
                             ft.Text(get_text("payment_summary"), size=16, weight=ft.FontWeight.BOLD, color="#1E293B"),
                         ],
@@ -306,10 +306,10 @@ class InvoiceDetailContent:
                         ft.Text(f"{int(final_total):,} KIP", size=20, weight=ft.FontWeight.BOLD, color=self.success_color),
                     ]),
                 ]),
-                padding=ft.padding.all(20),
+                padding=ft.Padding(left=20, right=20, top=20, bottom=20),
             ),
             elevation=2,
-            margin=ft.margin.only(bottom=16),
+            margin=ft.Margin(left=0, right=0, top=0, bottom=16),
         )
         
         # ========== ACTION BUTTONS ==========
@@ -322,7 +322,7 @@ class InvoiceDetailContent:
             style=ft.ButtonStyle(
                 shape=ft.RoundedRectangleBorder(radius=10),
                 side=ft.BorderSide(1, self.primary_color),
-                padding=ft.padding.symmetric(horizontal=24, vertical=12),
+                padding=ft.Padding(left=24, right=24, top=12, bottom=12),
             ),
         )
         

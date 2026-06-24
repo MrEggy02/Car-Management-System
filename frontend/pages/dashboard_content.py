@@ -55,13 +55,13 @@ class DashboardContent:
                         ),
                         bgcolor=ft.Colors.with_opacity(0.2, ft.Colors.WHITE),
                         border_radius=30,
-                        padding=ft.padding.symmetric(horizontal=16, vertical=8),
+                        padding=ft.Padding(left=16, right=16, top=8, bottom=8),
                     ),
                 ],
                 spacing=16,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(vertical=14, horizontal=26),
+            padding=ft.Padding(left=26, right=26, top=14, bottom=14),
             gradient=ft.LinearGradient(
                 begin=ft.Alignment(-1, -1),
                 end=ft.Alignment(1, 1),
@@ -104,7 +104,7 @@ class DashboardContent:
                 expand=True,
                 alignment=ft.MainAxisAlignment.CENTER,
             ),
-            padding=ft.padding.all(12),
+            padding=ft.Padding(left=12, right=12, top=12, bottom=12),
             bgcolor="#F5F7FA",
         )
         
@@ -152,10 +152,10 @@ class DashboardContent:
                 ],
                 spacing=0,
             ),
-            padding=ft.padding.all(20),
+            padding=ft.Padding(left=20, right=20, top=20, bottom=20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
-            margin=ft.margin.only(bottom=0),
+            margin=ft.Margin(left=0, right=0, top=0, bottom=0),
             shadow=ft.BoxShadow(
                 blur_radius=10,
                 color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
@@ -167,7 +167,7 @@ class DashboardContent:
         # Revenue Chart Section
         revenue_chart = self._build_revenue_chart()
         revenue_chart.expand = True
-        revenue_chart.margin = ft.margin.only(bottom=0)
+        revenue_chart.margin = ft.Margin(left=0, right=0, top=0, bottom=0)
         
         # Middle row side-by-side
         middle_row = ft.Row(
@@ -211,10 +211,10 @@ class DashboardContent:
                 ],
                 spacing=0,
             ),
-            padding=ft.padding.all(20),
+            padding=ft.Padding(left=20, right=20, top=20, bottom=20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
-            margin=ft.margin.only(bottom=0),
+            margin=ft.Margin(left=0, right=0, top=0, bottom=0),
             expand=True,
             shadow=ft.BoxShadow(
                 blur_radius=10,
@@ -258,10 +258,10 @@ class DashboardContent:
                 ],
                 spacing=0,
             ),
-            padding=ft.padding.all(20),
+            padding=ft.Padding(left=20, right=20, top=20, bottom=20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
-            margin=ft.margin.only(bottom=0),
+            margin=ft.Margin(left=0, right=0, top=0, bottom=0),
             expand=True,
             shadow=ft.BoxShadow(
                 blur_radius=10,
@@ -305,10 +305,10 @@ class DashboardContent:
                 ],
                 spacing=0,
             ),
-            padding=ft.padding.all(20),
+            padding=ft.Padding(left=20, right=20, top=20, bottom=20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
-            margin=ft.margin.only(bottom=0),
+            margin=ft.Margin(left=0, right=0, top=0, bottom=0),
             expand=True,
             shadow=ft.BoxShadow(
                 blur_radius=10,
@@ -343,7 +343,7 @@ class DashboardContent:
         content_area = ft.Container(
             content=scrollable_content,
             expand=True,
-            padding=ft.padding.all(24),
+            padding=ft.Padding(left=24, right=24, top=24, bottom=24),
             bgcolor="#F5F7FA",
         )
         
@@ -430,7 +430,7 @@ class DashboardContent:
                                 content=ft.Icon(icon, size=24, color=ft.Colors.WHITE),
                                 bgcolor=color,
                                 border_radius=12,
-                                padding=ft.padding.all(10),
+                                padding=ft.Padding(left=10, right=10, top=10, bottom=10),
                             ),
                             ft.Container(expand=True),
                             ft.Text(
@@ -457,10 +457,10 @@ class DashboardContent:
                 ],
                 spacing=0,
             ),
-            padding=ft.padding.all(16),
+            padding=ft.Padding(left=16, right=16, top=16, bottom=16),
             bgcolor=ft.Colors.WHITE,
             border_radius=12,
-            border=ft.border.all(1, ft.Colors.GREY_100),
+            border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_100), right=ft.BorderSide(1, ft.Colors.GREY_100), bottom=ft.BorderSide(1, ft.Colors.GREY_100), left=ft.BorderSide(1, ft.Colors.GREY_100)),
             expand=True,
         )
     
@@ -523,10 +523,10 @@ class DashboardContent:
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 spacing=0,
             ),
-            padding=ft.padding.all(16),
+            padding=ft.Padding(left=16, right=16, top=16, bottom=16),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
-            border=ft.border.all(1, ft.Colors.GREY_100),
+            border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_100), right=ft.BorderSide(1, ft.Colors.GREY_100), bottom=ft.BorderSide(1, ft.Colors.GREY_100), left=ft.BorderSide(1, ft.Colors.GREY_100)),
             expand=True,
         )
     
@@ -612,10 +612,10 @@ class DashboardContent:
                 ],
                 spacing=0,
             ),
-            padding=ft.padding.all(20),
+            padding=ft.Padding(left=20, right=20, top=20, bottom=20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
-            margin=ft.margin.only(bottom=20),
+            margin=ft.Margin(left=0, right=0, top=0, bottom=20),
             shadow=ft.BoxShadow(
                 blur_radius=10,
                 color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
@@ -632,7 +632,7 @@ class DashboardContent:
                         content=ft.Icon(icon, size=16, color=ft.Colors.WHITE),
                         bgcolor=color,
                         border_radius=8,
-                        padding=ft.padding.all(6),
+                        padding=ft.Padding(left=6, right=6, top=6, bottom=6),
                     ),
                     ft.Column(
                         [
@@ -645,7 +645,7 @@ class DashboardContent:
                 spacing=8,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(horizontal=12, vertical=8),
+            padding=ft.Padding(left=12, right=12, top=8, bottom=8),
             bgcolor=ft.Colors.GREY_50,
             border_radius=10,
             expand=True,
@@ -689,16 +689,16 @@ class DashboardContent:
                         content=ft.Text(role_text, size=11, color=role_color),
                         bgcolor=ft.Colors.with_opacity(0.1, role_color),
                         border_radius=12,
-                        padding=ft.padding.symmetric(horizontal=10, vertical=4),
+                        padding=ft.Padding(left=10, right=10, top=4, bottom=4),
                     ),
                 ],
                 spacing=12,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(vertical=8, horizontal=12),
+            padding=ft.Padding(left=12, right=12, top=8, bottom=8),
             bgcolor=ft.Colors.WHITE,
             border_radius=10,
-            border=ft.border.all(1, ft.Colors.GREY_100),
+            border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_100), right=ft.BorderSide(1, ft.Colors.GREY_100), bottom=ft.BorderSide(1, ft.Colors.GREY_100), left=ft.BorderSide(1, ft.Colors.GREY_100)),
         )
     
     def _build_low_stock_row(self, part):
@@ -762,10 +762,10 @@ class DashboardContent:
                 spacing=12,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(vertical=8, horizontal=12),
+            padding=ft.Padding(left=12, right=12, top=8, bottom=8),
             bgcolor=ft.Colors.WHITE,
             border_radius=10,
-            border=ft.border.all(1, ft.Colors.GREY_100),
+            border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_100), right=ft.BorderSide(1, ft.Colors.GREY_100), bottom=ft.BorderSide(1, ft.Colors.GREY_100), left=ft.BorderSide(1, ft.Colors.GREY_100)),
         )
     
     def _build_repair_row(self, repair):
@@ -807,14 +807,14 @@ class DashboardContent:
                         content=ft.Text(status_text, size=11, color=status_color),
                         bgcolor=ft.Colors.with_opacity(0.1, status_color),
                         border_radius=12,
-                        padding=ft.padding.symmetric(horizontal=10, vertical=4),
+                        padding=ft.Padding(left=10, right=10, top=4, bottom=4),
                     ),
                 ],
                 spacing=12,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(vertical=8, horizontal=12),
+            padding=ft.Padding(left=12, right=12, top=8, bottom=8),
             bgcolor=ft.Colors.WHITE,
             border_radius=10,
-            border=ft.border.all(1, ft.Colors.GREY_100),
+            border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_100), right=ft.BorderSide(1, ft.Colors.GREY_100), bottom=ft.BorderSide(1, ft.Colors.GREY_100), left=ft.BorderSide(1, ft.Colors.GREY_100)),
         )

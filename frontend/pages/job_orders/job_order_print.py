@@ -55,13 +55,13 @@ class JobOrderPrintContent:
                         content=ft.Icon(ft.Icons.PRINT, size=28, color=ft.Colors.WHITE),
                         bgcolor=ft.Colors.with_opacity(0.2, ft.Colors.WHITE),
                         border_radius=15,
-                        padding=ft.padding.all(8),
+                        padding=ft.Padding(left=8, right=8, top=8, bottom=8),
                     ),
                 ],
                 spacing=16,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(vertical=20, horizontal=32),
+            padding=ft.Padding(left=32, right=32, top=20, bottom=20),
             gradient=ft.LinearGradient(
                 begin=ft.Alignment(-1, -1),
                 end=ft.Alignment(1, 1),
@@ -111,7 +111,7 @@ class JobOrderPrintContent:
                     style=ft.ButtonStyle(
                         shape=ft.RoundedRectangleBorder(radius=10),
                         side=ft.BorderSide(1, ft.Colors.GREY_300),
-                        padding=ft.padding.symmetric(horizontal=20, vertical=12),
+                        padding=ft.Padding(left=20, right=20, top=12, bottom=12),
                     ),
                 ),
                 ft.ElevatedButton(
@@ -124,11 +124,11 @@ class JobOrderPrintContent:
                         bgcolor=self.primary_color,
                         shape=ft.RoundedRectangleBorder(radius=10),
                         elevation=2,
-                        padding=ft.padding.symmetric(horizontal=24, vertical=12),
+                        padding=ft.Padding(left=24, right=24, top=12, bottom=12),
                     ),
                 ),
             ], alignment=ft.MainAxisAlignment.CENTER, spacing=20),
-            padding=ft.padding.only(top=20),
+            padding=ft.Padding(left=0, right=0, top=20, bottom=0),
         )
         
         # Scrollable content
@@ -142,7 +142,7 @@ class JobOrderPrintContent:
         content_area = ft.Container(
             content=scrollable_content,
             expand=True,
-            padding=ft.padding.all(32),
+            padding=ft.Padding(left=32, right=32, top=32, bottom=32),
             bgcolor="#F5F7FA",
         )
         
@@ -218,7 +218,7 @@ class JobOrderPrintContent:
                             ft.Text(shop_phone, size=11, color="#64748B", text_align=ft.TextAlign.CENTER),
                             ft.Divider(height=1, color=ft.Colors.GREY_200),
                         ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-                        padding=ft.padding.only(bottom=16),
+                        padding=ft.Padding(left=0, right=0, top=0, bottom=16),
                     ),
                     
                     # Job Info
@@ -288,7 +288,7 @@ class JobOrderPrintContent:
                     ft.Container(height=8),
                     ft.Container(
                         content=ft.Text(problem, size=13, color="#1E293B"),
-                        padding=ft.padding.all(12),
+                        padding=ft.Padding(left=12, right=12, top=12, bottom=12),
                         bgcolor=ft.Colors.GREY_50,
                         border_radius=8,
                     ),
@@ -310,7 +310,7 @@ class JobOrderPrintContent:
                     ft.Text(get_text("contact_info"), size=10, color="#64748B", text_align=ft.TextAlign.CENTER),
                     
                 ], spacing=0),
-                padding=ft.padding.all(24),
+                padding=ft.Padding(left=24, right=24, top=24, bottom=24),
             ),
             elevation=3,
         )

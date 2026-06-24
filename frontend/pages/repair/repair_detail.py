@@ -39,7 +39,7 @@ class RepairDetailContent:
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
             alignment=ft.Alignment(0, 0),
             expand=True,
-            padding=ft.padding.all(24),
+            padding=ft.Padding(left=24, right=24, top=24, bottom=24),
             bgcolor="#F8FAFC",
         )
         
@@ -84,7 +84,7 @@ class RepairDetailContent:
                 bgcolor=ft.Colors.with_opacity(0.2, ft.Colors.WHITE),
                 shape=ft.RoundedRectangleBorder(radius=10),
                 elevation=0,
-                padding=ft.padding.symmetric(horizontal=20, vertical=12),
+                padding=ft.Padding(left=20, right=20, top=12, bottom=12),
             ),
         )
         
@@ -120,7 +120,7 @@ class RepairDetailContent:
                 spacing=12,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(vertical=12, horizontal=24),
+            padding=ft.Padding(left=24, right=24, top=12, bottom=12),
             gradient=ft.LinearGradient(
                 begin=ft.Alignment(-1, -1),
                 end=ft.Alignment(1, 1),
@@ -177,8 +177,8 @@ class RepairDetailContent:
                 ft.Text(label, size=12, color="#64748B", width=110),
                 ft.Text(value, size=13, color="#1E293B", weight=ft.FontWeight.W_500 if "R" in value or any(c.isdigit() for c in value) else ft.FontWeight.W_400, expand=True),
             ], spacing=12),
-            padding=ft.padding.symmetric(vertical=5),
-            border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_50)),
+            padding=ft.Padding(left=0, right=0, top=5, bottom=5),
+            border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_50)),
         )
     
     def _build_content(self):
@@ -227,7 +227,7 @@ class RepairDetailContent:
             content=ft.Text(status_texts.get(status, status), size=12, color=ft.Colors.WHITE, weight=ft.FontWeight.W_600),
             bgcolor=status_colors.get(status, "#607D8B"),
             border_radius=20,
-            padding=ft.padding.symmetric(horizontal=14, vertical=5),
+            padding=ft.Padding(left=14, right=14, top=5, bottom=5),
         )
         
         # ========== LEFT COLUMN ==========
@@ -258,15 +258,15 @@ class RepairDetailContent:
                         ft.Text(get_text("duration_label"), size=12, color="#64748B", width=110),
                         duration_ctrl,
                     ], spacing=12),
-                    padding=ft.padding.symmetric(vertical=5),
-                    border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_50)),
+                    padding=ft.Padding(left=0, right=0, top=5, bottom=5),
+                    border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_50)),
                 ),
             ], spacing=0),
-            padding=ft.padding.all(16),
+            padding=ft.Padding(left=16, right=16, top=16, bottom=16),
             bgcolor=ft.Colors.WHITE,
             border_radius=12,
             shadow=ft.BoxShadow(blur_radius=4, color=ft.Colors.with_opacity(0.05, ft.Colors.BLACK)),
-            margin=ft.margin.only(bottom=12),
+            margin=ft.Margin(left=0, right=0, top=0, bottom=12),
         )
         
         # Job Info Card
@@ -288,17 +288,17 @@ class RepairDetailContent:
                 ft.Text(get_text("problem_description"), size=12, color="#64748B"),
                 ft.Container(
                     content=ft.Text(problem, size=13, color="#1E293B"),
-                    padding=ft.padding.all(10),
+                    padding=ft.Padding(left=10, right=10, top=10, bottom=10),
                     bgcolor="#F8FAFC",
                     border_radius=8,
-                    margin=ft.margin.only(top=4),
+                    margin=ft.Margin(left=0, right=0, top=4, bottom=0),
                 ),
             ], spacing=0),
-            padding=ft.padding.all(16),
+            padding=ft.Padding(left=16, right=16, top=16, bottom=16),
             bgcolor=ft.Colors.WHITE,
             border_radius=12,
             shadow=ft.BoxShadow(blur_radius=4, color=ft.Colors.with_opacity(0.05, ft.Colors.BLACK)),
-            margin=ft.margin.only(bottom=12),
+            margin=ft.Margin(left=0, right=0, top=0, bottom=12),
         )
         
         left_column = ft.Container(
@@ -320,7 +320,7 @@ class RepairDetailContent:
                 total = item.get('total', 0)
                 quotation_total += total
                 
-                border_bottom = ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_50)) if idx < len(quotation_items) - 1 else None
+                border_bottom = ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_50)) if idx < len(quotation_items) - 1 else None
                 
                 item_row = ft.Container(
                     content=ft.Row([
@@ -330,7 +330,7 @@ class RepairDetailContent:
                         ft.Text(f"{int(unit_price):,}", size=12, color="#64748B", width=90, text_align=ft.TextAlign.RIGHT),
                         ft.Text(f"{int(total):,}", size=12, weight=ft.FontWeight.W_600, color=self.success_color, width=110, text_align=ft.TextAlign.RIGHT),
                     ], spacing=6, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                    padding=ft.padding.symmetric(vertical=6, horizontal=0),
+                    padding=ft.Padding(left=0, right=0, top=6, bottom=6),
                     border=border_bottom,
                 )
                 quotation_items_list.controls.append(item_row)
@@ -341,10 +341,10 @@ class RepairDetailContent:
                     ft.Text(get_text("total") + ":", size=13, weight=ft.FontWeight.W_600, color="#1E293B"),
                     ft.Text(f"{int(quotation_total):,} KIP", size=14, weight=ft.FontWeight.W_700, color=self.success_color),
                 ], spacing=12),
-                padding=ft.padding.symmetric(vertical=8, horizontal=0),
+                padding=ft.Padding(left=0, right=0, top=8, bottom=8),
                 bgcolor="#F8FAFC",
                 border_radius=8,
-                margin=ft.margin.only(top=6),
+                margin=ft.Margin(left=0, right=0, top=6, bottom=0),
             )
             quotation_items_list.controls.append(total_row)
         else:
@@ -354,7 +354,7 @@ class RepairDetailContent:
                         ft.Icon(ft.Icons.REQUEST_QUOTE, size=32, color="#CBD5E1"),
                         ft.Text(get_text("no_quotation_items"), size=13, color="#94A3B8"),
                     ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=8),
-                    padding=ft.padding.all(30),
+                    padding=ft.Padding(left=30, right=30, top=30, bottom=30),
                     alignment=ft.Alignment(0, 0),
                 )
             )
@@ -370,7 +370,7 @@ class RepairDetailContent:
                             ft.Icon(ft.Icons.PRICE_CHANGE, size=14, color=self.success_color),
                             ft.Text(f"{int(quotation_total):,} KIP", size=14, weight=ft.FontWeight.W_700, color=self.success_color),
                         ], spacing=4),
-                        padding=ft.padding.symmetric(horizontal=10, vertical=4),
+                        padding=ft.Padding(left=10, right=10, top=4, bottom=4),
                         bgcolor=ft.Colors.with_opacity(0.1, self.success_color),
                         border_radius=16,
                     ),
@@ -387,11 +387,11 @@ class RepairDetailContent:
                 ft.Divider(height=1, color=ft.Colors.GREY_200),
                 quotation_items_list,
             ], spacing=0),
-            padding=ft.padding.all(16),
+            padding=ft.Padding(left=16, right=16, top=16, bottom=16),
             bgcolor=ft.Colors.WHITE,
             border_radius=12,
             shadow=ft.BoxShadow(blur_radius=4, color=ft.Colors.with_opacity(0.05, ft.Colors.BLACK)),
-            margin=ft.margin.only(bottom=12),
+            margin=ft.Margin(left=0, right=0, top=0, bottom=12),
         )
         
         # Parts Used Card
@@ -407,7 +407,7 @@ class RepairDetailContent:
                 total = qty * cost_price
                 total_cost += total
                 
-                border_bottom = ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_50)) if idx < len(parts_usage) - 1 else None
+                border_bottom = ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_50)) if idx < len(parts_usage) - 1 else None
                 
                 item_row = ft.Container(
                     content=ft.Row([
@@ -425,7 +425,7 @@ class RepairDetailContent:
                             padding=0,
                         ),
                     ], spacing=6, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                    padding=ft.padding.symmetric(vertical=6, horizontal=0),
+                    padding=ft.Padding(left=0, right=0, top=6, bottom=6),
                     border=border_bottom,
                 )
                 parts_used_list.controls.append(item_row)
@@ -436,10 +436,10 @@ class RepairDetailContent:
                     ft.Text(get_text("total_parts_cost") + ":", size=13, weight=ft.FontWeight.W_600, color="#1E293B"),
                     ft.Text(f"{int(total_cost):,} KIP", size=14, weight=ft.FontWeight.W_700, color=self.success_color),
                 ], spacing=12),
-                padding=ft.padding.symmetric(vertical=8, horizontal=0),
+                padding=ft.Padding(left=0, right=0, top=8, bottom=8),
                 bgcolor="#F8FAFC",
                 border_radius=8,
-                margin=ft.margin.only(top=6),
+                margin=ft.Margin(left=0, right=0, top=6, bottom=0),
             )
             parts_used_list.controls.append(total_row)
         else:
@@ -449,7 +449,7 @@ class RepairDetailContent:
                         ft.Icon(ft.Icons.INVENTORY, size=32, color="#CBD5E1"),
                         ft.Text(get_text("no_parts_used"), size=13, color="#94A3B8"),
                     ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=8),
-                    padding=ft.padding.all(30),
+                    padding=ft.Padding(left=30, right=30, top=30, bottom=30),
                     alignment=ft.Alignment(0, 0),
                 )
             )
@@ -465,7 +465,7 @@ class RepairDetailContent:
                 style=ft.ButtonStyle(
                     bgcolor=self.primary_color,
                     shape=ft.RoundedRectangleBorder(radius=8),
-                    padding=ft.padding.symmetric(horizontal=12, vertical=6),
+                    padding=ft.Padding(left=12, right=12, top=6, bottom=6),
                 ),
             )
 
@@ -482,7 +482,7 @@ class RepairDetailContent:
                     style=ft.ButtonStyle(
                         bgcolor=ft.Colors.GREEN_600,
                         shape=ft.RoundedRectangleBorder(radius=8),
-                        padding=ft.padding.symmetric(horizontal=12, vertical=6),
+                        padding=ft.Padding(left=12, right=12, top=6, bottom=6),
                     ),
                 )
 
@@ -503,7 +503,7 @@ class RepairDetailContent:
                             ft.Icon(ft.Icons.ATTACH_MONEY, size=14, color=self.success_color),
                             ft.Text(f"{int(total_cost):,} KIP", size=14, weight=ft.FontWeight.W_700, color=self.success_color),
                         ], spacing=4),
-                        padding=ft.padding.symmetric(horizontal=10, vertical=4),
+                        padding=ft.Padding(left=10, right=10, top=4, bottom=4),
                         bgcolor=ft.Colors.with_opacity(0.1, self.success_color),
                         border_radius=16,
                     ),
@@ -523,11 +523,11 @@ class RepairDetailContent:
                 ft.Container(height=6),
                 ft.Row(action_buttons, alignment=ft.MainAxisAlignment.END, spacing=10) if action_buttons else ft.Container(),
             ], spacing=0),
-            padding=ft.padding.all(16),
+            padding=ft.Padding(left=16, right=16, top=16, bottom=16),
             bgcolor=ft.Colors.WHITE,
             border_radius=12,
             shadow=ft.BoxShadow(blur_radius=4, color=ft.Colors.with_opacity(0.05, ft.Colors.BLACK)),
-            margin=ft.margin.only(bottom=12),
+            margin=ft.Margin(left=0, right=0, top=0, bottom=12),
         )
         
         right_column = ft.Container(
@@ -547,7 +547,7 @@ class RepairDetailContent:
         
         main_content = ft.Container(
             content=two_columns,
-            padding=ft.padding.all(20),
+            padding=ft.Padding(left=20, right=20, top=20, bottom=20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
             expand=True,
@@ -563,7 +563,7 @@ class RepairDetailContent:
             style=ft.ButtonStyle(
                 shape=ft.RoundedRectangleBorder(radius=10),
                 side=ft.BorderSide(1, self.primary_color),
-                padding=ft.padding.symmetric(horizontal=24, vertical=12),
+                padding=ft.Padding(left=24, right=24, top=12, bottom=12),
             ),
         )
         
@@ -576,7 +576,7 @@ class RepairDetailContent:
             style=ft.ButtonStyle(
                 bgcolor=self.primary_color,
                 shape=ft.RoundedRectangleBorder(radius=10),
-                padding=ft.padding.symmetric(horizontal=24, vertical=12),
+                padding=ft.Padding(left=24, right=24, top=12, bottom=12),
             ),
         )
         
@@ -641,7 +641,7 @@ class RepairDetailContent:
             border_radius=12,
             bgcolor=ft.Colors.WHITE,
             filled=True,
-            content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
+            content_padding=ft.Padding(left=16, right=16, top=12, bottom=12),
         )
         part_dropdown.on_change = self.on_part_select
         
@@ -653,7 +653,7 @@ class RepairDetailContent:
             border_radius=12,
             bgcolor=ft.Colors.WHITE,
             filled=True,
-            content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
+            content_padding=ft.Padding(left=16, right=16, top=12, bottom=12),
         )
         
         stock_info = ft.Text("", size=12, color="#64748B", visible=False)
@@ -670,7 +670,7 @@ class RepairDetailContent:
                             content=ft.Icon(ft.Icons.INVENTORY, size=24, color=ft.Colors.WHITE),
                             bgcolor=self.primary_color,
                             border_radius=12,
-                            padding=ft.padding.all(8),
+                            padding=ft.Padding(left=8, right=8, top=8, bottom=8),
                         ),
                         ft.Text(
                             get_text("withdraw_part"),
@@ -682,8 +682,8 @@ class RepairDetailContent:
                     spacing=12,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
-                padding=ft.padding.symmetric(horizontal=20, vertical=16),
-                border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
+                padding=ft.Padding(left=20, right=20, top=16, bottom=16),
+                border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
             ),
             content=ft.Container(
                 content=ft.Column([
@@ -693,7 +693,7 @@ class RepairDetailContent:
                     ft.Container(height=8),
                     self.qty_field,
                 ], spacing=0),
-                padding=ft.padding.all(24),
+                padding=ft.Padding(left=24, right=24, top=24, bottom=24),
                 width=450,
             ),
             actions=[
@@ -771,7 +771,7 @@ class RepairDetailContent:
                             content=ft.Icon(ft.Icons.WARNING_AMBER, size=24, color=ft.Colors.WHITE),
                             bgcolor=self.warning_color,
                             border_radius=12,
-                            padding=ft.padding.all(8),
+                            padding=ft.Padding(left=8, right=8, top=8, bottom=8),
                         ),
                         ft.Text(
                             get_text("confirm_return"),
@@ -783,12 +783,12 @@ class RepairDetailContent:
                     spacing=12,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
-                padding=ft.padding.symmetric(horizontal=20, vertical=16),
-                border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
+                padding=ft.Padding(left=20, right=20, top=16, bottom=16),
+                border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
             ),
             content=ft.Container(
                 content=ft.Text(get_text("return_part_warning"), size=14, color="#64748B"),
-                padding=ft.padding.all(24),
+                padding=ft.Padding(left=24, right=24, top=24, bottom=24),
                 width=380,
             ),
             actions=[
@@ -876,7 +876,7 @@ class RepairDetailContent:
                             content=ft.Icon(icon, size=20, color=ft.Colors.WHITE),
                             bgcolor=color,
                             border_radius=10,
-                            padding=ft.padding.all(8),
+                            padding=ft.Padding(left=8, right=8, top=8, bottom=8),
                         ),
                         ft.Text(
                             label, size=11, color="#1E293B",
@@ -887,15 +887,15 @@ class RepairDetailContent:
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     spacing=4,
                 ),
-                padding=ft.padding.all(10),
+                padding=ft.Padding(left=10, right=10, top=10, bottom=10),
                 border_radius=12,
                 bgcolor=(
                     ft.Colors.with_opacity(0.12, color) if is_selected
                     else ft.Colors.WHITE
                 ),
                 border=(
-                    ft.border.all(2, color) if is_selected
-                    else ft.border.all(1, ft.Colors.GREY_200)
+                    ft.Border(top=ft.BorderSide(2, color), right=ft.BorderSide(2, color), bottom=ft.BorderSide(2, color), left=ft.BorderSide(2, color)) if is_selected
+                    else ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_200), right=ft.BorderSide(1, ft.Colors.GREY_200), bottom=ft.BorderSide(1, ft.Colors.GREY_200), left=ft.BorderSide(1, ft.Colors.GREY_200))
                 ),
                 ink=True,
                 on_click=lambda e, k=key, c=color: _on_step_click(k, c),
@@ -930,17 +930,17 @@ class RepairDetailContent:
                         content=ft.Row([
                             ft.Container(
                                 content=ft.Icon(ft.Icons.WARNING, size=22, color=ft.Colors.WHITE),
-                                bgcolor="#F59E0B", border_radius=10, padding=ft.padding.all(8),
+                                bgcolor="#F59E0B", border_radius=10, padding=ft.Padding(left=8, right=8, top=8, bottom=8),
                             ),
                             ft.Text(get_text("confirm_complete_repair"), size=18,
                                     weight=ft.FontWeight.BOLD, color="#1E293B"),
                         ], spacing=10),
-                        padding=ft.padding.all(16),
-                        border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
+                        padding=ft.Padding(left=16, right=16, top=16, bottom=16),
+                        border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
                     ),
                     content=ft.Container(
                         content=ft.Text(get_text("confirm_complete_repair_msg"), size=14, color="#64748B"),
-                        padding=ft.padding.all(20), width=360,
+                        padding=ft.Padding(left=20, right=20, top=20, bottom=20), width=360,
                     ),
                     actions=[
                         ft.TextButton(get_text("cancel"), on_click=lambda e: self._close_dialog(confirm_dialog),
@@ -965,15 +965,15 @@ class RepairDetailContent:
                     [
                         ft.Container(
                             content=ft.Icon(ft.Icons.EDIT, size=22, color=ft.Colors.WHITE),
-                            bgcolor=self.primary_color, border_radius=10, padding=ft.padding.all(8),
+                            bgcolor=self.primary_color, border_radius=10, padding=ft.Padding(left=8, right=8, top=8, bottom=8),
                         ),
                         ft.Text(get_text("update_repair_status"), size=18,
                                 weight=ft.FontWeight.BOLD, color="#1E293B"),
                     ],
                     spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
-                padding=ft.padding.all(16),
-                border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
+                padding=ft.Padding(left=16, right=16, top=16, bottom=16),
+                border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
             ),
             content=ft.Container(
                 content=ft.Column([
@@ -981,7 +981,7 @@ class RepairDetailContent:
                     ft.Container(height=10),
                     step_row,
                 ], spacing=0),
-                padding=ft.padding.all(20), width=420,
+                padding=ft.Padding(left=20, right=20, top=20, bottom=20), width=420,
             ),
             actions=[
                 ft.TextButton(get_text("cancel"), on_click=lambda e: self._close_dialog(dialog),
@@ -1052,19 +1052,19 @@ class RepairDetailContent:
                     [
                         ft.Container(
                             content=ft.Icon(ft.Icons.DOWNLOAD, size=22, color=ft.Colors.WHITE),
-                            bgcolor=ft.Colors.GREEN_600, border_radius=10, padding=ft.padding.all(8),
+                            bgcolor=ft.Colors.GREEN_600, border_radius=10, padding=ft.Padding(left=8, right=8, top=8, bottom=8),
                         ),
                         ft.Text(get_text("confirm_pull_parts"), size=18,
                                 weight=ft.FontWeight.BOLD, color="#1E293B"),
                     ],
                     spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
-                padding=ft.padding.all(16),
-                border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
+                padding=ft.Padding(left=16, right=16, top=16, bottom=16),
+                border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
             ),
             content=ft.Container(
                 content=ft.Text(get_text("confirm_pull_parts_msg"), size=13, color="#64748B"),
-                padding=ft.padding.all(20), width=420,
+                padding=ft.Padding(left=20, right=20, top=20, bottom=20), width=420,
             ),
             actions=[
                 ft.TextButton(get_text("cancel"), on_click=lambda e: self._close_dialog(confirm_dialog),

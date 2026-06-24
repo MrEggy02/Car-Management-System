@@ -31,7 +31,7 @@ class PurchaseOrderDetailContent:
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
             alignment=ft.Alignment(0, 0),
             expand=True,
-            padding=ft.padding.all(24),
+            padding=ft.Padding(left=24, right=24, top=24, bottom=24),
             bgcolor="#F8FAFC",
         )
         
@@ -76,7 +76,7 @@ class PurchaseOrderDetailContent:
                 spacing=12,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(vertical=12, horizontal=24),
+            padding=ft.Padding(left=24, right=24, top=12, bottom=12),
             gradient=ft.LinearGradient(
                 begin=ft.Alignment(-1, -1),
                 end=ft.Alignment(1, 1),
@@ -127,8 +127,8 @@ class PurchaseOrderDetailContent:
                 ft.Text(label, size=12, color="#64748B", width=100),
                 ft.Text(value, size=13, color="#1E293B", weight=ft.FontWeight.W_500, expand=True),
             ], spacing=12),
-            padding=ft.padding.symmetric(vertical=5),
-            border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_50)),
+            padding=ft.Padding(left=0, right=0, top=5, bottom=5),
+            border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_50)),
         )
     
     def _build_content(self):
@@ -169,7 +169,7 @@ class PurchaseOrderDetailContent:
             content=ft.Text(status_texts.get(status, status), size=12, color=ft.Colors.WHITE, weight=ft.FontWeight.W_600),
             bgcolor=status_colors.get(status, "#607D8B"),
             border_radius=20,
-            padding=ft.padding.symmetric(horizontal=14, vertical=5),
+            padding=ft.Padding(left=14, right=14, top=5, bottom=5),
         )
         
         # ========== LEFT COLUMN ==========
@@ -191,11 +191,11 @@ class PurchaseOrderDetailContent:
                 self._create_info_row(get_text("received_by"), received_by if received_by != '-' else '-'),
                 self._create_info_row(get_text("received_date"), received_at),
             ], spacing=0),
-            padding=ft.padding.all(16),
+            padding=ft.Padding(left=16, right=16, top=16, bottom=16),
             bgcolor=ft.Colors.WHITE,
             border_radius=12,
             shadow=ft.BoxShadow(blur_radius=4, color=ft.Colors.with_opacity(0.05, ft.Colors.BLACK)),
-            margin=ft.margin.only(bottom=12),
+            margin=ft.Margin(left=0, right=0, top=0, bottom=12),
         )
         
         # Total Amount Card
@@ -207,13 +207,13 @@ class PurchaseOrderDetailContent:
                     ft.Container(expand=True),
                     ft.Container(
                         content=ft.Text(f"{int(total_amount):,} KIP", size=20, weight=ft.FontWeight.W_800, color=self.success_color),
-                        padding=ft.padding.symmetric(horizontal=12, vertical=6),
+                        padding=ft.Padding(left=12, right=12, top=6, bottom=6),
                         bgcolor=ft.Colors.with_opacity(0.1, self.success_color),
                         border_radius=16,
                     ),
                 ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
             ], spacing=0),
-            padding=ft.padding.all(16),
+            padding=ft.Padding(left=16, right=16, top=16, bottom=16),
             bgcolor=ft.Colors.WHITE,
             border_radius=12,
             shadow=ft.BoxShadow(blur_radius=4, color=ft.Colors.with_opacity(0.05, ft.Colors.BLACK)),
@@ -237,7 +237,7 @@ class PurchaseOrderDetailContent:
                 total_line = item.get('total_line', qty * unit_cost)
                 received_qty = item.get('received_qty', 0)
                 
-                border_bottom = ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_50)) if idx < len(items) - 1 else None
+                border_bottom = ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_50)) if idx < len(items) - 1 else None
                 
                 if received_qty >= qty:
                     received_color = self.success_color
@@ -260,12 +260,12 @@ class PurchaseOrderDetailContent:
                             content=ft.Text(f"{received_qty}/{qty}", size=10, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500),
                             bgcolor=received_color,
                             border_radius=12,
-                            padding=ft.padding.symmetric(horizontal=8, vertical=3),
+                            padding=ft.Padding(left=8, right=8, top=3, bottom=3),
                             width=65,
                             alignment=ft.Alignment(0, 0),
                         ),
                     ], spacing=6, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                    padding=ft.padding.symmetric(vertical=6, horizontal=0),
+                    padding=ft.Padding(left=0, right=0, top=6, bottom=6),
                     border=border_bottom,
                 )
                 items_list.controls.append(item_row)
@@ -276,10 +276,10 @@ class PurchaseOrderDetailContent:
                     ft.Text(get_text("total") + ":", size=13, weight=ft.FontWeight.W_600, color="#1E293B"),
                     ft.Text(f"{int(total_amount):,} KIP", size=14, weight=ft.FontWeight.W_700, color=self.success_color),
                 ], spacing=12),
-                padding=ft.padding.symmetric(vertical=8, horizontal=0),
+                padding=ft.Padding(left=0, right=0, top=8, bottom=8),
                 bgcolor="#F8FAFC",
                 border_radius=8,
-                margin=ft.margin.only(top=6),
+                margin=ft.Margin(left=0, right=0, top=6, bottom=0),
             )
             items_list.controls.append(total_row)
         else:
@@ -289,7 +289,7 @@ class PurchaseOrderDetailContent:
                         ft.Icon(ft.Icons.INBOX, size=32, color="#CBD5E1"),
                         ft.Text(get_text("no_items"), size=13, color="#94A3B8"),
                     ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=8),
-                    padding=ft.padding.all(30),
+                    padding=ft.Padding(left=30, right=30, top=30, bottom=30),
                     alignment=ft.Alignment(0, 0),
                 )
             )
@@ -313,7 +313,7 @@ class PurchaseOrderDetailContent:
                 ft.Divider(height=1, color=ft.Colors.GREY_200),
                 items_list,
             ], spacing=0),
-            padding=ft.padding.all(16),
+            padding=ft.Padding(left=16, right=16, top=16, bottom=16),
             bgcolor=ft.Colors.WHITE,
             border_radius=12,
             shadow=ft.BoxShadow(blur_radius=4, color=ft.Colors.with_opacity(0.05, ft.Colors.BLACK)),
@@ -336,7 +336,7 @@ class PurchaseOrderDetailContent:
         
         main_content = ft.Container(
             content=two_columns,
-            padding=ft.padding.all(20),
+            padding=ft.Padding(left=20, right=20, top=20, bottom=20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
             expand=True,
@@ -352,7 +352,7 @@ class PurchaseOrderDetailContent:
             style=ft.ButtonStyle(
                 shape=ft.RoundedRectangleBorder(radius=10),
                 side=ft.BorderSide(1, self.primary_color),
-                padding=ft.padding.symmetric(horizontal=24, vertical=12),
+                padding=ft.Padding(left=24, right=24, top=12, bottom=12),
             ),
         )
         
@@ -365,7 +365,7 @@ class PurchaseOrderDetailContent:
             style=ft.ButtonStyle(
                 bgcolor=self.primary_color,
                 shape=ft.RoundedRectangleBorder(radius=10),
-                padding=ft.padding.symmetric(horizontal=24, vertical=12),
+                padding=ft.Padding(left=24, right=24, top=12, bottom=12),
             ),
         )
         

@@ -21,7 +21,7 @@ class EmployeesContent:
         self.filtered_employees = []
         self.search_input = None
         self.current_page = 1
-        self.items_per_page = 5
+        self.items_per_page = 10
         self.total_pages = 1
         self.primary_color = "#1565C0"
         self.primary_dark = "#0D47A1"
@@ -58,14 +58,14 @@ class EmployeesContent:
                             bgcolor=ft.Colors.with_opacity(0.2, ft.Colors.WHITE),
                             shape=ft.RoundedRectangleBorder(radius=10),
                             elevation=0,
-                            padding=ft.padding.symmetric(horizontal=20, vertical=12),
+                            padding=ft.Padding(left=20, right=20, top=12, bottom=12),
                         ),
                     ),
                 ],
                 spacing=16,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(vertical=12, horizontal=24),
+            padding=ft.Padding(left=24, right=24, top=12, bottom=12),
             gradient=ft.LinearGradient(
                 begin=ft.Alignment(-1, -1),
                 end=ft.Alignment(1, 1),
@@ -84,7 +84,7 @@ class EmployeesContent:
             expand=True,
             on_change=self.filter_employees,
             prefix_icon=ft.Icons.SEARCH,
-            content_padding=ft.padding.symmetric(horizontal=16, vertical=14),
+            content_padding=ft.Padding(left=16, right=16, top=14, bottom=14),
             border_color=ft.Colors.GREY_200,
             focused_border_color=self.primary_color,
         )
@@ -96,7 +96,7 @@ class EmployeesContent:
         
         control_bar = ft.Container(
             content=search_container,
-            padding=ft.padding.all(20),
+            padding=ft.Padding(left=20, right=20, top=20, bottom=20),
             bgcolor="#F5F7FA",
         )
         
@@ -107,17 +107,17 @@ class EmployeesContent:
         table_scroll_container = ft.Container(
             content=self.table_rows,
             expand=True,
-            border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_200)),
+            border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_200)),
             bgcolor=ft.Colors.WHITE,
         )
         
         # Table container
         table_container = ft.Container(
             content=ft.Column([table_header, ft.Divider(height=1, color=ft.Colors.GREY_300), table_scroll_container], spacing=0),
-            margin=ft.margin.only(left=20, right=20),
+            margin=ft.Margin(left=20, right=20, top=0, bottom=0),
             bgcolor=ft.Colors.WHITE,
             border_radius=ft.BorderRadius.only(top_left=12, top_right=12, bottom_left=12, bottom_right=12),
-            border=ft.border.all(1, ft.Colors.GREY_200),
+            border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_200), right=ft.BorderSide(1, ft.Colors.GREY_200), bottom=ft.BorderSide(1, ft.Colors.GREY_200), left=ft.BorderSide(1, ft.Colors.GREY_200)),
             expand=True,
         )
         
@@ -172,7 +172,7 @@ class EmployeesContent:
                             ),
                             ft.Container(
                                 content=ft.Text(f"{self.current_page}/{self.total_pages}", size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
-                                padding=ft.padding.symmetric(horizontal=15),
+                                padding=ft.Padding(left=15, right=15, top=0, bottom=0),
                             ),
                             ft.IconButton(
                                 icon=ft.Icons.CHEVRON_RIGHT, 
@@ -186,12 +186,12 @@ class EmployeesContent:
                         ]),
                         bgcolor=ft.Colors.WHITE,
                         border_radius=10,
-                        padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                        padding=ft.Padding(left=8, right=8, top=4, bottom=4),
                     ),
                 ],
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(vertical=16, horizontal=20),
+            padding=ft.Padding(left=20, right=20, top=16, bottom=16),
             bgcolor="#F5F7FA",
         )
     
@@ -361,7 +361,7 @@ class EmployeesContent:
                             content=ft.Icon(ft.Icons.CHECK_CIRCLE, size=24, color=ft.Colors.WHITE),
                             bgcolor=ft.Colors.GREEN_600,
                             border_radius=12,
-                            padding=ft.padding.all(8),
+                            padding=ft.Padding(left=8, right=8, top=8, bottom=8),
                         ),
                         ft.Text(
                             get_text("success"),
@@ -373,12 +373,12 @@ class EmployeesContent:
                     spacing=12,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
-                padding=ft.padding.symmetric(horizontal=20, vertical=16),
-                border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
+                padding=ft.Padding(left=20, right=20, top=16, bottom=16),
+                border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
             ),
             content=ft.Container(
                 content=ft.Text(message, size=15, color="#1E293B"),
-                padding=ft.padding.all(24),
+                padding=ft.Padding(left=24, right=24, top=24, bottom=24),
                 width=350,
             ),
             actions=[
@@ -414,7 +414,7 @@ class EmployeesContent:
                             content=ft.Icon(ft.Icons.ERROR_OUTLINE, size=24, color=ft.Colors.WHITE),
                             bgcolor=ft.Colors.RED_600,
                             border_radius=12,
-                            padding=ft.padding.all(8),
+                            padding=ft.Padding(left=8, right=8, top=8, bottom=8),
                         ),
                         ft.Text(
                             get_text("error"),
@@ -426,12 +426,12 @@ class EmployeesContent:
                     spacing=12,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
-                padding=ft.padding.symmetric(horizontal=20, vertical=16),
-                border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
+                padding=ft.Padding(left=20, right=20, top=16, bottom=16),
+                border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
             ),
             content=ft.Container(
                 content=ft.Text(message, size=15, color="#1E293B"),
-                padding=ft.padding.all(24),
+                padding=ft.Padding(left=24, right=24, top=24, bottom=24),
                 width=350,
             ),
             actions=[
