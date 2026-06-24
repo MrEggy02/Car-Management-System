@@ -371,13 +371,13 @@ class RepairSummaryReportContent:
         """Build repair statistics card"""
         repair_stats = self.report_data.get('repair_stats', {})
         
-        total = repair_stats.get('total_repairs', 0)
-        completed = repair_stats.get('completed_repairs', 0)
-        working = repair_stats.get('working_repairs', 0)
-        waiting = repair_stats.get('waiting_repairs', 0)
-        paused = repair_stats.get('paused_repairs', 0)
-        completion_rate = repair_stats.get('completion_rate', 0)
-        avg_hours = repair_stats.get('avg_repair_hours', 0)
+        total = repair_stats.get('total_repairs') or 0
+        completed = repair_stats.get('completed_repairs') or 0
+        working = repair_stats.get('working_repairs') or 0
+        waiting = repair_stats.get('waiting_repairs') or 0
+        paused = repair_stats.get('paused_repairs') or 0
+        completion_rate = repair_stats.get('completion_rate') or 0
+        avg_hours = repair_stats.get('avg_repair_hours') or 0
         
         # Stats row
         stats_row = ft.Row(spacing=16, expand=True)
@@ -508,10 +508,10 @@ class RepairSummaryReportContent:
             table_body.controls.append(
                 ft.Container(
                     content=ft.Row([
-                        ft.Text(vehicle.get('brand', '-'), size=13, weight=ft.FontWeight.W_500, color="#1E293B", expand=True),
-                        ft.Text(str(vehicle.get('repair_count', 0)), size=13, color="#3B82F6", width=100),
-                        ft.Text(str(vehicle.get('completed_count', 0)), size=13, color="#10B981", width=100),
-                        ft.Text(f"{vehicle.get('avg_hours', 0):.1f}h", size=13, color="#64748B", width=100),
+                        ft.Text(vehicle.get('brand') or '-', size=13, weight=ft.FontWeight.W_500, color="#1E293B", expand=True),
+                        ft.Text(str(vehicle.get('repair_count') or 0), size=13, color="#3B82F6", width=100),
+                        ft.Text(str(vehicle.get('completed_count') or 0), size=13, color="#10B981", width=100),
+                        ft.Text(f"{(vehicle.get('avg_hours') or 0):.1f}h", size=13, color="#64748B", width=100),
                     ]),
                     padding=ft.Padding(left=16, right=16, top=12, bottom=12),
                     bgcolor=bg,
@@ -582,10 +582,10 @@ class RepairSummaryReportContent:
         for i, mechanic in enumerate(mechanic_stats):
             bg = ft.Colors.GREY_50 if i % 2 == 0 else ft.Colors.WHITE
             
-            name = mechanic.get('mechanic_name', '-')
-            repair_count = mechanic.get('repair_count', 0)
-            completed_count = mechanic.get('completed_count', 0)
-            avg_hours = mechanic.get('avg_hours_per_repair', 0)
+            name = mechanic.get('mechanic_name') or '-'
+            repair_count = mechanic.get('repair_count') or 0
+            completed_count = mechanic.get('completed_count') or 0
+            avg_hours = mechanic.get('avg_hours_per_repair') or 0
             completion_rate = (completed_count / repair_count * 100) if repair_count > 0 else 0
             
             table_body.controls.append(
@@ -644,10 +644,10 @@ class RepairSummaryReportContent:
         for i, day in enumerate(daily_repairs):
             bg = ft.Colors.GREY_50 if i % 2 == 0 else ft.Colors.WHITE
             
-            date = day.get('date', '-')
-            daily_repair = day.get('daily_repairs', 0)
-            daily_completed = day.get('daily_completed', 0)
-            daily_in_progress = day.get('daily_in_progress', 0)
+            date = day.get('date') or '-'
+            daily_repair = day.get('daily_repairs') or 0
+            daily_completed = day.get('daily_completed') or 0
+            daily_in_progress = day.get('daily_in_progress') or 0
             
             completed_color = "#10B981" if daily_completed > 0 else "#94A3B8"
             progress_color = "#3B82F6" if daily_in_progress > 0 else "#94A3B8"
