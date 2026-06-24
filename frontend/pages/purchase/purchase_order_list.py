@@ -18,7 +18,7 @@ class PurchaseOrderListContent:
         self.filtered_orders = []
         self.low_stock_parts = []
         self.current_page = 1
-        self.items_per_page = 10
+        self.items_per_page = 5
         self.total_pages = 1
         self.search_field = None
         self.current_status_filter = "all"

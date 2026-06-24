@@ -26,7 +26,7 @@ class BrandsPageContent:
         
         # Pagination
         self.current_page = 1
-        self.items_per_page = 10
+        self.items_per_page = 5
         self.total_pages = 1
         self.pagination_container = ft.Container()
         

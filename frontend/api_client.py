@@ -6,9 +6,12 @@ API_BASE_URL = "http://127.0.0.1:8000"
 
 
 class APIClient:
+    GLOBAL_MOCK_MODE = False
+
     def __init__(self, username: str = None, password: str = None):
         self.username = username
         self.password = password
+        self.mock_mode = APIClient.GLOBAL_MOCK_MODE
 
     def _get_auth(self):
         if self.username and self.password:
@@ -60,7 +63,10 @@ class APIClient:
                 if method == "GET" and not response.content:
                     return response.content
                 try:
-                    return response.json()
+                    res_json = response.json()
+                    if getattr(self, "mock_mode", False):
+                        return self._mask_data(res_json, endpoint)
+                    return res_json
                 except:
                     return response.content
             else:
@@ -77,6 +83,74 @@ class APIClient:
             raise Exception("ການເຊື່ອມຕໍ່ໝົດເວລາ ກະລຸນາລອງໃໝ່")
         except Exception as e:
             raise Exception(str(e))
+
+    def _mask_data(self, data, endpoint=""):
+        if not getattr(self, "mock_mode", False):
+            return data
+
+        import copy
+        
+        # Define replacements for specific sensitive keys
+        SENSITIVE_REPLACEMENTS = {
+            "customer_name": "ລູກຄ້າ ຕົວຢ່າງ (Demo Customer)",
+            "fullname": "ຜູ້ໃຊ້ ຕົວຢ່າງ (Demo User)",
+            "contact_person": "ຜູ້ຕິດຕໍ່ ຕົວຢ່າງ (Demo Contact)",
+            "mechanic_name": "ຊ່າງຊ້ອມ ຕົວຢ່າງ (Demo Mechanic)",
+            "creator_name": "ຜູ້ສ້າງ ຕົວຢ່າງ (Demo Creator)",
+            "phone": "020-XXXX-XXXX",
+            "customer_phone": "020-XXXX-XXXX",
+            "email": "demo_email@example.com",
+            "address": "ນະຄອນຫຼວງວຽງຈັນ (Vientiane, Laos)",
+            "plate_number": "ກກ XXXX",
+            "chassis_number": "XXXX-CHASSIS-XXXX",
+            "engine_number": "XXXX-ENGINE-XXXX",
+            "username": "demo_user",
+            "problem_description": "ລາຍລະອຽດອາການເພຕົວຢ່າງ (Demo symptom description...)",
+            "note": "ໝາຍເຫດຕົວຢ່າງ (Demo note...)",
+            "shop_name": "ອູ່ສ້ອມແປງລົດ ຕົວຢ່າງ J&P",
+        }
+
+        # Handle deep copy to avoid mutating cache in-place
+        data_copy = copy.deepcopy(data)
+
+        def walk(obj, parent_key=None, current_endpoint=""):
+            if isinstance(obj, list):
+                return [walk(item, parent_key, current_endpoint) for item in obj]
+            elif isinstance(obj, dict):
+                # Guess context based on dict structure or endpoint
+                is_employee = "role" in obj or "can_login" in obj
+                is_supplier = "contact_person" in obj or "email" in obj
+                is_customer = "phone" in obj and "address" in obj and not is_employee and not is_supplier
+                is_shop = "address" in obj and "phone" in obj and current_endpoint.endswith("/shop")
+
+                new_dict = {}
+                for k, v in obj.items():
+                    if isinstance(v, (dict, list)):
+                        new_dict[k] = walk(v, k, current_endpoint)
+                    elif isinstance(v, str):
+                        # Direct replacements
+                        if k in SENSITIVE_REPLACEMENTS:
+                            new_dict[k] = SENSITIVE_REPLACEMENTS[k]
+                        elif k == "name":
+                            if is_employee:
+                                new_dict[k] = "ພະນັກງານ ຕົວຢ່າງ (Demo Employee)"
+                            elif is_supplier:
+                                new_dict[k] = "ບໍລິສັດສະໜອງ ຕົວຢ່າງ (Demo Supplier)"
+                            elif is_customer or "customer" in current_endpoint:
+                                new_dict[k] = "ລູກຄ້າ ຕົວຢ່າງ (Demo Customer)"
+                            elif is_shop or current_endpoint.endswith("/shop"):
+                                new_dict[k] = "ອູ່ J&P Auto Maxing (ຕົວຢ່າງ)"
+                            else:
+                                # Keep original name for services, parts, categories, brands, units
+                                new_dict[k] = v
+                        else:
+                            new_dict[k] = v
+                    else:
+                        new_dict[k] = v
+                return new_dict
+            return obj
+
+        return walk(data_copy, current_endpoint=endpoint)
 
     # ========== Authentication ==========
     def login(self, username: str, password: str) -> Dict:
@@ -508,18 +582,35 @@ class APIClient:
         problem_description: str,
         mileage: int = 0,
         fuel_level: str = "",
+        car_defects: str = "",
+        signed_receipt_image_path: str = None,
     ) -> Dict:
-        return self._request(
-            "POST",
-            "/job-orders",
-            data={
-                "customer_id": customer_id,
-                "vehicle_id": vehicle_id,
-                "problem_description": problem_description,
-                "mileage": mileage,
-                "fuel_level": fuel_level,
-            },
-        )
+        data = {
+            "customer_id": customer_id,
+            "vehicle_id": vehicle_id,
+            "problem_description": problem_description,
+            "mileage": mileage,
+            "fuel_level": fuel_level,
+            "car_defects": car_defects,
+        }
+        files = None
+        if signed_receipt_image_path:
+            try:
+                f = open(signed_receipt_image_path, "rb")
+                files = {"signed_receipt_image": (os.path.basename(signed_receipt_image_path), f, "image/png")}
+            except Exception as e:
+                print(f"Error opening signed_receipt_image: {e}")
+                
+        try:
+            return self._request(
+                "POST",
+                "/job-orders",
+                data=data,
+                files=files,
+            )
+        finally:
+            if files:
+                files["signed_receipt_image"][1].close()
 
     def get_job_orders(self, status: str = None) -> List[Dict]:
         params = {"status": status} if status else None
@@ -533,7 +624,20 @@ class APIClient:
         return self._request("GET", f"/job-orders/{order_id}/pdf")
 
     def update_job_order(self, order_id: int, **kwargs) -> Dict:
-        return self._request("PUT", f"/job-orders/{order_id}", data=kwargs)
+        image_path = kwargs.pop("signed_receipt_image_path", None)
+        files = None
+        if image_path:
+            try:
+                f = open(image_path, "rb")
+                files = {"signed_receipt_image": (os.path.basename(image_path), f, "image/png")}
+            except Exception as e:
+                print(f"Error opening signed_receipt_image for update: {e}")
+                
+        try:
+            return self._request("PUT", f"/job-orders/{order_id}", data=kwargs, files=files)
+        finally:
+            if files:
+                files["signed_receipt_image"][1].close()
 
     def delete_job_order(self, order_id: int) -> Dict:
         return self._request("DELETE", f"/job-orders/{order_id}")

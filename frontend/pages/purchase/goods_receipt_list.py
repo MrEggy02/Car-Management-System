@@ -17,7 +17,7 @@ class GoodsReceiptListContent:
         self.receipts = []
         self.filtered_receipts = []
         self.current_page = 1
-        self.items_per_page = 10
+        self.items_per_page = 5
         self.total_pages = 1
         self.search_field = None
         self.table_rows = None

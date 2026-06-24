@@ -3,6 +3,7 @@ import sys
 import os
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+import mock_patch
 
 from pages.login_page import login_page
 from theme.app_theme import apply_theme

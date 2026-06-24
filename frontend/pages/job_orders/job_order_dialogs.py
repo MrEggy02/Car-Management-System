@@ -871,8 +871,10 @@ def show_create_job_order_dialog(primary_color, customers, vehicles_by_customer,
     return dialog
 
 
-def show_job_order_detail_dialog(order, primary_color, on_close, on_print=None):
+def show_job_order_detail_dialog(order, primary_color, on_close, on_print=None, on_upload_click=None):
     """Show job order detail dialog with print button"""
+    import webbrowser
+    from api_client import API_BASE_URL
     
     order_id = order.get("id")
     job_no = order.get("job_no", "-")
@@ -890,8 +892,10 @@ def show_job_order_detail_dialog(order, primary_color, on_close, on_print=None):
     else:
         receive_date = "-"
     problem = order.get("problem_description", "-")
+    car_defects = order.get("car_defects", "-") or "-"
     mileage = order.get("mileage", 0)
     fuel_level = order.get("fuel_level", "-")
+    signed_receipt_image = order.get("signed_receipt_image", "") or ""
     status = order.get("status", "pending")
     created_by = order.get("created_by_name", "-")
     
@@ -930,6 +934,54 @@ def show_job_order_detail_dialog(order, primary_color, on_close, on_print=None):
             on_click=lambda e: on_print(order_id),
             style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=6)),
         ))
+        
+    image_header_row = ft.Row([
+        ft.Text(get_text("signed_receipt_image"), size=11, color="#64748B", weight=ft.FontWeight.BOLD),
+    ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
+    
+    if on_upload_click:
+        image_header_row.controls.append(
+            ft.TextButton(
+                content=ft.Row([
+                    ft.Icon(ft.Icons.UPLOAD_FILE, size=14, color=primary_color),
+                    ft.Text(get_text("change_image") if signed_receipt_image else get_text("upload_signed_receipt"), size=11, color=primary_color, weight=ft.FontWeight.W_600),
+                ], spacing=4),
+                on_click=lambda e: on_upload_click(order_id),
+                style=ft.ButtonStyle(padding=ft.padding.all(0)),
+            )
+        )
+        
+    image_display_container = ft.Container()
+    if signed_receipt_image:
+        image_url = f"{API_BASE_URL}/uploads/{signed_receipt_image}"
+        image_display_container.content = ft.GestureDetector(
+            on_tap=lambda e: webbrowser.open(image_url),
+            mouse_cursor=ft.MouseCursor.CLICK,
+            content=ft.Container(
+                content=ft.Image(
+                    src=image_url,
+                    width=400,
+                    height=180,
+                    fit="contain",
+                ),
+                border=ft.border.all(1, ft.Colors.GREY_300),
+                border_radius=8,
+                bgcolor=ft.Colors.GREY_50,
+                padding=6,
+                tooltip="Click to view full image",
+            )
+        )
+    else:
+        image_display_container.content = ft.Container(
+            content=ft.Row([
+                ft.Icon(ft.Icons.IMAGE_NOT_SUPPORTED, size=18, color="#94A3B8"),
+                ft.Text(get_text("no_image_uploaded"), size=11, color="#94A3B8"),
+            ], spacing=6, alignment=ft.MainAxisAlignment.CENTER),
+            border=ft.border.all(1, ft.Colors.GREY_200),
+            border_radius=8,
+            padding=10,
+            alignment=ft.Alignment(0, 0),
+        )
     
     dialog = ft.AlertDialog(
         modal=True,
@@ -998,6 +1050,13 @@ def show_job_order_detail_dialog(order, primary_color, on_close, on_print=None):
                 ]),
                 ft.Text(get_text("problem_description"), size=11, color="#64748B"),
                 ft.Text(problem, size=12, color="#1E293B"),
+                
+                ft.Text(get_text("car_defects"), size=11, color="#64748B"),
+                ft.Text(car_defects, size=12, color="#1E293B"),
+                
+                image_header_row,
+                image_display_container,
+                
                 ft.Divider(height=1, color=ft.Colors.GREY_100),
                 ft.Row([
                     ft.Text(get_text("service_advisor"), size=11, color="#64748B"),
@@ -1006,7 +1065,7 @@ def show_job_order_detail_dialog(order, primary_color, on_close, on_print=None):
             ], spacing=12, scroll=ft.ScrollMode.AUTO),
             padding=ft.padding.all(16),
             width=450,
-            height=480,
+            height=540,
         ),
         actions=[
             ft.Container(
@@ -1019,6 +1078,7 @@ def show_job_order_detail_dialog(order, primary_color, on_close, on_print=None):
     )
     
     return dialog
+
 
 
 def show_status_update_dialog(order, primary_color, on_update, on_close):

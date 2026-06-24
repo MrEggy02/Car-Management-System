@@ -6,6 +6,7 @@ LANGUAGES = {"lo": "ພາສາລາວ", "en": "English"}  # Lao  # English
 
 # ພາສາລາວ (Lao)
 LO: Dict[str, str] = {
+    "mock_mode": "ໂໝດປິດຂໍ້ມູນ (Mock)",
     # General
     "app_name": "J&P Auto Maxing",
     "dashboard": "ໜ້າຫຼັກ",
@@ -212,7 +213,7 @@ LO: Dict[str, str] = {
     "english_language": "ພາສາອັງກິດ",
     "confirm_logout": "ຢືນຢັນການອອກຈາກລະບົບ",
     "logout_confirm_message": "ທ່ານແນ່ໃຈຫຼືບໍ່ວ່າຕ້ອງການອອກຈາກລະບົບ?",
-    "customer_management": "ຈັດການຂໍ້ມູນລູກຄ້າ",
+    "customer_management": "ລົງທະບຽນ",
     "input_customer_data": "ປ້ອນຂໍ້ມູນລູກຄ້າ ແລະ ລົດ",
     "save_data": "ບັນທຶກຂໍ້ມູນ",
     "edit_customer_data": "ແກ້ໄຂຂໍ້ມູນລູກຄ້າ ແລະ ລົດ",
@@ -327,6 +328,13 @@ LO: Dict[str, str] = {
     "vehicle_problem_details": "ລາຍລະອຽດບັນຫາລົດ",
     "problem_description": "ລາຍລະອຽດບັນຫາ",
     "problem_description_hint": "ອະທິບາຍອາການເສຍຂອງລົດ",
+    "car_defects": "ຂໍ້ມູນຕຳນິຂອງລົດ",
+    "car_defects_hint": "ປ້ອນຂໍ້ມູນຕຳນິຂອງລົດ (ຖ້າມີ)",
+    "signed_receipt_image": "ຮູບພາບໃບຮັບລົດທີ່ເຊັນແລ້ວ",
+    "upload_signed_receipt": "ອັບໂຫຼດໃບຮັບລົດທີ່ເຊັນແລ້ວ",
+    "change_image": "ປ່ຽນຮູບພາບ",
+    "no_image_uploaded": "ຍັງບໍ່ໄດ້ອັບໂຫຼດຮູບພາບ",
+    "upload_success": "ອັບໂຫຼດຮູບພາບສຳເລັດ",
     "mileage": "ໄລຍະທາງສະສົມ (km)",
     "fuel_level": "ລະດັບນໍ້າມັນ",
     "select_fuel_level": "ເລືອກລະດັບນໍ້າມັນ",
@@ -367,7 +375,7 @@ LO: Dict[str, str] = {
     "contact_info": "ຕິດຕໍ່: 020xxxxxxx",
     "close": "ປິດ",
     "print_sent": "ສົ່ງຄຳສັ່ງພິມແລ້ວ",
-    "job_order_management": "ຈັດການໃບຮັບລົດ",
+    "job_order_management": "ຮັບລົດ",
     "new_job_order": "ໃບຮັບລົດໃໝ່",
     "job_order_list": "ລາຍການໃບຮັບລົດ",
     "quotation_create": "ສ້າງໃບສະເໜີລາຄາ",
@@ -403,7 +411,7 @@ LO: Dict[str, str] = {
     "discount_amount": "ສ່ວນຫຼຸດ (KIP)",
     "edit_item": "ແກ້ໄຂລາຍການ",
     "job_order_info": "ຂໍ້ມູນໃບຮັບລົດ",
-    "quotation_management": "ຈັດການໃບສະເໜີລາຄາ",
+    "quotation_management": "ໃບສະເໜີລາຄາ",
     "quotations": "ໃບສະເໜີລາຄາ",
     "quotation": "ໃບສະເໜີລາຄາ",
     "quotation_view": "ເບິ່ງໃບສະເໜີລາຄາ",
@@ -492,7 +500,7 @@ LO: Dict[str, str] = {
     "select_status": "ເລືອກສະຖານະ",
     "current_status": "ສະຖານະປັດຈຸບັນ",
     "status_updated_to": "ອັບເດດສະຖານະເປັນ",
-    "repair_management": "ຈັດການການສ້ອມແປງ",
+    "repair_management": "ສ້ອມແປງ",
     "new_repair": "ສ້າງໃບສັ່ງສ້ອມແປງ",
     "repair_list": "ລາຍການສ້ອມແປງ",
     # Create Repair Page
@@ -1260,6 +1268,7 @@ LO: Dict[str, str] = {
 
 
 EN: Dict[str, str] = {
+   "mock_mode": "Mask Data (Mock)",
    
 
 "job_no": "Job No.",
@@ -2141,6 +2150,13 @@ EN: Dict[str, str] = {
     "vehicle_problem_details": "Vehicle Problem Details",
     "problem_description": "Problem Description",
     "problem_description_hint": "Describe the vehicle issues or symptoms",
+    "car_defects": "Vehicle Defects",
+    "car_defects_hint": "Enter vehicle defects (if any)",
+    "signed_receipt_image": "Signed Receipt Image",
+    "upload_signed_receipt": "Upload Signed Receipt",
+    "change_image": "Change Image",
+    "no_image_uploaded": "No image uploaded",
+    "upload_success": "Image uploaded successfully",
     "mileage": "Mileage (km)",
     "fuel_level": "Fuel Level",
     "select_fuel_level": "Select fuel level",

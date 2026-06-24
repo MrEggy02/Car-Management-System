@@ -852,19 +852,37 @@ def get_mechanic_performance_report(
                 e.name as mechanic_name,
                 e.phone as mechanic_phone,
                 e.status as mechanic_status,
-                COUNT(ro.id) as total_assigned,
+                COUNT(DISTINCT ro.id) as total_assigned,
                 SUM(CASE WHEN ro.status = 'completed' THEN 1 ELSE 0 END) as completed_count,
                 SUM(CASE WHEN ro.status = 'working' THEN 1 ELSE 0 END) as working_count,
                 SUM(CASE WHEN ro.status = 'paused' THEN 1 ELSE 0 END) as paused_count,
                 SUM(CASE WHEN ro.status = 'waiting' THEN 1 ELSE 0 END) as waiting_count,
                 ROUND(AVG(CASE WHEN ro.status = 'completed' AND ro.end_date IS NOT NULL 
                     THEN TIMESTAMPDIFF(HOUR, ro.start_date, ro.end_date) 
-                    ELSE NULL END), 1) as avg_hours
+                    ELSE NULL END), 1) as avg_hours,
+                COALESCE(SUM(CASE WHEN ro.status = 'completed' THEN 
+                    COALESCE((
+                        SELECT SUM(qi.total) 
+                        FROM quotation_items qi 
+                        LEFT JOIN quotations q ON qi.quotation_id = q.id 
+                        WHERE q.job_order_id = ro.job_order_id AND q.status = 'approved'
+                          AND (qi.service_id IS NOT NULL OR (qi.service_id IS NULL AND qi.part_id IS NULL AND qi.custom_name IS NOT NULL))
+                    ), 0)
+                ELSE 0 END), 0) as labor_revenue,
+                COALESCE(SUM(CASE WHEN ro.status = 'completed' THEN 
+                    COALESCE((
+                        SELECT SUM(qi.total - (qi.qty * p.cost_price)) 
+                        FROM quotation_items qi 
+                        LEFT JOIN quotations q ON qi.quotation_id = q.id 
+                        LEFT JOIN parts p ON qi.part_id = p.id
+                        WHERE q.job_order_id = ro.job_order_id AND q.status = 'approved'
+                          AND qi.part_id IS NOT NULL
+                    ), 0)
+                ELSE 0 END), 0) as parts_profit
             FROM Employees e
             LEFT JOIN repair_orders ro ON e.id = ro.mechanic_id AND DATE(ro.start_date) BETWEEN %s AND %s
             WHERE e.role = 'mechanic' AND e.status = 'active'
             GROUP BY e.id, e.name, e.phone, e.status
-            ORDER BY completed_count DESC
         """, (start_date, end_date))
         mechanic_stats = cursor.fetchall()
         
@@ -874,6 +892,8 @@ def get_mechanic_performance_report(
         total_working = 0
         total_paused = 0
         total_waiting = 0
+        total_labor_revenue = 0.0
+        total_parts_profit = 0.0
         valid_durations = []
         
         for m in mechanic_stats:
@@ -883,6 +903,9 @@ def get_mechanic_performance_report(
             m['paused_count'] = int(m['paused_count'] or 0)
             m['waiting_count'] = int(m['waiting_count'] or 0)
             m['avg_hours'] = float(m['avg_hours'] or 0) if m['avg_hours'] is not None else None
+            m['labor_revenue'] = float(m['labor_revenue'] or 0)
+            m['parts_profit'] = float(m['parts_profit'] or 0)
+            m['total_profit'] = m['labor_revenue'] + m['parts_profit']
             
             # Efficiency
             assigned = m['total_assigned']
@@ -893,10 +916,15 @@ def get_mechanic_performance_report(
             total_working += m['working_count']
             total_paused += m['paused_count']
             total_waiting += m['waiting_count']
+            total_labor_revenue += m['labor_revenue']
+            total_parts_profit += m['parts_profit']
             if m['avg_hours'] is not None and m['avg_hours'] > 0:
                 valid_durations.append(m['avg_hours'])
                 
         avg_workshop_hours = round(sum(valid_durations) / len(valid_durations), 1) if valid_durations else 0
+        
+        # Sort by total profit descending
+        mechanic_stats.sort(key=lambda x: x['total_profit'], reverse=True)
         
         return {
             "summary": {
@@ -906,7 +934,10 @@ def get_mechanic_performance_report(
                 "total_working": total_working,
                 "total_paused": total_paused,
                 "total_waiting": total_waiting,
-                "avg_workshop_hours": avg_workshop_hours
+                "avg_workshop_hours": avg_workshop_hours,
+                "total_labor_revenue": total_labor_revenue,
+                "total_parts_profit": total_parts_profit,
+                "total_profit": total_labor_revenue + total_parts_profit
             },
             "mechanic_stats": mechanic_stats,
             "period": {"start_date": start_date, "end_date": end_date}

@@ -594,11 +594,8 @@ class AppLayout:
             from pages.login_page import login_page
 
             def on_login_success(p, c, u):
-                from pages.main_app import MainApp
-                app = MainApp(p, c, u)
-                p.clean()
-                p.add(app.build())
-                p.update()
+                from pages.dashboard_page import dashboard_page
+                dashboard_page(p, c, u)
 
             login_page(self.page, on_login_success)
 

@@ -25,7 +25,7 @@ class PartsContent:
         self.category_chips = None
         self.current_category_id = None
         self.current_page = 1
-        self.items_per_page = 25
+        self.items_per_page = 5
         self.total_pages = 1
         self.primary_color = "#1565C0"
         self.primary_dark = "#0D47A1"

@@ -29,8 +29,10 @@ class JobOrderListContent:
         self.search_field = None
         self.current_status_filter = "all"  # Changed from status_filter dropdown
         self.current_page = 1
-        self.items_per_page = 10
+        self.items_per_page = 5
         self.total_pages = 1
+        self.active_upload_job_order_id = None
+        self.file_picker = None
         
         # Status colors
         self.status_colors = {
@@ -64,6 +66,18 @@ class JobOrderListContent:
         self.pagination_container = ft.Container()
 
     def build(self):
+        # Setup file picker
+        def on_file_picked(e):
+            if e.files and self.active_upload_job_order_id:
+                file_path = e.files[0].path
+                self.upload_signed_receipt(self.active_upload_job_order_id, file_path)
+                
+        self.file_picker = ft.FilePicker()
+        self.file_picker.on_result = on_file_picked
+        if self.file_picker not in self.page.overlay:
+            self.page.overlay.append(self.file_picker)
+            self.page.update()
+            
         header = ft.Container(
             content=ft.Row(
                 [
@@ -435,9 +449,34 @@ class JobOrderListContent:
             order, 
             self.primary_color, 
             self._close_dialog,
-            on_print=lambda oid: self.print_job_order(oid)
+            on_print=lambda oid: self.print_job_order(oid),
+            on_upload_click=self.on_upload_click
         )
         self._open_dialog(dialog)
+        
+    def on_upload_click(self, order_id):
+        self.active_upload_job_order_id = order_id
+        self.page.run_task(
+            self.file_picker.pick_files,
+            allow_multiple=False,
+            file_type=ft.FilePickerFileType.IMAGE,
+        )
+        
+    def upload_signed_receipt(self, order_id, file_path):
+        self.show_snack_bar(get_text("loading"), is_error=False)
+        try:
+            self.client.update_job_order(order_id, signed_receipt_image_path=file_path)
+            self.show_snack_bar(get_text("upload_success"), is_error=False)
+            self.load_orders()
+            self.page.run_task(self._reopen_detail_dialog_async, order_id)
+        except Exception as ex:
+            print(f"Error uploading receipt: {ex}")
+            self.show_snack_bar(f"{get_text('error')}: {str(ex)}", is_error=True)
+            
+    async def _reopen_detail_dialog_async(self, order_id):
+        import asyncio
+        await asyncio.sleep(0.3)
+        self.show_detail_dialog(order_id)
     
     def confirm_delete(self, order_id, job_no):
         """Show confirmation dialog before deleting a job order."""

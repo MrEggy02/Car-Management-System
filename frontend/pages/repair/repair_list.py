@@ -19,7 +19,7 @@ class RepairListContent:
         self.repair_orders = []
         self.filtered_orders = []
         self.current_page = 1
-        self.items_per_page = 10
+        self.items_per_page = 5
         self.total_pages = 1
         self.search_field = None
         self.status_filter = None

@@ -4,6 +4,7 @@ from typing import Dict, Callable
 from datetime import datetime
 import asyncio
 import functools
+import os
 
 from i18n import get_text
 
@@ -38,8 +39,27 @@ class JobOrderCreateContent:
         self.problem_description = None
         self.mileage = None
         self.fuel_level = None
+        self.car_defects = None
+        self.selected_image_path = None
+        self.image_preview = None
+        self.image_preview_container = None
+        self.file_picker = None
         
     def build(self):
+        # Setup file picker
+        def on_file_picked(e):
+            if e.files:
+                self.selected_image_path = e.files[0].path
+                self.image_preview.value = os.path.basename(self.selected_image_path)
+                self.image_preview_container.visible = True
+                self.page.update()
+                
+        self.file_picker = ft.FilePicker()
+        self.file_picker.on_result = on_file_picked
+        if self.file_picker not in self.page.overlay:
+            self.page.overlay.append(self.file_picker)
+            self.page.update()
+            
         # --- Header with Back Button on Left ---
         header = ft.Container(
             content=ft.Row(
@@ -239,13 +259,65 @@ class JobOrderCreateContent:
             label=get_text("problem_description"),
             hint_text=get_text("problem_description_hint"),
             multiline=True,
-            min_lines=8,
-            max_lines=12,
+            min_lines=6,
+            max_lines=8,
             border_radius=12,
             bgcolor=ft.Colors.WHITE,
             filled=True,
             content_padding=ft.padding.symmetric(horizontal=16, vertical=14),
             expand=True,
+        )
+        
+        self.car_defects = ft.TextField(
+            label=get_text("car_defects"),
+            hint_text=get_text("car_defects_hint"),
+            multiline=True,
+            min_lines=3,
+            max_lines=5,
+            border_radius=12,
+            bgcolor=ft.Colors.WHITE,
+            filled=True,
+            content_padding=ft.padding.symmetric(horizontal=16, vertical=14),
+            expand=True,
+        )
+        
+        self.selected_image_path = None
+        self.image_preview = ft.Text("", size=12, color="#475569", expand=True)
+        self.image_preview_container = ft.Container(
+            content=ft.Row([
+                ft.Icon(ft.Icons.IMAGE, size=16, color=self.primary_color),
+                self.image_preview,
+                ft.IconButton(
+                    icon=ft.Icons.CLOSE,
+                    icon_size=16,
+                    icon_color=ft.Colors.RED_400,
+                    on_click=lambda e: self.clear_selected_image(),
+                )
+            ], spacing=6),
+            bgcolor=ft.Colors.GREY_50,
+            border_radius=8,
+            padding=ft.padding.symmetric(horizontal=12, vertical=6),
+            visible=False,
+        )
+        
+        upload_button = ft.OutlinedButton(
+            content=ft.Row(
+                [
+                    ft.Icon(ft.Icons.UPLOAD_FILE, size=18, color=self.primary_color),
+                    ft.Text(get_text("upload_signed_receipt"), size=14, color=self.primary_color),
+                ],
+                spacing=8,
+                tight=True,
+            ),
+            on_click=lambda e: self.page.run_task(
+                self.file_picker.pick_files,
+                allow_multiple=False,
+                file_type=ft.FilePickerFileType.IMAGE,
+            ),
+            style=ft.ButtonStyle(
+                shape=ft.RoundedRectangleBorder(radius=10),
+                side=ft.BorderSide(1, self.primary_color),
+            ),
         )
         
         self.mileage = ft.TextField(
@@ -299,6 +371,20 @@ class JobOrderCreateContent:
                     ft.Text(get_text("problem_description"), size=14, weight=ft.FontWeight.W_600, color="#475569"),
                     ft.Container(height=8),
                     self.problem_description,
+                    ft.Container(height=16),
+                    
+                    # Vehicle Defects
+                    ft.Text(get_text("car_defects"), size=14, weight=ft.FontWeight.W_600, color="#475569"),
+                    ft.Container(height=8),
+                    self.car_defects,
+                    ft.Container(height=16),
+                    
+                    # Signed Receipt Image
+                    ft.Text(get_text("signed_receipt_image"), size=14, weight=ft.FontWeight.W_600, color="#475569"),
+                    ft.Container(height=8),
+                    ft.Row([upload_button], alignment=ft.MainAxisAlignment.START),
+                    ft.Container(height=8),
+                    self.image_preview_container,
                 ],
                 spacing=0,
                 expand=True,
@@ -584,6 +670,8 @@ class JobOrderCreateContent:
                 problem_description=self.problem_description.value,
                 mileage=int(self.mileage.value) if self.mileage.value and self.mileage.value.isdigit() else 0,
                 fuel_level=self.fuel_level.value if self.fuel_level.value else "",
+                car_defects=self.car_defects.value if self.car_defects.value else "",
+                signed_receipt_image_path=self.selected_image_path,
             )
             
             if result:
@@ -598,6 +686,12 @@ class JobOrderCreateContent:
             traceback.print_exc()
             self.show_snackbar(f"{get_text('error')}: {ex}", True)
     
+    def clear_selected_image(self):
+        self.selected_image_path = None
+        self.image_preview.value = ""
+        self.image_preview_container.visible = False
+        self.page.update()
+        
     def show_snackbar(self, msg, is_error=False):
         """Show snackbar message"""
         self.page.snack_bar = ft.SnackBar(

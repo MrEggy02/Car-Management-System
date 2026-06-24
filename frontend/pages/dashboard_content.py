@@ -152,19 +152,29 @@ class DashboardContent:
                 ],
                 spacing=0,
             ),
-            padding=ft.padding.all(24),
+            padding=ft.padding.all(20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
-            margin=ft.margin.only(bottom=20),
+            margin=ft.margin.only(bottom=0),
             shadow=ft.BoxShadow(
                 blur_radius=10,
                 color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
                 offset=ft.Offset(0, 2),
             ),
+            expand=True,
         )
         
         # Revenue Chart Section
         revenue_chart = self._build_revenue_chart()
+        revenue_chart.expand = True
+        revenue_chart.margin = ft.margin.only(bottom=0)
+        
+        # Middle row side-by-side
+        middle_row = ft.Row(
+            [repair_status, revenue_chart],
+            spacing=20,
+            expand=True,
+        )
         
         # Employees Section
         employees_container = ft.Container(
@@ -190,12 +200,12 @@ class DashboardContent:
                     ft.Container(height=12),
                     ft.Container(
                         content=ft.Column(
-                            [self._build_employee_row(emp) for emp in self.employees[:5]] if self.employees else [
+                            [self._build_employee_row(emp) for emp in self.employees[:3]] if self.employees else [
                                 ft.Text(get_text("no_data"), size=13, color="#64748B")
                             ],
                             spacing=8,
                             scroll=ft.ScrollMode.AUTO,
-                            height=320,
+                            height=160,
                         ),
                     ),
                 ],
@@ -204,7 +214,7 @@ class DashboardContent:
             padding=ft.padding.all(20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
-            margin=ft.margin.only(right=10, bottom=20),
+            margin=ft.margin.only(bottom=0),
             expand=True,
             shadow=ft.BoxShadow(
                 blur_radius=10,
@@ -237,12 +247,12 @@ class DashboardContent:
                     ft.Container(height=12),
                     ft.Container(
                         content=ft.Column(
-                            [self._build_low_stock_row(part) for part in self.low_stock_parts[:5]] if self.low_stock_parts else [
+                            [self._build_low_stock_row(part) for part in self.low_stock_parts[:3]] if self.low_stock_parts else [
                                 ft.Text(get_text("no_low_stock"), size=13, color="#64748B")
                             ],
                             spacing=8,
                             scroll=ft.ScrollMode.AUTO,
-                            height=320,
+                            height=160,
                         ),
                     ),
                 ],
@@ -251,23 +261,13 @@ class DashboardContent:
             padding=ft.padding.all(20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
-            margin=ft.margin.only(left=10, bottom=20),
+            margin=ft.margin.only(bottom=0),
             expand=True,
             shadow=ft.BoxShadow(
                 blur_radius=10,
                 color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
                 offset=ft.Offset(0, 2),
             ),
-        )
-        
-        # Two column layout for employees and low stock
-        two_column_row = ft.Row(
-            [
-                employees_container,
-                low_stock_container,
-            ],
-            spacing=20,
-            expand=True,
         )
         
         # Recent Repairs Section
@@ -294,12 +294,12 @@ class DashboardContent:
                     ft.Container(height=12),
                     ft.Container(
                         content=ft.Column(
-                            [self._build_repair_row(repair) for repair in self.recent_repairs[:8]] if self.recent_repairs else [
+                            [self._build_repair_row(repair) for repair in self.recent_repairs[:3]] if self.recent_repairs else [
                                 ft.Text(get_text("no_repairs"), size=13, color="#64748B")
                             ],
                             spacing=8,
                             scroll=ft.ScrollMode.AUTO,
-                            height=320,
+                            height=160,
                         ),
                     ),
                 ],
@@ -308,7 +308,8 @@ class DashboardContent:
             padding=ft.padding.all(20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
-            margin=ft.margin.only(top=0, bottom=20),
+            margin=ft.margin.only(bottom=0),
+            expand=True,
             shadow=ft.BoxShadow(
                 blur_radius=10,
                 color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
@@ -316,16 +317,25 @@ class DashboardContent:
             ),
         )
         
+        # Three column layout
+        three_column_row = ft.Row(
+            [
+                employees_container,
+                low_stock_container,
+                recent_repairs_container,
+            ],
+            spacing=20,
+            expand=True,
+        )
+        
         # Scrollable content
         scrollable_content = ft.Column(
             [
                 stats_row,
-                repair_status,
-                revenue_chart,
-                two_column_row,
-                recent_repairs_container,
+                middle_row,
+                three_column_row,
             ],
-            spacing=0,
+            spacing=20,
             expand=True,
             scroll=ft.ScrollMode.AUTO,
         )

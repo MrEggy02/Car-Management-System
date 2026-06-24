@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Jun 22, 2026 at 05:49 AM
+-- Generation Time: Jun 24, 2026 at 12:43 AM
 -- Server version: 8.4.3
 -- PHP Version: 8.3.30
 
@@ -146,7 +146,8 @@ INSERT INTO `goods_receipts` (`id`, `receipt_no`, `purchase_order_id`, `supplier
 (2, 'GR-2026-0002', 6, 11, NULL, '2026-06-19 06:52:32', 300000.00, NULL, 'received', 1),
 (3, 'GR-2026-0003', 5, 11, NULL, '2026-06-19 08:41:26', 250000.00, NULL, 'received', 1),
 (4, 'GR-2026-0004', 7, 11, NULL, '2026-06-19 09:57:02', 3000000.00, NULL, 'received', 1),
-(5, 'GR-2026-0005', 9, 11, NULL, '2026-06-19 10:40:09', 67.00, NULL, 'received', 1);
+(5, 'GR-2026-0005', 9, 11, NULL, '2026-06-19 10:40:09', 67.00, NULL, 'received', 1),
+(6, 'GR-2026-0006', 5, 11, NULL, '2026-06-22 08:58:44', 300000.00, NULL, 'received', 1);
 
 -- --------------------------------------------------------
 
@@ -172,7 +173,8 @@ INSERT INTO `goods_receipt_items` (`id`, `receipt_id`, `part_id`, `qty_received`
 (2, 2, 74, 6, 50000.00, 300000.00),
 (3, 3, 74, 5, 50000.00, 250000.00),
 (4, 4, 70, 1, 3000000.00, 3000000.00),
-(5, 5, 74, 1, 67.00, 67.00);
+(5, 5, 74, 1, 67.00, 67.00),
+(6, 6, 74, 5, 60000.00, 300000.00);
 
 -- --------------------------------------------------------
 
@@ -186,9 +188,9 @@ CREATE TABLE `invoices` (
   `total_amount` decimal(15,2) DEFAULT NULL COMMENT 'ຍອດລວມ',
   `total_discount` decimal(15,2) DEFAULT NULL COMMENT 'ສ່ວນຫຼຸດລວມ',
   `final_total` decimal(15,2) DEFAULT NULL COMMENT 'ຍອດສຸດທ້າຍ',
-  `payment_method` enum('cash','transfer') DEFAULT 'cash' COMMENT 'ວິທີຈ່າຍ',
+  `payment_method` enum('cash','transfer') NOT NULL,
   `paid_date` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'ວັນທີຈ່າຍ',
-  `payment_status` enum('pending','paid') DEFAULT 'pending' COMMENT 'ສະຖານະຈ່າຍ',
+  `payment_status` enum('pending','paid') NOT NULL DEFAULT 'pending',
   `received_amount` decimal(15,2) DEFAULT '0.00' COMMENT 'ຮັບເງິນມາ',
   `change_amount` decimal(15,2) DEFAULT '0.00' COMMENT 'ທອນເງິນ',
   `created_by` int DEFAULT NULL COMMENT 'ຜູ້ສ້າງໃບເກັບເງິນ'
@@ -208,7 +210,12 @@ INSERT INTO `invoices` (`id`, `job_order_id`, `total_amount`, `total_discount`, 
 (7, 16, 150000.00, 0.00, 150000.00, 'transfer', '2026-06-18 03:42:05', 'paid', 150000.00, 0.00, 1),
 (8, 20, 1500400.00, 0.00, 1500400.00, 'cash', '2026-06-18 08:33:59', 'paid', 1500400.00, 0.00, 1),
 (9, 13, 1150000.00, 0.00, 1150000.00, 'cash', '2026-06-18 09:09:09', 'paid', 1200000.00, 50000.00, 1),
-(10, 19, 1000.00, 0.00, 1000.00, 'transfer', '2026-06-19 05:50:22', 'paid', 1000.00, 0.00, 1);
+(10, 19, 1000.00, 0.00, 1000.00, 'transfer', '2026-06-19 05:50:22', 'paid', 1000.00, 0.00, 1),
+(11, 22, 16800100.00, 775000.00, 16025100.00, 'transfer', '2026-06-22 06:24:48', 'paid', 16025100.00, 0.00, 1),
+(12, 21, 290000.00, 0.00, 290000.00, 'transfer', '2026-06-22 09:38:50', 'paid', 290000.00, 0.00, 1),
+(13, 23, 2500000.00, 0.00, 2500000.00, 'cash', '2026-06-23 02:51:19', 'paid', 2500000.00, 0.00, 1),
+(14, 17, 800.00, 0.00, 800.00, 'cash', '2026-06-23 02:51:27', 'paid', 800.00, 0.00, 1),
+(15, 12, 4180000.00, 0.00, 4180000.00, 'cash', '2026-06-23 23:19:12', 'paid', 4180000.00, 0.00, 1);
 
 -- --------------------------------------------------------
 
@@ -223,8 +230,10 @@ CREATE TABLE `job_orders` (
   `vehicle_id` int DEFAULT NULL,
   `receive_date` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `problem_description` text,
+  `car_defects` text,
   `mileage` int DEFAULT NULL,
   `fuel_level` varchar(50) DEFAULT NULL,
+  `signed_receipt_image` varchar(255) DEFAULT NULL,
   `status` enum('pending','quoting','approved','repairing','finished','closed','cancelled') DEFAULT 'pending',
   `created_by` int DEFAULT NULL,
   `closed_by` int DEFAULT NULL COMMENT 'ຜູ້ປິດງານ',
@@ -247,15 +256,17 @@ INSERT INTO `job_orders` (`id`, `job_no`, `customer_id`, `vehicle_id`, `receive_
 (9, 'JOB-2026-0009', 47, 24, '2026-06-14 08:33:51', 'ຕັ່ງເປ່', 2000, 'full', 'finished', 1, NULL, NULL),
 (10, 'JOB-2026-0010', 6, 7, '2026-06-14 08:46:08', 'ປະຕູເພ່', 1000, '3/4', 'finished', 1, NULL, NULL),
 (11, 'JOB-2026-0011', 49, 29, '2026-06-14 09:53:18', 'ຢາງແຕກ', 2000, '1/4', 'finished', 1, NULL, NULL),
-(12, 'JOB-2026-0012', 24, 18, '2026-06-14 17:55:36', 'kokoko', 999, '1/2', 'finished', 1, NULL, NULL),
+(12, 'JOB-2026-0012', 24, 18, '2026-06-14 17:55:36', 'kokoko', 999, '1/2', 'closed', 1, 1, '2026-06-23 23:19:12'),
 (13, 'JOB-2026-0013', 32, 19, '2026-06-16 18:25:50', '23131213132', 1222222, '3/4', 'closed', 1, 1, '2026-06-18 09:09:09'),
 (14, 'JOB-2026-0014', 32, 19, '2026-06-17 03:03:29', 'ກນດນກນກດາກດ', 121212121, '3/4', 'approved', 3, NULL, NULL),
 (16, 'JOB-2026-0015', 32, 19, '2026-06-18 02:31:44', 'qeqwe', 1131313131, '3/4', 'closed', 1, 1, '2026-06-18 03:42:05'),
-(17, 'JOB-2026-0016', 32, 19, '2026-06-18 04:19:18', '0', 0, 'full', 'finished', 1, NULL, NULL),
+(17, 'JOB-2026-0016', 32, 19, '2026-06-18 04:19:18', '0', 0, 'full', 'closed', 1, 1, '2026-06-23 02:51:27'),
 (19, 'JOB-2026-0017', 32, 19, '2026-06-18 05:06:57', 'ລົດສຽງດັງ', 100, 'full', 'closed', 1, 1, '2026-06-19 05:50:22'),
 (20, 'JOB-2026-0018', 32, 19, '2026-06-18 05:36:54', '1000000', 141555, 'full', 'closed', 1, 1, '2026-06-18 08:33:59'),
-(21, 'JOB-2026-0019', 32, 19, '2026-06-20 02:35:22', 'ລົດສຽງດັງ', 11122, '1/2', 'finished', 1, NULL, NULL),
-(22, 'JOB-2026-0020', 32, 19, '2026-06-21 08:12:20', '1231313', 12313213, '', 'approved', 1, NULL, NULL);
+(21, 'JOB-2026-0019', 32, 19, '2026-06-20 02:35:22', 'ລົດສຽງດັງ', 11122, '1/2', 'closed', 1, 1, '2026-06-22 09:38:50'),
+(22, 'JOB-2026-0020', 32, 19, '2026-06-21 08:12:20', '1231313', 12313213, '', 'closed', 1, 1, '2026-06-22 06:24:48'),
+(23, 'JOB-2026-0021', 32, 19, '2026-06-22 06:57:18', '212', 121, 'full', 'closed', 1, 1, '2026-06-23 02:51:19'),
+(24, 'JOB-2026-0022', 32, 31, '2026-06-22 06:59:02', '122', 1212, 'full', 'repairing', 1, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -343,8 +354,8 @@ INSERT INTO `parts` (`id`, `name`, `cost_price`, `sell_price`, `stock_qty`, `min
 (69, 'ຊຸດຄັນສົ່ງ Toyota Hilux', 1450000.00, 1900000.00, 2, 1, 3, 7, 3),
 (70, 'ປ້ຳ ABS Honda Accord', 3000000.00, 5000000.00, 2, 1, 7, 7, 1),
 (71, 'ສາຍດຶງຝາກະໂປງ', 85000.00, 120000.00, 10, 3, 11, 7, 1),
-(72, 'ຄັນເກຍ Toyota Vios', 950000.00, 1300000.00, 3, 2, 3, 2, 2),
-(74, '10000000', 67.00, 100.00, 41, 5, 11, 2, 5);
+(72, 'ຄັນເກຍ Toyota Vios', 950000.00, 1300000.00, 2, 2, 3, 2, 2),
+(74, '10000000', 60000.00, 100.00, 41, 5, 11, 2, 5);
 
 -- --------------------------------------------------------
 
@@ -384,7 +395,10 @@ INSERT INTO `parts_usage` (`id`, `repair_id`, `part_id`, `qty`, `cost_price`, `u
 (23, 18, 74, 1, 10.00, '2026-06-18 05:10:23', 'Pulled from quotation'),
 (24, 19, 74, 4, 10.00, '2026-06-18 05:38:09', 'Pulled from quotation'),
 (25, 19, 18, 1, 300000.00, '2026-06-18 05:38:21', NULL),
-(26, 20, 20, 1, 25000.00, '2026-06-20 02:38:14', 'Pulled from quotation');
+(26, 20, 20, 1, 25000.00, '2026-06-20 02:38:14', 'Pulled from quotation'),
+(33, 24, 74, 1, 67.00, '2026-06-22 06:23:54', 'Pulled from quotation'),
+(34, 24, 72, 1, 950000.00, '2026-06-22 06:23:54', 'Pulled from quotation'),
+(35, 25, 74, 4, 60000.00, '2026-06-23 02:48:07', 'Pulled from quotation');
 
 -- --------------------------------------------------------
 
@@ -503,7 +517,7 @@ CREATE TABLE `purchase_items` (
 
 INSERT INTO `purchase_items` (`id`, `purchase_id`, `part_id`, `qty`, `received_qty`, `unit_cost`, `total_line`) VALUES
 (1, 1, 12, 2, 0, 20000.00, 40000.00),
-(5, 5, 74, 10, 5, 50000.00, 500000.00),
+(5, 5, 74, 10, 10, 50000.00, 500000.00),
 (6, 6, 74, 10, 10, 50000.00, 500000.00),
 (7, 7, 70, 1, 1, 5000000.00, 5000000.00),
 (8, 8, 70, 1, 0, 3000000.00, 3000000.00),
@@ -535,7 +549,7 @@ INSERT INTO `purchase_orders` (`id`, `po_no`, `supplier_id`, `order_date`, `tota
 (2, 'PO-2026-0002', 7, '2026-05-10 08:25:49', 20000.00, 'completed', 1),
 (3, 'PO-2026-0003', 3, '2026-05-10 09:47:07', 20000.00, 'completed', 1),
 (4, 'PO-2026-0004', 3, '2026-06-17 02:12:24', 5000000.00, 'cancelled', 1),
-(5, 'PO-2026-0005', 11, '2026-06-19 06:47:27', 500000.00, 'partial', 1),
+(5, 'PO-2026-0005', 11, '2026-06-19 06:47:27', 500000.00, 'completed', 1),
 (6, 'PO-2026-0006', 11, '2026-06-19 06:52:32', 500000.00, 'completed', 1),
 (7, 'PO-2026-0007', 11, '2026-06-19 09:52:35', 5000000.00, 'completed', 1),
 (8, 'PO-2026-0008', 11, '2026-06-19 10:28:58', 3180000.00, 'cancelled', 1),
@@ -588,7 +602,9 @@ INSERT INTO `quotations` (`id`, `job_order_id`, `promotion_id`, `sub_total`, `di
 (35, 19, NULL, 1000.00, 0.00, 1000.00, 'approved', '2026-06-18 05:07:58', 1, 1),
 (36, 20, NULL, 1500400.00, 0.00, 1500400.00, 'approved', '2026-06-18 05:37:34', 1, 1),
 (37, 21, NULL, 290000.00, 0.00, 290000.00, 'approved', '2026-06-20 02:36:41', 1, 1),
-(38, 22, 3, 16800100.00, 775000.00, 16025100.00, 'approved', '2026-06-21 08:12:32', 1, 1);
+(38, 22, 3, 16800100.00, 775000.00, 16025100.00, 'approved', '2026-06-21 08:12:32', 1, 1),
+(39, 24, 3, 15500400.00, 775000.00, 14725400.00, 'approved', '2026-06-22 06:59:35', 1, 1),
+(40, 23, NULL, 2500000.00, 0.00, 2500000.00, 'approved', '2026-06-23 02:47:52', 1, 1);
 
 -- --------------------------------------------------------
 
@@ -675,7 +691,10 @@ INSERT INTO `quotation_items` (`id`, `quotation_id`, `part_id`, `service_id`, `q
 (68, 37, 20, NULL, 1, 40000.00, 40000.00, 0.00, NULL),
 (69, 38, 74, NULL, 1, 100.00, 100.00, 0.00, NULL),
 (70, 38, 72, NULL, 1, 1300000.00, 1300000.00, 0.00, NULL),
-(71, 38, NULL, 24, 1, 15500000.00, 15500000.00, 775000.00, NULL);
+(71, 38, NULL, 24, 1, 15500000.00, 15500000.00, 775000.00, NULL),
+(72, 39, 74, NULL, 4, 100.00, 400.00, 0.00, NULL),
+(73, 39, NULL, 24, 1, 15500000.00, 15500000.00, 775000.00, NULL),
+(74, 40, NULL, NULL, 1, 2500000.00, 2500000.00, 0.00, 'ບໍ່ມີໃນບໍລິການ');
 
 -- --------------------------------------------------------
 
@@ -717,7 +736,10 @@ INSERT INTO `repair_orders` (`id`, `job_order_id`, `mechanic_id`, `start_date`, 
 (16, 17, 4, '2026-06-18 04:21:30', '2026-06-18 04:37:28', 'completed', '2026-06-18 04:21:30', NULL),
 (18, 19, 4, '2026-06-18 05:08:30', '2026-06-18 05:11:22', 'completed', '2026-06-18 05:08:30', NULL),
 (19, 20, 4, '2026-06-18 05:37:51', '2026-06-18 05:38:37', 'completed', '2026-06-18 05:37:50', NULL),
-(20, 21, 4, '2026-06-20 02:37:40', '2026-06-20 02:56:13', 'completed', '2026-06-20 02:37:40', NULL);
+(20, 21, 4, '2026-06-20 02:37:40', '2026-06-20 02:56:13', 'completed', '2026-06-20 02:37:40', NULL),
+(24, 22, 2, '2026-06-22 06:23:29', '2026-06-22 06:24:25', 'completed', '2026-06-22 06:23:28', NULL),
+(25, 24, 4, '2026-06-22 08:02:49', NULL, 'working', '2026-06-22 08:02:49', NULL),
+(26, 23, 4, '2026-06-23 02:48:22', '2026-06-23 02:48:41', 'completed', '2026-06-23 02:48:21', NULL);
 
 -- --------------------------------------------------------
 
@@ -838,7 +860,11 @@ INSERT INTO `stock_movement` (`id`, `part_id`, `type`, `qty`, `ref_type`, `ref_i
 (36, 74, 'OUT', 1, 'repair', 22, '2026-06-21 09:12:19'),
 (37, 74, 'IN', 1, 'repair', 22, '2026-06-21 09:13:09'),
 (38, 72, 'IN', 1, 'repair', 22, '2026-06-21 09:13:09'),
-(39, 74, 'IN', 1, 'repair', 22, '2026-06-21 09:13:09');
+(39, 74, 'IN', 1, 'repair', 22, '2026-06-21 09:13:09'),
+(40, 74, 'OUT', 1, 'repair', 24, '2026-06-22 06:23:54'),
+(41, 72, 'OUT', 1, 'repair', 24, '2026-06-22 06:23:54'),
+(42, 74, 'IN', 5, 'purchase', 6, '2026-06-22 08:58:44'),
+(43, 74, 'OUT', 4, 'repair', 25, '2026-06-23 02:48:07');
 
 -- --------------------------------------------------------
 
@@ -942,7 +968,8 @@ INSERT INTO `vehicles` (`id`, `customer_id`, `plate_number`, `model`, `year`, `c
 (24, 47, 'ມມ 9999', 'Rabtor', 2025, 'ຂາວ', 4),
 (25, 47, 'ກຫ 7891', 'X1', 2022, 'black', 2),
 (28, 48, 'ຮຮ 1560', 'M1', 2025, 'ຂາວ', 6),
-(29, 49, 'ກນ 9909', 'M1', 2011, 'ຮຽນ', 3);
+(29, 49, 'ກນ 9909', 'M1', 2011, 'ຮຽນ', 3),
+(31, 32, 'ກຄ 4543', 'ຫກັຫກ', 2021, 'ດຳ', 6);
 
 --
 -- Indexes for dumped tables
@@ -1162,25 +1189,25 @@ ALTER TABLE `employees`
 -- AUTO_INCREMENT for table `goods_receipts`
 --
 ALTER TABLE `goods_receipts`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `goods_receipt_items`
 --
 ALTER TABLE `goods_receipt_items`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `invoices`
 --
 ALTER TABLE `invoices`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT for table `job_orders`
 --
 ALTER TABLE `job_orders`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
 
 --
 -- AUTO_INCREMENT for table `parts`
@@ -1192,7 +1219,7 @@ ALTER TABLE `parts`
 -- AUTO_INCREMENT for table `parts_usage`
 --
 ALTER TABLE `parts_usage`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=33;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
 
 --
 -- AUTO_INCREMENT for table `part_categories`
@@ -1234,19 +1261,19 @@ ALTER TABLE `purchase_orders`
 -- AUTO_INCREMENT for table `quotations`
 --
 ALTER TABLE `quotations`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=39;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=41;
 
 --
 -- AUTO_INCREMENT for table `quotation_items`
 --
 ALTER TABLE `quotation_items`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=72;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=75;
 
 --
 -- AUTO_INCREMENT for table `repair_orders`
 --
 ALTER TABLE `repair_orders`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
 
 --
 -- AUTO_INCREMENT for table `services`
@@ -1264,7 +1291,7 @@ ALTER TABLE `shop`
 -- AUTO_INCREMENT for table `stock_movement`
 --
 ALTER TABLE `stock_movement`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=40;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=44;
 
 --
 -- AUTO_INCREMENT for table `suppliers`
@@ -1282,7 +1309,7 @@ ALTER TABLE `units`
 -- AUTO_INCREMENT for table `vehicles`
 --
 ALTER TABLE `vehicles`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=31;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=32;
 
 --
 -- Constraints for dumped tables

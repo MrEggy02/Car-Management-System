@@ -17,7 +17,7 @@ class StockMovementContent:
         self.movements = []
         self.filtered_movements = []
         self.current_page = 1
-        self.items_per_page = 20
+        self.items_per_page = 5
         self.total_pages = 1
         self.search_field = None
         self.type_filter = None

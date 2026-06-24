@@ -267,7 +267,7 @@ class MechanicPerformanceReportContent:
     def _build_summary_cards(self):
         summary = self.report_data.get('summary', {})
         
-        cards = ft.Row([
+        row1 = ft.Row([
             self._build_stat_card(
                 title="ຈຳນວນຊ່າງທັງໝົດ",
                 value=str(summary.get('total_mechanics', 0)),
@@ -291,8 +291,36 @@ class MechanicPerformanceReportContent:
             ),
         ], spacing=16, expand=True)
         
+        row2 = ft.Row([
+            self._build_stat_card(
+                title="ລາຍຮັບຄ່າແຮງລວມ",
+                value=self._format_currency(summary.get('total_labor_revenue', 0)),
+                icon=ft.Icons.BUILD,
+                color="#0284C7",
+                subtitle="ລາຍຮັບຈາກຄ່າແຮງຊ່າງ",
+            ),
+            self._build_stat_card(
+                title="ກຳໄລອາໄຫຼ່ລວມ",
+                value=self._format_currency(summary.get('total_parts_profit', 0)),
+                icon=ft.Icons.INVENTORY,
+                color="#8B5CF6",
+                subtitle="ກຳໄລຈາກອາໄຫຼ່ທີ່ໃຊ້",
+            ),
+            self._build_stat_card(
+                title="ກຳໄລລວມທັງໝົດ",
+                value=self._format_currency(summary.get('total_profit', 0)),
+                icon=ft.Icons.MONETIZATION_ON,
+                color="#10B981",
+                subtitle="ຄ່າແຮງ + ກຳໄລອາໄຫຼ່",
+            ),
+        ], spacing=16, expand=True)
+        
         return ft.Container(
-            content=cards,
+            content=ft.Column([
+                row1,
+                ft.Container(height=10),
+                row2
+            ]),
             margin=ft.margin.symmetric(horizontal=24),
         )
     
@@ -348,12 +376,13 @@ class MechanicPerformanceReportContent:
         header = ft.Container(
             content=ft.Row([
                 ft.Text("ຊື່ຊ່າງສ້ອມແປງ", size=12, weight=ft.FontWeight.BOLD, color="#64748B", expand=True),
-                ft.Text("ເບີໂທລະສັບ", size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=120),
-                ft.Text("ມອບໝາຍ", size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=80),
-                ft.Text("ສຳເລັດ", size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=80),
-                ft.Text("ກຳລັງເຮັດ / ລໍຖ້າ / ຢຸດ", size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=150),
-                ft.Text("ສະເລ່ຍຊົ່ວໂມງ", size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=100),
-                ft.Text("ປະສິດທິພາບ", size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=100),
+                ft.Text("ມອບໝາຍ", size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=70, text_align=ft.TextAlign.CENTER),
+                ft.Text("ສຳເລັດ", size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=70, text_align=ft.TextAlign.CENTER),
+                ft.Text("ສະເລ່ຍຊົ່ວໂມງ", size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=90, text_align=ft.TextAlign.CENTER),
+                ft.Text("ລາຍຮັບຄ່າແຮງ", size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=120, text_align=ft.TextAlign.RIGHT),
+                ft.Text("ກຳໄລອາໄຫຼ່", size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=120, text_align=ft.TextAlign.RIGHT),
+                ft.Text("ກຳໄລລວມ", size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=120, text_align=ft.TextAlign.RIGHT),
+                ft.Text("ປະສິດທິພາບ", size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=100, text_align=ft.TextAlign.CENTER),
             ]),
             padding=ft.padding.symmetric(vertical=12, horizontal=16),
             bgcolor=ft.Colors.GREY_100,
@@ -365,24 +394,26 @@ class MechanicPerformanceReportContent:
         for i, m in enumerate(mechanic_stats):
             bg = ft.Colors.GREY_50 if i % 2 == 0 else ft.Colors.WHITE
             
-            # Formulate WIP details
-            wip_details = f"{m.get('working_count', 0)} / {m.get('waiting_count', 0)} / {m.get('paused_count', 0)}"
-            
             avg_hours_val = m.get('avg_hours')
             avg_hours_text = f"{avg_hours_val:.1f} ຊມ" if avg_hours_val is not None else "-"
             
             eff_val = m.get('efficiency', 0)
             eff_color = "#10B981" if eff_val >= 80 else "#F59E0B" if eff_val >= 50 else "#EF4444"
             
+            labor_rev = m.get('labor_revenue', 0)
+            parts_prof = m.get('parts_profit', 0)
+            total_prof = m.get('total_profit', 0)
+            
             table_body.controls.append(
                 ft.Container(
                     content=ft.Row([
                         ft.Text(m.get('mechanic_name', '-'), size=13, weight=ft.FontWeight.W_500, color="#1E293B", expand=True),
-                        ft.Text(m.get('mechanic_phone', '-'), size=12, color="#64748B", width=120),
-                        ft.Text(str(m.get('total_assigned', 0)), size=13, color="#1E293B", width=80),
-                        ft.Text(str(m.get('completed_count', 0)), size=13, color="#10B981", weight=ft.FontWeight.BOLD, width=80),
-                        ft.Text(wip_details, size=13, color="#64748B", width=150),
-                        ft.Text(avg_hours_text, size=13, color="#1E293B", width=100),
+                        ft.Text(str(m.get('total_assigned', 0)), size=13, color="#1E293B", width=70, text_align=ft.TextAlign.CENTER),
+                        ft.Text(str(m.get('completed_count', 0)), size=13, color="#10B981", weight=ft.FontWeight.BOLD, width=70, text_align=ft.TextAlign.CENTER),
+                        ft.Text(avg_hours_text, size=13, color="#1E293B", width=90, text_align=ft.TextAlign.CENTER),
+                        ft.Text(self._format_currency(labor_rev), size=13, color="#1E293B", width=120, text_align=ft.TextAlign.RIGHT),
+                        ft.Text(self._format_currency(parts_prof), size=13, color="#1E293B", width=120, text_align=ft.TextAlign.RIGHT),
+                        ft.Text(self._format_currency(total_prof), size=13, weight=ft.FontWeight.BOLD, color="#10B981", width=120, text_align=ft.TextAlign.RIGHT),
                         ft.Container(
                             content=ft.Text(f"{eff_val:.1f}%", size=11, color=ft.Colors.WHITE, weight=ft.FontWeight.BOLD),
                             bgcolor=eff_color,
@@ -391,7 +422,7 @@ class MechanicPerformanceReportContent:
                             width=90,
                             alignment=ft.Alignment(0, 0),
                         ),
-                    ]),
+                    ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
                     padding=ft.padding.symmetric(vertical=12, horizontal=16),
                     bgcolor=bg,
                 )
@@ -454,3 +485,10 @@ class MechanicPerformanceReportContent:
             duration=2000,
         )
         self.page.update()
+
+    def _format_currency(self, amount):
+        try:
+            return f"{int(amount or 0):,} KIP"
+        except:
+            return "0 KIP"
+

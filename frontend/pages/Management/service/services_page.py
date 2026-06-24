@@ -27,7 +27,7 @@ class ServicesContent:
         self.filtered_services = []
         self.search_input = None
         self.current_page = 1
-        self.items_per_page = 10
+        self.items_per_page = 5
         self.total_pages = 1
         self.primary_color = PRIMARY_COLOR
         self.primary_dark = PRIMARY_DARK

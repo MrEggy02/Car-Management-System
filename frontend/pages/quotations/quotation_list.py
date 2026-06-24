@@ -32,7 +32,7 @@ class QuotationListContent:
         self.detail_dialog = None
         self.search_field = None
         self.current_page = 1
-        self.items_per_page = 10
+        self.items_per_page = 5
         self.total_pages = 1
         self.current_dialog = None
         self.parts_list = []

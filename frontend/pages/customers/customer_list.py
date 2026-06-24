@@ -28,7 +28,7 @@ class CustomerListContent:
         self.all_vehicles = []  # Cache all vehicles for detail dialogs
         self.search_input = None
         self.current_page = 1
-        self.items_per_page = 10
+        self.items_per_page = 5
         self.total_pages = 1
         self.primary_color = "#1565C0"
         self.primary_dark = "#0D47A1"

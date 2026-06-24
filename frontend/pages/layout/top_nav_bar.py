@@ -127,6 +127,13 @@ class TopNavBarManager:
             ),
         )
         
+        # Mock mode toggle switch
+        mock_mode_switch = ft.Switch(
+            value=getattr(self.parent.client, "mock_mode", False),
+            active_track_color=ft.Colors.GREEN_400,
+            on_change=self._toggle_mock_mode,
+        )
+        
         # App name
         self.app_name_text = ft.Text(
             get_text("app_name"),
@@ -175,7 +182,15 @@ class TopNavBarManager:
                         alignment=Alignment.CENTER,
                         padding=ft.padding.only(left=175),
                     ),
-                    user_profile,
+                    ft.Row(
+                        [
+                            ft.Text(get_text("mock_mode"), color=ft.Colors.WHITE, size=11, weight=ft.FontWeight.W_500),
+                            mock_mode_switch,
+                            user_profile,
+                        ],
+                        spacing=10,
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                    ),
                 ],
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -194,6 +209,13 @@ class TopNavBarManager:
         
         return self.top_nav_bar
     
+    def _toggle_mock_mode(self, e):
+        """Toggle mock mode on API client and rebuild the app UI"""
+        self.parent.client.mock_mode = e.control.value
+        from api_client import APIClient
+        APIClient.GLOBAL_MOCK_MODE = e.control.value
+        self.parent._rebuild_all()
+
     def _direct_logout(self):
         """Direct logout without confirmation dialog"""
         print("DEBUG: Direct logout called")
@@ -202,11 +224,8 @@ class TopNavBarManager:
         from pages.login_page import login_page
 
         def on_login_success(p, c, u):
-            from pages.main_app import MainApp
-            app = MainApp(p, c, u)
-            p.clean()
-            p.add(app.build())
-            p.update()
+            from pages.dashboard_page import dashboard_page
+            dashboard_page(p, c, u)
 
         login_page(self.parent.page, on_login_success)
     

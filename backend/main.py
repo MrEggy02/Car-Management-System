@@ -1,6 +1,8 @@
 from fastapi import FastAPI, Depends, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBasicCredentials
+from fastapi.staticfiles import StaticFiles
+import os
 from auth import security, authenticate_user
 from routers import (
     employees,
@@ -25,6 +27,10 @@ from routers import (
 )
 
 app = FastAPI(title="J&P Auto Maxing API", version="2.0")
+
+# Mount uploads directory
+os.makedirs("uploads", exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # CORS
 app.add_middleware(

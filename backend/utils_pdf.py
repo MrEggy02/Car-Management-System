@@ -2697,19 +2697,37 @@ def generate_mechanic_performance_pdf(start_date: str = None, end_date: str = No
                 e.id as mechanic_id,
                 e.name as mechanic_name,
                 e.phone as mechanic_phone,
-                COUNT(ro.id) as total_assigned,
+                COUNT(DISTINCT ro.id) as total_assigned,
                 SUM(CASE WHEN ro.status = 'completed' THEN 1 ELSE 0 END) as completed_count,
                 SUM(CASE WHEN ro.status = 'working' THEN 1 ELSE 0 END) as working_count,
                 SUM(CASE WHEN ro.status = 'paused' THEN 1 ELSE 0 END) as paused_count,
                 SUM(CASE WHEN ro.status = 'waiting' THEN 1 ELSE 0 END) as waiting_count,
                 ROUND(AVG(CASE WHEN ro.status = 'completed' AND ro.end_date IS NOT NULL 
                     THEN TIMESTAMPDIFF(HOUR, ro.start_date, ro.end_date) 
-                    ELSE NULL END), 1) as avg_hours
+                    ELSE NULL END), 1) as avg_hours,
+                COALESCE(SUM(CASE WHEN ro.status = 'completed' THEN 
+                    COALESCE((
+                        SELECT SUM(qi.total) 
+                        FROM quotation_items qi 
+                        LEFT JOIN quotations q ON qi.quotation_id = q.id 
+                        WHERE q.job_order_id = ro.job_order_id AND q.status = 'approved'
+                          AND (qi.service_id IS NOT NULL OR (qi.service_id IS NULL AND qi.part_id IS NULL AND qi.custom_name IS NOT NULL))
+                    ), 0)
+                ELSE 0 END), 0) as labor_revenue,
+                COALESCE(SUM(CASE WHEN ro.status = 'completed' THEN 
+                    COALESCE((
+                        SELECT SUM(qi.total - (qi.qty * p.cost_price)) 
+                        FROM quotation_items qi 
+                        LEFT JOIN quotations q ON qi.quotation_id = q.id 
+                        LEFT JOIN parts p ON qi.part_id = p.id
+                        WHERE q.job_order_id = ro.job_order_id AND q.status = 'approved'
+                          AND qi.part_id IS NOT NULL
+                    ), 0)
+                ELSE 0 END), 0) as parts_profit
             FROM Employees e
             LEFT JOIN repair_orders ro ON e.id = ro.mechanic_id AND DATE(ro.start_date) BETWEEN %s AND %s
             WHERE e.role = 'mechanic' AND e.status = 'active'
             GROUP BY e.id, e.name, e.phone
-            ORDER BY completed_count DESC
         """, (start_date, end_date))
         mechanic_stats = cursor.fetchall()
         
@@ -2723,6 +2741,8 @@ def generate_mechanic_performance_pdf(start_date: str = None, end_date: str = No
     total_assigned = 0
     total_completed = 0
     total_working = 0
+    total_labor_revenue = 0.0
+    total_parts_profit = 0.0
     valid_durations = []
     
     for m in mechanic_stats:
@@ -2730,15 +2750,27 @@ def generate_mechanic_performance_pdf(start_date: str = None, end_date: str = No
         m['completed_count'] = int(m['completed_count'] or 0)
         m['working_count'] = int(m['working_count'] or 0)
         m['avg_hours'] = float(m['avg_hours'] or 0) if m['avg_hours'] is not None else None
+        m['labor_revenue'] = float(m['labor_revenue'] or 0)
+        m['parts_profit'] = float(m['parts_profit'] or 0)
+        m['total_profit'] = m['labor_revenue'] + m['parts_profit']
+        
+        # Efficiency
+        assigned = m['total_assigned']
+        m['efficiency'] = round((m['completed_count'] / assigned * 100), 1) if assigned > 0 else 0
         
         total_assigned += m['total_assigned']
         total_completed += m['completed_count']
         total_working += m['working_count']
+        total_labor_revenue += m['labor_revenue']
+        total_parts_profit += m['parts_profit']
         if m['avg_hours'] is not None and m['avg_hours'] > 0:
             valid_durations.append(m['avg_hours'])
             
     avg_workshop_hours = round(sum(valid_durations) / len(valid_durations), 1) if valid_durations else 0
     workshop_efficiency = (total_completed / total_assigned * 100) if total_assigned > 0 else 0
+    
+    # Sort by total profit descending
+    mechanic_stats.sort(key=lambda x: x['total_profit'], reverse=True)
     
     story = []
     build_report_header(story, "ລາຍງານປະສິດທິພາບຂອງຊ່າງ", "Mechanic Performance Report", start_date, end_date, shop)
@@ -2764,6 +2796,12 @@ def generate_mechanic_performance_pdf(start_date: str = None, end_date: str = No
         leading=12
     )
     
+    table_cell_right = ParagraphStyle(
+        'TableCellRight',
+        parent=table_cell,
+        alignment=2 # Right
+    )
+    
     table_hdr = ParagraphStyle(
         'TableHdr',
         parent=normal_style,
@@ -2779,9 +2817,10 @@ def generate_mechanic_performance_pdf(start_date: str = None, end_date: str = No
         [Paragraph("ຈຳນວນຊ່າງສ້ອມແປງທັງໝົດ / Total Mechanics", table_cell), Paragraph(str(len(mechanic_stats)), table_cell)],
         [Paragraph("ຈຳນວນງານສ້ອມແປງທີ່ມອບໝາຍ / Total Assigned Jobs", table_cell), Paragraph(str(total_assigned), table_cell)],
         [Paragraph("ງານຊ່ອມແປງທີ່ສຳເລັດ / Completed Jobs", table_cell), Paragraph(str(total_completed), table_cell)],
-        [Paragraph("ງານຊ່ອມແປງທີ່ກຳລັງເຮັດ / Ongoing Jobs", table_cell), Paragraph(str(total_working), table_cell)],
         [Paragraph("ເວລາຊ່ອມແປງສະເລ່ຍ / Avg Workshop Repair Duration", table_cell), Paragraph(f"{avg_workshop_hours:.1f} ຊົ່ວໂມງ (Hours)", table_cell)],
-        [Paragraph("ອັດຕາຊ່ອມສຳເລັດຂອງຮ້ານ / Overall Completion Rate", table_cell), Paragraph(f"{workshop_efficiency:.1f}%", table_cell)],
+        [Paragraph("ລາຍຮັບຄ່າແຮງລວມ / Total Labor Revenue", table_cell), Paragraph(f"{int(total_labor_revenue):,} KIP", table_cell)],
+        [Paragraph("ກຳໄລອາໄຫຼ່ລວມ / Total Parts Profit", table_cell), Paragraph(f"{int(total_parts_profit):,} KIP", table_cell)],
+        [Paragraph("ກຳໄລລວມທັງໝົດ / Total Combined Profit", table_cell), Paragraph(f"<b>{int(total_labor_revenue + total_parts_profit):,} KIP</b>", table_cell)],
     ]
     metrics_table = Table(metrics_data, colWidths=[280, 240])
     metrics_table.setStyle(TableStyle([
@@ -2799,33 +2838,45 @@ def generate_mechanic_performance_pdf(start_date: str = None, end_date: str = No
     perf_data = [
         [
             Paragraph("<b>ລຳດັບ<br/>No.</b>", table_hdr),
-            Paragraph("<b>ຊື່ນາຍຊ່າງ / Mechanic Name</b>", table_hdr),
-            Paragraph("<b>ເບີໂທ / Phone</b>", table_hdr),
-            Paragraph("<b>ມອບໝາຍ / Jobs</b>", table_hdr),
-            Paragraph("<b>ສຳເລັດ / Done</b>", table_hdr),
-            Paragraph("<b>ເວລາສະເລ່ຍ / Avg Hours</b>", table_hdr),
-            Paragraph("<b>ອັດຕາສຳເລັດ / Rate</b>", table_hdr)
+            Paragraph("<b>ຊື່ນາຍຊ່າງ / Name</b>", table_hdr),
+            Paragraph("<b>ມອບໝາຍ<br/>Jobs</b>", table_hdr),
+            Paragraph("<b>ສຳເລັດ<br/>Done</b>", table_hdr),
+            Paragraph("<b>ສະເລ່ຍ<br/>Hours</b>", table_hdr),
+            Paragraph("<b>ລາຍຮັບຄ່າແຮງ<br/>Labor (KIP)</b>", table_hdr),
+            Paragraph("<b>ກຳໄລອາໄຫຼ່<br/>Parts (KIP)</b>", table_hdr),
+            Paragraph("<b>ກຳໄລລວມ<br/>Profit (KIP)</b>", table_hdr),
+            Paragraph("<b>ອັດຕາສຳເລັດ<br/>Rate (%)</b>", table_hdr)
         ]
     ]
     for idx, m in enumerate(mechanic_stats):
         assigned = m['total_assigned']
         done = m['completed_count']
-        rate = (done / assigned * 100) if assigned > 0 else 0
+        rate = m['efficiency']
         avg_h = m['avg_hours']
         avg_text = f"{float(avg_h):.1f}" if avg_h is not None else "-"
+        labor_rev = m['labor_revenue']
+        parts_prof = m['parts_profit']
+        tot_prof = m['total_profit']
         perf_data.append([
             Paragraph(str(idx + 1), table_cell),
             Paragraph(m.get('mechanic_name', '-'), table_cell),
-            Paragraph(m.get('mechanic_phone', '-'), table_cell),
             Paragraph(str(assigned), table_cell),
             Paragraph(str(done), table_cell),
             Paragraph(avg_text, table_cell),
-            Paragraph(f"{rate:.1f}%", table_cell)
+            Paragraph(f"{int(labor_rev):,}", table_cell_right),
+            Paragraph(f"{int(parts_prof):,}", table_cell_right),
+            Paragraph(f"{int(tot_prof):,}", table_cell_right),
+            Paragraph(f"{rate:.1f}%", table_cell_right)
         ])
     if len(perf_data) == 1:
-        perf_data.append([Paragraph("ບໍ່ມີຂໍ້ມູນຊ່າງສ້ອມແປງ (No mechanic data available)", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell)])
+        perf_data.append([
+            Paragraph("ບໍ່ມີຂໍ້ມູນຊ່າງສ້ອມແປງ (No mechanic data available)", table_cell),
+            Paragraph("-", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell),
+            Paragraph("-", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell),
+            Paragraph("-", table_cell), Paragraph("-", table_cell)
+        ])
         
-    perf_table = Table(perf_data, colWidths=[35, 145, 90, 50, 50, 80, 70])
+    perf_table = Table(perf_data, colWidths=[20, 105, 30, 30, 45, 75, 75, 75, 65])
     perf_table.setStyle(TableStyle([
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0D47A1')),

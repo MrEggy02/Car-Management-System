@@ -20,8 +20,10 @@ def show_job_order_detail_dialog(order, primary_color, show_snackbar):
     else:
         receive_date = "-"
     problem = order.get("problem_description", "-")
+    car_defects = order.get("car_defects", "-") or "-"
     mileage = order.get("mileage", 0)
     fuel_level = order.get("fuel_level", "-")
+    signed_receipt_image = order.get("signed_receipt_image", "") or ""
     status = order.get("status", "pending")
     created_by = order.get("created_by_name", "-")
     
@@ -49,6 +51,46 @@ def show_job_order_detail_dialog(order, primary_color, show_snackbar):
     
     def print_order(e=None):
         show_snackbar(get_text("preparing_print"), False)
+        
+    image_display_container = ft.Container()
+    if signed_receipt_image:
+        from api_client import API_BASE_URL
+        import webbrowser
+        image_url = f"{API_BASE_URL}/uploads/{signed_receipt_image}"
+        image_display_container.content = ft.Column([
+            ft.Text(get_text("signed_receipt_image"), size=11, color="#64748B", weight=ft.FontWeight.BOLD),
+            ft.GestureDetector(
+                on_tap=lambda e: webbrowser.open(image_url),
+                mouse_cursor=ft.MouseCursor.CLICK,
+                content=ft.Container(
+                    content=ft.Image(
+                        src=image_url,
+                        width=400,
+                        height=180,
+                        fit="contain",
+                    ),
+                    border=ft.border.all(1, ft.Colors.GREY_300),
+                    border_radius=8,
+                    bgcolor=ft.Colors.GREY_50,
+                    padding=6,
+                    tooltip="Click to view full image",
+                )
+            )
+        ], spacing=4)
+    else:
+        image_display_container.content = ft.Column([
+            ft.Text(get_text("signed_receipt_image"), size=11, color="#64748B", weight=ft.FontWeight.BOLD),
+            ft.Container(
+                content=ft.Row([
+                    ft.Icon(ft.Icons.IMAGE_NOT_SUPPORTED, size=18, color="#94A3B8"),
+                    ft.Text(get_text("no_image_uploaded"), size=11, color="#94A3B8"),
+                ], spacing=6, alignment=ft.MainAxisAlignment.CENTER),
+                border=ft.border.all(1, ft.Colors.GREY_200),
+                border_radius=8,
+                padding=10,
+                alignment=ft.Alignment(0, 0),
+            )
+        ], spacing=4)
     
     actions_row = ft.Row([
         ft.TextButton(
@@ -133,6 +175,12 @@ def show_job_order_detail_dialog(order, primary_color, show_snackbar):
                 ]),
                 ft.Text(get_text("problem_description"), size=11, color="#64748B"),
                 ft.Text(problem, size=12, color="#1E293B"),
+                
+                ft.Text(get_text("car_defects"), size=11, color="#64748B"),
+                ft.Text(car_defects, size=12, color="#1E293B"),
+                
+                image_display_container,
+                
                 ft.Divider(height=1, color=ft.Colors.GREY_100),
                 ft.Row([
                     ft.Text(get_text("service_advisor"), size=11, color="#64748B"),
@@ -141,7 +189,7 @@ def show_job_order_detail_dialog(order, primary_color, show_snackbar):
             ], spacing=12, scroll=ft.ScrollMode.AUTO),
             padding=ft.padding.all(16),
             width=450,
-            height=480,
+            height=540,
         ),
         actions=[
             ft.Container(
