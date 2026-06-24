@@ -427,7 +427,7 @@ class RevenueReportContent:
         for day in daily_revenue[:30]:
             date = day.get('date', '')
             revenue = day.get('daily_revenue', 0)
-            count = day.get('daily_count', 0)
+            count = day.get('daily_invoice_count', 0)
             
             height_percentage = (revenue / max_revenue) * 200
             bar_color = self.primary_color if revenue > 0 else ft.Colors.GREY_300
@@ -554,7 +554,7 @@ class RevenueReportContent:
                     content=ft.Row([
                         ft.Text(day.get('date', '-'), size=13, color="#1E293B", width=120),
                         ft.Text(self._format_currency(day.get('daily_revenue', 0)), size=13, weight=ft.FontWeight.W_500, color="#1E293B", expand=True),
-                        ft.Text(str(day.get('daily_count', 0)), size=13, color="#64748B", width=100),
+                        ft.Text(str(day.get('daily_invoice_count', 0)), size=13, color="#64748B", width=100),
                     ]),
                     padding=ft.Padding(left=16, right=16, top=12, bottom=12),
                     bgcolor=bg,

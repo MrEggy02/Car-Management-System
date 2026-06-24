@@ -580,6 +580,7 @@ class APIClient:
         customer_id: int,
         vehicle_id: int,
         problem_description: str,
+        car_defects: str = "",
         mileage: int = 0,
         fuel_level: str = "",
     ) -> Dict:
@@ -590,6 +591,7 @@ class APIClient:
                 "customer_id": customer_id,
                 "vehicle_id": vehicle_id,
                 "problem_description": problem_description,
+                "car_defects": car_defects,
                 "mileage": mileage,
                 "fuel_level": fuel_level,
             },
@@ -608,6 +610,29 @@ class APIClient:
 
     def update_job_order(self, order_id: int, **kwargs) -> Dict:
         return self._request("PUT", f"/job-orders/{order_id}", data=kwargs)
+
+    def upload_job_order_receipt(self, order_id: int, receipt_path: str) -> Dict:
+        url = f"{API_BASE_URL}/job-orders/{order_id}/upload-receipt"
+        auth = self._get_auth()
+        try:
+            with open(receipt_path, "rb") as f:
+                files = {"receipt": (os.path.basename(receipt_path), f, "image/png")}
+                response = requests.post(url, auth=auth, files=files)
+                if response.status_code == 200:
+                    return response.json()
+                else:
+                    try:
+                        error_msg = response.json().get("detail", f"HTTP {response.status_code}")
+                    except:
+                        error_msg = response.text or f"HTTP {response.status_code}"
+                    raise Exception(error_msg)
+        except requests.exceptions.ConnectionError:
+            raise Exception("Cannot connect to server. Please start the backend.")
+        except Exception as e:
+            raise Exception(f"Error uploading receipt: {e}")
+
+    def get_job_order_receipt_url(self, order_id: int) -> str:
+        return f"{API_BASE_URL}/job-orders/{order_id}/receipt"
 
     def delete_job_order(self, order_id: int) -> Dict:
         return self._request("DELETE", f"/job-orders/{order_id}")

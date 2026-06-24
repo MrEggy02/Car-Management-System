@@ -871,7 +871,7 @@ def show_create_job_order_dialog(primary_color, customers, vehicles_by_customer,
     return dialog
 
 
-def show_job_order_detail_dialog(order, primary_color, on_close, on_print=None):
+def show_job_order_detail_dialog(order, primary_color, on_close, on_print=None, receipt_url=None):
     """Show job order detail dialog with print button"""
     
     order_id = order.get("id")
@@ -890,6 +890,9 @@ def show_job_order_detail_dialog(order, primary_color, on_close, on_print=None):
     else:
         receive_date = "-"
     problem = order.get("problem_description", "-")
+    car_defects = order.get("car_defects", "")
+    if not car_defects:
+        car_defects = "-"
     mileage = order.get("mileage", 0)
     fuel_level = order.get("fuel_level", "-")
     status = order.get("status", "pending")
@@ -931,6 +934,80 @@ def show_job_order_detail_dialog(order, primary_color, on_close, on_print=None):
             style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=6)),
         ))
     
+    content_controls = [
+        ft.Row([
+            ft.Text(get_text("status"), size=12, color="#64748B", width=100),
+            status_badge,
+        ], spacing=8),
+        ft.Divider(height=1, color=ft.Colors.GREY_100),
+        ft.Text(get_text("customer_information"), size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
+        ft.Row([
+            ft.Column([
+                ft.Text(get_text("customer_name"), size=11, color="#64748B"),
+                ft.Text(customer_name, size=13, weight=ft.FontWeight.W_500),
+            ], spacing=2, expand=True),
+            ft.Column([
+                ft.Text(get_text("customer_phone"), size=11, color="#64748B"),
+                ft.Text(customer_phone, size=13),
+            ], spacing=2, expand=True),
+        ]),
+        ft.Text(get_text("vehicle_information"), size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
+        ft.Row([
+            ft.Column([
+                ft.Text(get_text("plate_number"), size=11, color="#64748B"),
+                ft.Text(plate_number, size=13, weight=ft.FontWeight.W_500),
+            ], spacing=2, expand=True),
+            ft.Column([
+                ft.Text(get_text("car_brand_model"), size=11, color="#64748B"),
+                ft.Text(f"{brand} {model}", size=13),
+            ], spacing=2, expand=True),
+        ]),
+        ft.Text(get_text("job_details"), size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
+        ft.Row([
+            ft.Column([
+                ft.Text(get_text("receive_date"), size=11, color="#64748B"),
+                ft.Text(receive_date, size=12),
+            ], spacing=2, expand=True),
+            ft.Column([
+                ft.Text(get_text("mileage"), size=11, color="#64748B"),
+                ft.Text(f"{mileage} km", size=12),
+            ], spacing=2, expand=True),
+            ft.Column([
+                ft.Text(get_text("fuel_level"), size=11, color="#64748B"),
+                ft.Text(fuel_level, size=12),
+            ], spacing=2, expand=True),
+        ]),
+        ft.Text(get_text("problem_description"), size=11, color="#64748B"),
+        ft.Text(problem, size=12, color="#1E293B"),
+        ft.Divider(height=1, color=ft.Colors.GREY_100),
+        ft.Text("ຕຳນິເດີມຂອງລົດ (Car Defects)", size=11, color="#64748B"),
+        ft.Text(car_defects, size=12, color="#1E293B"),
+        ft.Divider(height=1, color=ft.Colors.GREY_100),
+        ft.Row([
+            ft.Text(get_text("service_advisor"), size=11, color="#64748B"),
+            ft.Text(created_by, size=12, color="#64748B", expand=True),
+        ], spacing=8),
+    ]
+
+    if receipt_url:
+        content_controls.append(ft.Divider(height=1, color=ft.Colors.GREY_100))
+        content_controls.append(ft.Text("ຮູບໃບສັນຍາ (Receipt Image)", size=11, color="#64748B"))
+        content_controls.append(
+            ft.Container(
+                content=ft.Image(src=receipt_url, fit="contain"),
+                border_radius=8,
+                border=ft.Border(
+                    top=ft.BorderSide(1, ft.Colors.GREY_200), 
+                    right=ft.BorderSide(1, ft.Colors.GREY_200), 
+                    bottom=ft.BorderSide(1, ft.Colors.GREY_200), 
+                    left=ft.BorderSide(1, ft.Colors.GREY_200)
+                ),
+                padding=5,
+                height=200,
+                alignment=ft.Alignment(0, 0)
+            )
+        )
+
     dialog = ft.AlertDialog(
         modal=True,
         shape=ft.RoundedRectangleBorder(radius=14),
@@ -953,57 +1030,7 @@ def show_job_order_detail_dialog(order, primary_color, on_close, on_print=None):
             border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
         ),
         content=ft.Container(
-            content=ft.Column([
-                ft.Row([
-                    ft.Text(get_text("status"), size=12, color="#64748B", width=100),
-                    status_badge,
-                ], spacing=8),
-                ft.Divider(height=1, color=ft.Colors.GREY_100),
-                ft.Text(get_text("customer_information"), size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
-                ft.Row([
-                    ft.Column([
-                        ft.Text(get_text("customer_name"), size=11, color="#64748B"),
-                        ft.Text(customer_name, size=13, weight=ft.FontWeight.W_500),
-                    ], spacing=2, expand=True),
-                    ft.Column([
-                        ft.Text(get_text("customer_phone"), size=11, color="#64748B"),
-                        ft.Text(customer_phone, size=13),
-                    ], spacing=2, expand=True),
-                ]),
-                ft.Text(get_text("vehicle_information"), size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
-                ft.Row([
-                    ft.Column([
-                        ft.Text(get_text("plate_number"), size=11, color="#64748B"),
-                        ft.Text(plate_number, size=13, weight=ft.FontWeight.W_500),
-                    ], spacing=2, expand=True),
-                    ft.Column([
-                        ft.Text(get_text("car_brand_model"), size=11, color="#64748B"),
-                        ft.Text(f"{brand} {model}", size=13),
-                    ], spacing=2, expand=True),
-                ]),
-                ft.Text(get_text("job_details"), size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
-                ft.Row([
-                    ft.Column([
-                        ft.Text(get_text("receive_date"), size=11, color="#64748B"),
-                        ft.Text(receive_date, size=12),
-                    ], spacing=2, expand=True),
-                    ft.Column([
-                        ft.Text(get_text("mileage"), size=11, color="#64748B"),
-                        ft.Text(f"{mileage} km", size=12),
-                    ], spacing=2, expand=True),
-                    ft.Column([
-                        ft.Text(get_text("fuel_level"), size=11, color="#64748B"),
-                        ft.Text(fuel_level, size=12),
-                    ], spacing=2, expand=True),
-                ]),
-                ft.Text(get_text("problem_description"), size=11, color="#64748B"),
-                ft.Text(problem, size=12, color="#1E293B"),
-                ft.Divider(height=1, color=ft.Colors.GREY_100),
-                ft.Row([
-                    ft.Text(get_text("service_advisor"), size=11, color="#64748B"),
-                    ft.Text(created_by, size=12, color="#64748B", expand=True),
-                ], spacing=8),
-            ], spacing=12, scroll=ft.ScrollMode.AUTO),
+            content=ft.Column(content_controls, spacing=12, scroll=ft.ScrollMode.AUTO),
             padding=ft.Padding(left=16, right=16, top=16, bottom=16),
             width=450,
             height=480,

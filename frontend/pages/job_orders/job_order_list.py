@@ -8,6 +8,8 @@ import tempfile
 import os
 import threading
 import time
+import tkinter as tk
+from tkinter import filedialog
 
 from i18n import get_text, get_current_language
 from pages.job_orders.job_order_dialogs import (
@@ -31,6 +33,8 @@ class JobOrderListContent:
         self.current_page = 1
         self.items_per_page = 10
         self.total_pages = 1
+        
+        self.current_upload_order_id = None
         
         # Status colors
         self.status_colors = {
@@ -63,7 +67,68 @@ class JobOrderListContent:
         self.table_rows = ft.Column(spacing=0, scroll=ft.ScrollMode.AUTO, expand=True)
         self.pagination_container = ft.Container()
 
+    async def trigger_upload(self, order_id):
+        self.current_upload_order_id = order_id
+        
+        def on_file_selected(file_path):
+            if not file_path:
+                self.current_upload_order_id = None
+                return
+            
+            try:
+                self.client.upload_job_order_receipt(self.current_upload_order_id, file_path)
+                self.show_snack_bar("ອັບໂຫຼດສຳເລັດ", is_error=False)
+                self.load_orders()
+            except Exception as ex:
+                self.show_snack_bar(f"Error: {ex}", is_error=True)
+            self.current_upload_order_id = None
+            
+        def run_picker():
+            root = tk.Tk()
+            root.attributes("-alpha", 0.0)
+            root.attributes("-topmost", True)
+            root.withdraw()
+            file_path = filedialog.askopenfilename(
+                title="ເລືອກຮູບພາບໃບສັນຍາ (Select Receipt Image)",
+                filetypes=[("Image Files", "*.png;*.jpg;*.jpeg")]
+            )
+            root.destroy()
+            on_file_selected(file_path)
+            
+        threading.Thread(target=run_picker, daemon=True).start()
+        
+    def view_receipt_image(self, order_id):
+        url = self.client.get_job_order_receipt_url(order_id)
+        dialog = ft.AlertDialog(
+            title=ft.Text("ໃບສັນຍາ (Receipt Image)"),
+            content=ft.Image(src=url, fit="contain", width=600, height=600),
+            actions=[
+                ft.TextButton(get_text("close") if get_text("close") != "close" else "ປິດ", on_click=self._close_dialog)
+            ]
+        )
+        self._open_dialog(dialog)
+
+    def _open_dialog(self, dialog):
+        self.current_dialog = dialog
+        self.page.dialog = dialog
+        dialog.open = True
+        self.page.update()
+
+    def _close_dialog(self, e=None):
+        if self.current_dialog:
+            self.current_dialog.open = False
+            self.page.update()
+
+    def show_snack_bar(self, msg, is_error=False):
+        self.page.snack_bar = ft.SnackBar(
+            content=ft.Text(msg),
+            bgcolor=ft.Colors.RED_600 if is_error else ft.Colors.GREEN_600
+        )
+        self.page.snack_bar.open = True
+        self.page.update()
+
     def build(self):
+
         header = ft.Container(
             content=ft.Row(
                 [
@@ -224,7 +289,7 @@ class JobOrderListContent:
                 ft.Container(content=ft.Text(get_text("customer_name"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=200, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=10, right=0, top=0, bottom=0)),
                 ft.Container(content=ft.Text(get_text("plate_number"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=130, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=10, right=0, top=0, bottom=0)),
                 ft.Container(content=ft.Text(get_text("receive_date"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=120, alignment=ft.Alignment(0, 0)),
-                ft.Container(content=ft.Text(get_text("actions"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=200, alignment=ft.Alignment(0, 0)),
+                ft.Container(content=ft.Text(get_text("actions"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), expand=True, alignment=ft.Alignment(0, 0)),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
             padding=ft.Padding(left=10, right=10, top=14, bottom=14),
             bgcolor=ft.Colors.GREY_100,
@@ -269,13 +334,39 @@ class JobOrderListContent:
             border_radius=6,
         )
         
+        async def on_upload_click(e):
+            await self.trigger_upload(order_id)
+            
+        upload_btn = ft.Container(
+            content=ft.Row([ft.Icon(ft.Icons.UPLOAD_FILE, size=16, color="#0284C7"), ft.Text("ອັບຮູບ", size=12, color="#0284C7")], spacing=4),
+            on_click=on_upload_click,
+            padding=ft.Padding(left=8, right=8, top=4, bottom=4),
+            border_radius=6,
+        )
+        
+        has_image = order.get("signed_receipt_image") is not None
+        view_image_btn = ft.Container(
+            content=ft.Row([ft.Icon(ft.Icons.IMAGE, size=16, color="#059669"), ft.Text("ເບິ່ງຮູບ", size=12, color="#059669")], spacing=4),
+            on_click=lambda e, oid=order_id: self.view_receipt_image(oid),
+            padding=ft.Padding(left=8, right=8, top=4, bottom=4),
+            border_radius=6,
+            visible=has_image,
+        )
+        
+        actions_row = ft.Row(
+            [view_btn, print_btn, upload_btn, view_image_btn, delete_btn] if has_image else [view_btn, print_btn, upload_btn, delete_btn], 
+            spacing=4,
+            wrap=False,
+            scroll=ft.ScrollMode.AUTO
+        )
+        
         row = ft.Container(
             content=ft.Row([
                 ft.Container(content=ft.Text(job_no, size=13, weight=ft.FontWeight.W_500, color="#1E293B"), width=140, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=10, right=0, top=0, bottom=0)),
                 ft.Container(content=ft.Text(customer_name, size=13, color="#1E293B", max_lines=1), width=200, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=10, right=0, top=0, bottom=0)),
                 ft.Container(content=ft.Text(plate_number, size=12, color="#64748B", max_lines=1), width=130, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=10, right=0, top=0, bottom=0)),
                 ft.Container(content=ft.Text(receive_date, size=12, color="#64748B"), width=120, alignment=ft.Alignment(0, 0)),
-                ft.Container(content=ft.Row([view_btn, print_btn, delete_btn], spacing=4), width=200, alignment=ft.Alignment(0, 0)),
+                ft.Container(content=actions_row, expand=True, alignment=ft.Alignment(-1, 0)),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
             padding=ft.Padding(left=10, right=10, top=12, bottom=12),
             bgcolor=row_bg,
@@ -431,11 +522,15 @@ class JobOrderListContent:
         if not order:
             return
         
+        has_image = order.get("signed_receipt_image") is not None
+        receipt_url = self.client.get_job_order_receipt_url(order_id) if has_image else None
+        
         dialog = show_job_order_detail_dialog(
             order, 
             self.primary_color, 
             self._close_dialog,
-            on_print=lambda oid: self.print_job_order(oid)
+            on_print=lambda oid: self.print_job_order(oid),
+            receipt_url=receipt_url
         )
         self._open_dialog(dialog)
     

@@ -1,7 +1,10 @@
 # backend/routers/job_orders.py
-from fastapi import APIRouter, HTTPException, Depends, Form, Response
+from fastapi import APIRouter, HTTPException, Depends, Form, Response, UploadFile, File
+from fastapi.responses import FileResponse
 from database import get_db
 from auth import authenticate_user
+import os
+import uuid
 from typing import Optional
 from datetime import datetime
 
@@ -26,6 +29,8 @@ def get_job_orders(
                     jo.vehicle_id,
                     jo.receive_date,
                     jo.problem_description,
+                    jo.car_defects,
+                    jo.signed_receipt_image,
                     jo.mileage,
                     jo.fuel_level,
                     jo.status,
@@ -60,6 +65,8 @@ def get_job_orders(
                     jo.vehicle_id,
                     jo.receive_date,
                     jo.problem_description,
+                    jo.car_defects,
+                    jo.signed_receipt_image,
                     jo.mileage,
                     jo.fuel_level,
                     jo.status,
@@ -143,6 +150,8 @@ def get_job_orders_with_details(
                 jo.vehicle_id,
                 jo.receive_date,
                 jo.problem_description,
+                jo.car_defects,
+                jo.signed_receipt_image,
                 jo.mileage,
                 jo.fuel_level,
                 jo.status,
@@ -226,6 +235,8 @@ def get_job_order(order_id: int, user: dict = Depends(authenticate_user)):
                 jo.vehicle_id,
                 jo.receive_date,
                 jo.problem_description,
+                jo.car_defects,
+                jo.signed_receipt_image,
                 jo.mileage,
                 jo.fuel_level,
                 jo.status,
@@ -288,6 +299,7 @@ def create_job_order(
     customer_id: int = Form(...),
     vehicle_id: int = Form(...),
     problem_description: str = Form(...),
+    car_defects: str = Form(""),
     mileage: int = Form(0),
     fuel_level: str = Form(""),
     user: dict = Depends(authenticate_user)
@@ -304,9 +316,9 @@ def create_job_order(
         
         cursor.execute("""
             INSERT INTO job_orders 
-            (job_no, customer_id, vehicle_id, problem_description, mileage, fuel_level, status, created_by, receive_date)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-        """, (job_no, customer_id, vehicle_id, problem_description, mileage, fuel_level, 'pending', user.get('id'), datetime.now()))
+            (job_no, customer_id, vehicle_id, problem_description, car_defects, mileage, fuel_level, status, created_by, receive_date)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (job_no, customer_id, vehicle_id, problem_description, car_defects, mileage, fuel_level, 'pending', user.get('id'), datetime.now()))
         
         db.commit()
         order_id = cursor.lastrowid
@@ -332,6 +344,7 @@ def update_job_order(
     order_id: int,
     status: Optional[str] = Form(None),
     problem_description: Optional[str] = Form(None),
+    car_defects: Optional[str] = Form(None),
     mileage: Optional[int] = Form(None),
     fuel_level: Optional[str] = Form(None),
     user: dict = Depends(authenticate_user)
@@ -362,6 +375,9 @@ def update_job_order(
         if problem_description:
             update_fields.append("problem_description = %s")
             values.append(problem_description)
+        if car_defects is not None:
+            update_fields.append("car_defects = %s")
+            values.append(car_defects)
         if mileage is not None:
             update_fields.append("mileage = %s")
             values.append(mileage)
@@ -410,6 +426,84 @@ def delete_job_order(order_id: int, user: dict = Depends(authenticate_user)):
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        db.close()
+
+
+# Directory for saving uploads
+UPLOAD_DIR = "uploads/receipts"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+@router.post("/job-orders/{order_id}/upload-receipt")
+def upload_receipt(
+    order_id: int,
+    receipt: UploadFile = File(...),
+    user: dict = Depends(authenticate_user)
+):
+    """Upload signed receipt image for a job order"""
+    db = get_db()
+    cursor = db.cursor()
+    try:
+        # Check if job order exists
+        cursor.execute("SELECT id, signed_receipt_image FROM job_orders WHERE id = %s", (order_id,))
+        job_order = cursor.fetchone()
+        if not job_order:
+            raise HTTPException(status_code=404, detail="Job order not found")
+        
+        # Generate unique filename
+        ext = receipt.filename.split('.')[-1] if '.' in receipt.filename else 'png'
+        filename = f"signed_{uuid.uuid4().hex}.{ext}"
+        filepath = os.path.join(UPLOAD_DIR, filename)
+        
+        # Save file
+        with open(filepath, "wb") as f:
+            f.write(receipt.file.read())
+            
+        # Delete old image if it exists
+        old_image = job_order[1]
+        if old_image:
+            old_filepath = os.path.join(UPLOAD_DIR, old_image)
+            if os.path.exists(old_filepath):
+                try:
+                    os.remove(old_filepath)
+                except:
+                    pass
+        
+        # Update database
+        cursor.execute("UPDATE job_orders SET signed_receipt_image = %s WHERE id = %s", (filename, order_id))
+        db.commit()
+        
+        return {"message": "Receipt image uploaded successfully", "filename": filename}
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        print(f"Error uploading receipt: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        db.close()
+
+
+@router.get("/job-orders/{order_id}/receipt")
+def get_receipt_image(order_id: int):
+    """Get the signed receipt image for a job order"""
+    db = get_db()
+    cursor = db.cursor()
+    try:
+        cursor.execute("SELECT signed_receipt_image FROM job_orders WHERE id = %s", (order_id,))
+        job_order = cursor.fetchone()
+        if not job_order or not job_order[0]:
+            raise HTTPException(status_code=404, detail="Receipt image not found")
+            
+        image_path = os.path.join(UPLOAD_DIR, job_order[0])
+        if not os.path.exists(image_path):
+            raise HTTPException(status_code=404, detail="Receipt image file not found")
+            
+        return FileResponse(image_path)
     finally:
         cursor.close()
         db.close()

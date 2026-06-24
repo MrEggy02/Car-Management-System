@@ -842,6 +842,9 @@ def generate_job_order_pdf(order_id: int) -> bytes:
 
     # D. Problem Description Section
     problem = order.get('problem_description', '-')
+    car_defects = order.get('car_defects', '-')
+    if not car_defects:
+        car_defects = '-'
     
     problem_style = ParagraphStyle(
         'ProblemStyle',
@@ -854,7 +857,9 @@ def generate_job_order_pdf(order_id: int) -> bytes:
     
     problem_data = [
         [Paragraph("<b>ອາການລົດ ຫຼື ບັນຫາທີ່ແຈ້ງຊ່ອມ / Problem & Symptoms Reported:</b>", section_header_style)],
-        [Paragraph(problem, problem_style)]
+        [Paragraph(problem, problem_style)],
+        [Paragraph("<b>ຕຳນິເດີມຂອງລົດ / Car Defects:</b>", section_header_style)],
+        [Paragraph(car_defects, problem_style)]
     ]
     problem_table = Table(problem_data, colWidths=[520])
     problem_table.setStyle(TableStyle([

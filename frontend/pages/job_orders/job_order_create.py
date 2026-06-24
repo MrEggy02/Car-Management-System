@@ -36,6 +36,7 @@ class JobOrderCreateContent:
         self.vehicles_card = None
         self.vehicle_radio_group = None
         self.problem_description = None
+        self.car_defects = None
         self.mileage = None
         self.fuel_level = None
         
@@ -248,6 +249,19 @@ class JobOrderCreateContent:
             expand=True,
         )
         
+        self.car_defects = ft.TextField(
+            label="ຕຳນິເດີມຂອງລົດ",
+            hint_text="ບອກລາຍລະອຽດຕຳນິເດີມຂອງລົດ (ຖ້າມີ)",
+            multiline=True,
+            min_lines=3,
+            max_lines=5,
+            border_radius=12,
+            bgcolor=ft.Colors.WHITE,
+            filled=True,
+            content_padding=ft.Padding(left=16, right=16, top=14, bottom=14),
+            expand=True,
+        )
+        
         self.mileage = ft.TextField(
             label=get_text("mileage"),
             hint_text="0",
@@ -299,6 +313,12 @@ class JobOrderCreateContent:
                     ft.Text(get_text("problem_description"), size=14, weight=ft.FontWeight.W_600, color="#475569"),
                     ft.Container(height=8),
                     self.problem_description,
+                    ft.Container(height=16),
+                    
+                    # Car Defects
+                    ft.Text("ຕຳນິເດີມຂອງລົດ (Car Defects)", size=14, weight=ft.FontWeight.W_600, color="#475569"),
+                    ft.Container(height=8),
+                    self.car_defects,
                 ],
                 spacing=0,
                 expand=True,
@@ -582,6 +602,7 @@ class JobOrderCreateContent:
                 customer_id=self.selected_customer_id,
                 vehicle_id=self.selected_vehicle_id,
                 problem_description=self.problem_description.value,
+                car_defects=self.car_defects.value if self.car_defects.value else "",
                 mileage=int(self.mileage.value) if self.mileage.value and self.mileage.value.isdigit() else 0,
                 fuel_level=self.fuel_level.value if self.fuel_level.value else "",
             )
