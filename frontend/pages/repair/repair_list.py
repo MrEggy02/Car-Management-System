@@ -124,9 +124,7 @@ class RepairListContent:
     # ─────────────────────────── KPI CARDS ───────────────────────────
     def _build_kpi_cards(self):
         statuses = [
-            ("waiting",   "#FF9800", ft.Icons.HOURGLASS_EMPTY),
             ("working",   "#2196F3", ft.Icons.BUILD),
-            ("paused",    "#9C27B0", ft.Icons.PAUSE),
             ("completed", "#4CAF50", ft.Icons.CHECK_CIRCLE),
         ]
         status_texts = {
@@ -228,22 +226,7 @@ class RepairListContent:
 
     # ─────────────────────────── SEARCH BAR ───────────────────────────
     def _build_search_bar(self):
-        self.status_filter = ft.Dropdown(
-            hint_text=get_text("filter_by_status"),
-            border_radius=12,
-            bgcolor=ft.Colors.WHITE,
-            filled=True,
-            options=[
-                ft.dropdown.Option("all",       get_text("all_status")),
-                ft.dropdown.Option("waiting",   get_text("waiting")),
-                ft.dropdown.Option("working",   get_text("working")),
-                ft.dropdown.Option("paused",    get_text("paused")),
-                ft.dropdown.Option("completed", get_text("completed")),
-            ],
-            value="all",
-            expand=True,
-        )
-        self.status_filter.on_change = self.filter_repairs
+        self.status_filter = None
 
         self.search_field = ft.TextField(
             hint_text=get_text("search_repair"),
@@ -298,7 +281,7 @@ class RepairListContent:
         return ft.Container(
             content=ft.Column(
                 [
-                    ft.Row([self.status_filter, self.search_field, refresh_button], spacing=10),
+                    ft.Row([self.search_field, refresh_button], spacing=10),
                     ft.Row([self.date_from_field, self.date_to_field], spacing=10),
                 ],
                 spacing=8,
@@ -759,9 +742,7 @@ class RepairListContent:
             return
 
         steps = [
-            ("waiting",   get_text("waiting"),   "#FF9800", ft.Icons.HOURGLASS_EMPTY),
             ("working",   get_text("working"),   "#2196F3", ft.Icons.BUILD),
-            ("paused",    get_text("paused"),    "#9C27B0", ft.Icons.PAUSE),
             ("completed", get_text("completed"), "#4CAF50", ft.Icons.CHECK_CIRCLE),
         ]
 

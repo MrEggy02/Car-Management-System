@@ -71,7 +71,10 @@ class DashboardContent:
            
         )
         
-        # Stats Row with Icons and Progress Rings 
+        # Quick Actions Row
+        quick_actions_row = self._build_quick_actions()
+        
+        # Stats Row with Icons
         stats_row = ft.Container(
             content=ft.Row(
                 [
@@ -81,23 +84,23 @@ class DashboardContent:
                         subtitle=f"{self.summary_data.get('today_invoices', 0)} {get_text('invoices')}",
                         icon=ft.Icons.ATTACH_MONEY,
                         color="#10B981",
-                        progress=self._get_today_progress(),
+                        progress=None,
                     ),
                     self._build_stats_card(
-                        title=get_text("month_revenue"),
-                        value=self._format_currency(self.summary_data.get('month_revenue', 0)),
-                        subtitle=f"{self.summary_data.get('month_invoices', 0)} {get_text('invoices')}",
-                        icon=ft.Icons.TRENDING_UP,
-                        color="#1565C0",
-                        progress=self._get_month_progress(),
+                        title=get_text("pending_quotations"),
+                        value=str(self.summary_data.get('pending_quotations', 0)),
+                        subtitle=get_text("waiting"),
+                        icon=ft.Icons.PENDING_ACTIONS,
+                        color="#F59E0B",
+                        progress=None,
                     ),
                     self._build_stats_card(
-                        title=get_text("completion_rate"),
-                        value=f"{self._get_completion_rate()}%",
-                        subtitle=f"{self.summary_data.get('completed_repairs', 0)} / {self.summary_data.get('total_repairs', 0)} {get_text('repairs')}",
-                        icon=ft.Icons.CHECK_CIRCLE,
-                        color="#10B981",
-                        progress=self._get_completion_rate() / 100 if self._get_completion_rate() > 0 else 0,
+                        title=get_text("unpaid_invoices"),
+                        value=self._format_currency(self.summary_data.get('unpaid_invoices_amount', 0)),
+                        subtitle=f"{self.summary_data.get('unpaid_invoices_count', 0)} {get_text('invoices')}",
+                        icon=ft.Icons.ACCOUNT_BALANCE_WALLET,
+                        color="#EF4444",
+                        progress=None,
                     ),
                 ],
                 spacing=20,
@@ -176,52 +179,7 @@ class DashboardContent:
             expand=True,
         )
         
-        # Employees Section
-        employees_container = ft.Container(
-            content=ft.Column(
-                [
-                    ft.Row(
-                        [
-                            ft.Text(
-                                get_text("recent_employees"),
-                                size=16,
-                                weight=ft.FontWeight.BOLD,
-                                color="#1E293B",
-                            ),
-                            ft.Container(expand=True),
-                            ft.TextButton(
-                                get_text("view_all"),
-                                on_click=lambda e: self.navigate("employees"),
-                                style=ft.ButtonStyle(color=self.primary_color),
-                            ),
-                        ],
-                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                    ),
-                    ft.Container(height=12),
-                    ft.Container(
-                        content=ft.Column(
-                            [self._build_employee_row(emp) for emp in self.employees[:3]] if self.employees else [
-                                ft.Text(get_text("no_data"), size=13, color="#64748B")
-                            ],
-                            spacing=8,
-                            scroll=ft.ScrollMode.AUTO,
-                            height=160,
-                        ),
-                    ),
-                ],
-                spacing=0,
-            ),
-            padding=ft.Padding(left=20, right=20, top=20, bottom=20),
-            bgcolor=ft.Colors.WHITE,
-            border_radius=16,
-            margin=ft.Margin(left=0, right=0, top=0, bottom=0),
-            expand=True,
-            shadow=ft.BoxShadow(
-                blur_radius=10,
-                color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
-                offset=ft.Offset(0, 2),
-            ),
-        )
+
         
         # Low Stock Parts Section
         low_stock_container = ft.Container(
@@ -317,10 +275,9 @@ class DashboardContent:
             ),
         )
         
-        # Three column layout
-        three_column_row = ft.Row(
+        # Two column layout
+        two_column_row = ft.Row(
             [
-                employees_container,
                 low_stock_container,
                 recent_repairs_container,
             ],
@@ -331,9 +288,10 @@ class DashboardContent:
         # Scrollable content
         scrollable_content = ft.Column(
             [
+                quick_actions_row,
                 stats_row,
                 middle_row,
-                three_column_row,
+                two_column_row,
             ],
             spacing=20,
             expand=True,
@@ -419,42 +377,75 @@ class DashboardContent:
             return int((completed / total) * 100)
         return 0
     
-    def _build_stats_card(self, title, value, subtitle, icon, color, progress):
-        """Build stats card with progress ring"""
+    def _build_quick_actions(self):
+        def create_btn(icon, text, route, color):
+            return ft.ElevatedButton(
+                content=ft.Row([ft.Icon(icon, size=18, color=color), ft.Text(text, size=14, weight=ft.FontWeight.W_500, color=color)], spacing=8),
+                style=ft.ButtonStyle(
+                    bgcolor=ft.Colors.WHITE,
+                    shape=ft.RoundedRectangleBorder(radius=10),
+                    padding=ft.Padding(left=16, right=16, top=12, bottom=12),
+                    elevation=2,
+                ),
+                on_click=lambda e: self.navigate(route),
+                expand=True
+            )
+        
         return ft.Container(
-            content=ft.Column(
+            content=ft.Row(
                 [
-                    ft.Row(
-                        [
-                            ft.Container(
-                                content=ft.Icon(icon, size=24, color=ft.Colors.WHITE),
-                                bgcolor=color,
-                                border_radius=12,
-                                padding=ft.Padding(left=10, right=10, top=10, bottom=10),
-                            ),
-                            ft.Container(expand=True),
-                            ft.Text(
-                                value,
-                                size=18,
-                                weight=ft.FontWeight.BOLD,
-                                color="#1E293B",
-                                text_align=ft.TextAlign.RIGHT,
-                            ),
-                        ],
-                        spacing=12,
+                    create_btn(ft.Icons.ADD_BOX, get_text("new_job_order"), "job_order_create", self.primary_color),
+                    create_btn(ft.Icons.DESCRIPTION, get_text("new_quotation"), "quotation_create", "#F59E0B"),
+                    create_btn(ft.Icons.PAYMENT, get_text("receive_payment"), "invoice_list", "#10B981"),
+                ],
+                spacing=20,
+            ),
+            padding=ft.Padding(left=12, right=12, top=0, bottom=0),
+            margin=ft.Margin(left=0, right=0, top=12, bottom=0),
+        )
+
+    def _build_stats_card(self, title, value, subtitle, icon, color, progress=None):
+        """Build stats card with progress ring"""
+        content_items = [
+            ft.Row(
+                [
+                    ft.Container(
+                        content=ft.Icon(icon, size=24, color=ft.Colors.WHITE),
+                        bgcolor=color,
+                        border_radius=12,
+                        padding=ft.Padding(left=10, right=10, top=10, bottom=10),
                     ),
-                    ft.Container(height=4),
-                    ft.Text(title, size=13, color="#64748B"),
-                    ft.Text(subtitle, size=10, color="#94A3B8"),
-                    ft.Container(height=8),
-                    ft.ProgressBar(
-                        value=progress,
-                        color=color,
-                        bgcolor=ft.Colors.GREY_200,
-                        height=4,
-                        border_radius=2,
+                    ft.Container(expand=True),
+                    ft.Text(
+                        value,
+                        size=18,
+                        weight=ft.FontWeight.BOLD,
+                        color="#1E293B",
+                        text_align=ft.TextAlign.RIGHT,
                     ),
                 ],
+                spacing=12,
+            ),
+            ft.Container(height=4),
+            ft.Text(title, size=13, color="#64748B"),
+            ft.Text(subtitle, size=10, color="#94A3B8"),
+        ]
+        
+        if progress is not None:
+            content_items.extend([
+                ft.Container(height=8),
+                ft.ProgressBar(
+                    value=progress,
+                    color=color,
+                    bgcolor=ft.Colors.GREY_200,
+                    height=4,
+                    border_radius=2,
+                )
+            ])
+            
+        return ft.Container(
+            content=ft.Column(
+                content_items,
                 spacing=0,
             ),
             padding=ft.Padding(left=16, right=16, top=16, bottom=16),

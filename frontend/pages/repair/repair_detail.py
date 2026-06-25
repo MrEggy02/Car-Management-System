@@ -858,9 +858,7 @@ class RepairDetailContent:
             return
 
         steps = [
-            ("waiting",   get_text("waiting"),   "#FF9800", ft.Icons.HOURGLASS_EMPTY),
             ("working",   get_text("working"),   "#2196F3", ft.Icons.BUILD),
-            ("paused",    get_text("paused"),    "#9C27B0", ft.Icons.PAUSE),
             ("completed", get_text("completed"), "#4CAF50", ft.Icons.CHECK_CIRCLE),
         ]
 

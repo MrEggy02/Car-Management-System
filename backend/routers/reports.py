@@ -708,6 +708,24 @@ def get_dashboard_summary(user: dict = Depends(authenticate_user)):
         """, (today,))
         today_pending = cursor.fetchone()
         
+        # Pending Quotations (Using 'draft' status)
+        cursor.execute("""
+            SELECT COUNT(*) as pending_quotations
+            FROM quotations
+            WHERE status = 'draft'
+        """)
+        pending_quotations = cursor.fetchone()
+        
+        # Unpaid Invoices
+        cursor.execute("""
+            SELECT 
+                COUNT(*) as unpaid_invoices_count,
+                COALESCE(SUM(final_total - received_amount), 0) as unpaid_invoices_amount
+            FROM invoices
+            WHERE payment_status IN ('pending', 'partial')
+        """)
+        unpaid_invoices = cursor.fetchone()
+        
         return {
             "today_revenue": float(today_stats.get('today_revenue', 0) or 0),
             "today_invoices": today_stats.get('today_invoices', 0) or 0,
@@ -720,7 +738,10 @@ def get_dashboard_summary(user: dict = Depends(authenticate_user)):
             "waiting_repairs": repair_stats.get('waiting_repairs', 0) or 0,
             "low_stock_count": low_stock.get('low_stock_count', 0) or 0,
             "pending_jobs": pending_jobs.get('pending_jobs', 0) or 0,
-            "today_pending_jobs": today_pending.get('today_pending_jobs', 0) or 0
+            "today_pending_jobs": today_pending.get('today_pending_jobs', 0) or 0,
+            "pending_quotations": pending_quotations.get('pending_quotations', 0) or 0,
+            "unpaid_invoices_count": unpaid_invoices.get('unpaid_invoices_count', 0) or 0,
+            "unpaid_invoices_amount": float(unpaid_invoices.get('unpaid_invoices_amount', 0) or 0)
         }
     except Exception as e:
         print(f"Error in dashboard summary: {e}")

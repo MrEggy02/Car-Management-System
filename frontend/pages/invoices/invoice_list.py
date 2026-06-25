@@ -220,7 +220,7 @@ class InvoiceListContent:
                 ),
                 ft.Container(
                     content=ft.Text(get_text("actions"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=160,
+                    width=230,
                     alignment=ft.Alignment(0, 0),
                 ),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
@@ -389,6 +389,20 @@ class InvoiceListContent:
             border_radius=6,
         )
         
+        actions_list = [view_btn, print_btn]
+        if payment_status == "pending":
+            pay_btn = ft.Container(
+                content=ft.Row([
+                    ft.Icon(ft.Icons.PAYMENT, size=16, color=ft.Colors.WHITE),
+                    ft.Text(get_text("receive_payment") if get_text("receive_payment") != "receive_payment" else "ຮັບຊຳລະເງິນ", size=12, color=ft.Colors.WHITE),
+                ], spacing=4),
+                on_click=lambda e, inv=invoice: self._show_payment_dialog(inv),
+                padding=ft.Padding(left=8, right=8, top=4, bottom=4),
+                bgcolor=self.success_color,
+                border_radius=6,
+            )
+            actions_list.append(pay_btn)
+        
         row = ft.Container(
             content=ft.Row([
                 ft.Container(
@@ -433,8 +447,8 @@ class InvoiceListContent:
                     alignment=ft.Alignment(0, 0),
                 ),
                 ft.Container(
-                    content=ft.Row([view_btn, print_btn], spacing=4),
-                    width=160,
+                    content=ft.Row(actions_list, spacing=4),
+                    width=230,
                     alignment=ft.Alignment(0, 0),
                 ),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
@@ -715,3 +729,93 @@ class InvoiceListContent:
             duration=3000,
         )
         self.page.update()
+
+    def _show_payment_dialog(self, invoice: Dict):
+        final_total = invoice.get('final_total', 0)
+        invoice_id = invoice.get('id')
+        
+        payment_method_dropdown = ft.Dropdown(
+            label=get_text("payment_method"),
+            value="cash",
+            options=[
+                ft.dropdown.Option("cash", get_text("payment_cash")),
+                ft.dropdown.Option("transfer", get_text("payment_transfer")),
+            ],
+            expand=True,
+            border_radius=12,
+            bgcolor=ft.Colors.WHITE,
+            filled=True,
+        )
+        
+        received_field = ft.TextField(
+            label=get_text("received_amount"),
+            value=str(final_total),
+            expand=True,
+            input_filter=ft.NumbersOnlyInputFilter(),
+            border_radius=12,
+            bgcolor=ft.Colors.WHITE,
+            filled=True,
+        )
+        
+        change_text = ft.Text("0 KIP", size=16, weight=ft.FontWeight.BOLD, color=self.success_color, text_align=ft.TextAlign.RIGHT)
+        
+        def on_received_change(e):
+            try:
+                received = float(e.control.value) if e.control.value else 0
+                change = max(0, received - final_total)
+                change_text.value = f"{int(change):,} KIP"
+                self.page.update()
+            except:
+                change_text.value = "0 KIP"
+        
+        received_field.on_change = on_received_change
+        
+        def confirm_payment(e):
+            try:
+                method = payment_method_dropdown.value
+                try:
+                    received = float(received_field.value)
+                except:
+                    received = final_total
+                
+                change = max(0, received - final_total)
+                
+                self.client.record_invoice_payment(
+                    invoice_id=invoice_id,
+                    payment_method=method,
+                    received_amount=received,
+                    change_amount=change
+                )
+                self.show_snack_bar("Payment successful", is_error=False)
+                self._close_dialog(dialog)
+                self.load_invoices()
+            except Exception as ex:
+                self.show_snack_bar(f"Payment failed: {ex}", is_error=True)
+                
+        dialog = ft.AlertDialog(
+            modal=True,
+            shape=ft.RoundedRectangleBorder(radius=16),
+            bgcolor=ft.Colors.WHITE,
+            title=ft.Text("ຮັບຊຳລະເງິນ", size=18, weight=ft.FontWeight.BOLD),
+            content=ft.Container(
+                content=ft.Column([
+                    ft.Text(f"ຍອດລວມ: {int(final_total):,} KIP", size=16, weight=ft.FontWeight.BOLD, color=self.primary_color),
+                    ft.Container(height=10),
+                    payment_method_dropdown,
+                    ft.Container(height=10),
+                    received_field,
+                    ft.Container(height=10),
+                    ft.Row([
+                        ft.Text(get_text("change"), size=14),
+                        ft.Container(expand=True),
+                        change_text,
+                    ]),
+                ], tight=True),
+                width=350,
+            ),
+            actions=[
+                ft.TextButton(get_text("cancel"), on_click=lambda e: self._close_dialog(dialog)),
+                ft.ElevatedButton("ຍືນຍັນຊຳລະ", on_click=confirm_payment, bgcolor=self.success_color, color=ft.Colors.WHITE),
+            ],
+        )
+        self._open_dialog(dialog)

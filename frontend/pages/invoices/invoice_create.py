@@ -53,8 +53,8 @@ class InvoiceCreateContent:
         # Header with Create Button in right side
         self.create_btn = ft.ElevatedButton(
             content=ft.Row([
-                ft.Icon(ft.Icons.PAYMENT, size=18, color=ft.Colors.WHITE),
-                ft.Text(get_text("confirm_payment"), size=14, color=ft.Colors.WHITE, weight=ft.FontWeight.W_600),
+                ft.Icon(ft.Icons.SAVE, size=18, color=ft.Colors.WHITE),
+                ft.Text(get_text("save_invoice") if get_text("save_invoice") != "save_invoice" else "ບັນທຶກໃບຮັບເງິນ", size=14, color=ft.Colors.WHITE, weight=ft.FontWeight.W_600),
             ], spacing=8),
             on_click=self.confirm_payment,
             style=ft.ButtonStyle(
@@ -572,65 +572,18 @@ class InvoiceCreateContent:
             margin=ft.Margin(left=0, right=0, top=0, bottom=16),
         )
         
-        # Payment Section (Clean Card)
-        self.payment_method_dropdown = ft.Dropdown(
-            label=get_text("payment_method"),
-            value="cash",
-            options=[
-                ft.dropdown.Option("cash", get_text("payment_cash")),
-                ft.dropdown.Option("transfer", get_text("payment_transfer")),
-            ],
-            expand=True,
-            border_radius=12,
-            bgcolor=ft.Colors.WHITE,
-            filled=True,
-            content_padding=ft.Padding(left=16, right=16, top=12, bottom=12),
-        )
-        
-        self.received_field = ft.TextField(
-            label=get_text("received_amount"),
-            value=str(self.final_total),
-            expand=True,
-            input_filter=ft.NumbersOnlyInputFilter(),
-            border_radius=12,
-            bgcolor=ft.Colors.WHITE,
-            filled=True,
-            content_padding=ft.Padding(left=16, right=16, top=12, bottom=12),
-        )
-        
-        self.change_text = ft.Text("0 KIP", size=16, weight=ft.FontWeight.BOLD, color=self.success_color, text_align=ft.TextAlign.RIGHT)
-        
-        def on_received_change(e):
-            try:
-                received = float(e.control.value) if e.control.value else 0
-                change = max(0, received - self.final_total)
-                self.change_text.value = self._format_currency(change)
-                self.page.update()
-            except:
-                self.change_text.value = "0 KIP"
-        
-        self.received_field.on_change = on_received_change
-        
+        # Summary Section (Clean Card)
         payment_card = ft.Container(
             content=ft.Column([
                 ft.Row([
-                    ft.Icon(ft.Icons.PAYMENT, size=18, color=self.primary_color),
-                    ft.Text(get_text("payment_summary"), size=15, weight=ft.FontWeight.W_600, color="#1E293B"),
+                    ft.Icon(ft.Icons.RECEIPT_LONG, size=18, color=self.primary_color),
+                    ft.Text(get_text("invoice_summary") if get_text("invoice_summary") != "invoice_summary" else "ສະຫຼຸບໃບເກັບເງິນ", size=15, weight=ft.FontWeight.W_600, color="#1E293B"),
                 ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
                 ft.Divider(height=1, color=ft.Colors.GREY_100),
                 ft.Container(height=8),
                 self._create_info_row(get_text("final_total"), self._format_currency(self.final_total)),
-                ft.Divider(height=1, color=ft.Colors.GREY_100),
-                ft.Container(height=8),
-                self.payment_method_dropdown,
-                ft.Container(height=12),
-                self.received_field,
-                ft.Container(height=12),
-                ft.Row([
-                    ft.Text(get_text("change"), size=13, color="#64748B"),
-                    ft.Container(expand=True),
-                    self.change_text,
-                ]),
+                ft.Container(height=16),
+                ft.Text("ໃບເກັບເງິນນີ້ຈະຖືກບັນທຶກໃນສະຖານະ 'ໜີ້ຕ້ອງຮັບ' (Pending) ແລະ ສາມາດກົດຮັບຊຳລະເງິນໄດ້ໃນໜ້າລາຍການໃບຮັບເງິນ.", size=12, color="#64748B"),
             ], spacing=0),
             padding=ft.Padding(left=16, right=16, top=16, bottom=16),
             bgcolor=ft.Colors.WHITE,
@@ -681,25 +634,15 @@ class InvoiceCreateContent:
         self.page.update()
         
         try:
-            payment_method = self.payment_method_dropdown.value if self.payment_method_dropdown else "cash"
-            
-            try:
-                received_amount = float(self.received_field.value) if self.received_field.value else 0
-            except:
-                received_amount = self.final_total
-            
-            change_amount = max(0, received_amount - self.final_total)
-            payment_status = 'paid' if received_amount >= self.final_total else 'pending'
-            
             result = self.client.create_invoice(
                 job_order_id=self.selected_job_id,
                 total_amount=self.total_amount,
                 total_discount=self.discount_amount,
                 final_total=self.final_total,
-                payment_method=payment_method,
-                payment_status=payment_status,
-                received_amount=received_amount,
-                change_amount=change_amount
+                payment_method="cash",
+                payment_status="pending",
+                received_amount=0,
+                change_amount=0
             )
             
             if result and result.get('id'):
@@ -757,7 +700,7 @@ class InvoiceCreateContent:
                 content=ft.Column([
                     ft.Container(height=8),
                     ft.Text(
-                        get_text("payment_success"),
+                        "ບັນທຶກໃບເກັບເງິນສຳເລັດແລ້ວ!",
                         size=15,
                         weight=ft.FontWeight.W_500,
                         color="#1E293B",

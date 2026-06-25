@@ -801,6 +801,13 @@ class APIClient:
             "change_amount": change_amount
         })
 
+    def record_invoice_payment(self, invoice_id: int, payment_method: str, received_amount: float, change_amount: float) -> Dict:
+        return self._request("PUT", f"/invoices/{invoice_id}/payment", data={
+            "payment_method": payment_method,
+            "received_amount": received_amount,
+            "change_amount": change_amount
+        })
+
     def update_invoice_status(self, invoice_id: int, payment_status: str) -> Dict:
         return self._request("PUT", f"/invoices/{invoice_id}/status", data={
             "payment_status": payment_status
