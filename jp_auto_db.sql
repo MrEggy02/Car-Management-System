@@ -128,14 +128,14 @@ INSERT INTO `employees` (`id`, `name`, `phone`, `role`, `status`, `created_at`, 
 CREATE TABLE `goods_receipts` (
   `id` int NOT NULL,
   `receipt_no` varchar(50) NOT NULL COMMENT 'Receipt Number',
-  `purchase_order_id` int DEFAULT NULL COMMENT 'Reference PO (if any)',
-  `supplier_id` int DEFAULT NULL COMMENT 'Supplier',
+  `purchase_order_id` int NOT NULL COMMENT 'Reference PO (if any)',
+  `supplier_id` int NOT NULL COMMENT 'Supplier',
   `reference_doc` varchar(100) DEFAULT NULL COMMENT 'Supplier document/invoice number',
-  `receipt_date` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Date received',
-  `total_amount` decimal(15,2) DEFAULT '0.00' COMMENT 'Total amount',
+  `receipt_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Date received',
+  `total_amount` decimal(15,2) NOT NULL DEFAULT '0.00' COMMENT 'Total amount',
   `note` text COMMENT 'Notes',
-  `status` enum('received','cancelled') DEFAULT 'received' COMMENT 'Status',
-  `received_by` int DEFAULT NULL COMMENT 'Employee who received it'
+  `status` enum('received','cancelled') NOT NULL DEFAULT 'received' COMMENT 'Status',
+  `received_by` int NOT NULL COMMENT 'Employee who received it'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Goods receipt header';
 
 --
@@ -187,16 +187,16 @@ INSERT INTO `goods_receipt_items` (`id`, `receipt_id`, `part_id`, `qty_received`
 
 CREATE TABLE `invoices` (
   `id` int NOT NULL,
-  `job_order_id` int DEFAULT NULL COMMENT 'ໃບຮັບລົດ',
-  `total_amount` decimal(15,2) DEFAULT NULL COMMENT 'ຍອດລວມ',
-  `total_discount` decimal(15,2) DEFAULT NULL COMMENT 'ສ່ວນຫຼຸດລວມ',
-  `final_total` decimal(15,2) DEFAULT NULL COMMENT 'ຍອດສຸດທ້າຍ',
+  `job_order_id` int NOT NULL COMMENT 'ໃບຮັບລົດ',
+  `total_amount` decimal(15,2) NOT NULL DEFAULT '0.00' COMMENT 'ຍອດລວມ',
+  `total_discount` decimal(15,2) DEFAULT '0.00' COMMENT 'ສ່ວນຫຼຸດລວມ',
+  `final_total` decimal(15,2) NOT NULL DEFAULT '0.00' COMMENT 'ຍອດສຸດທ້າຍ',
   `payment_method` enum('cash','transfer') NOT NULL,
   `paid_date` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'ວັນທີຈ່າຍ',
   `payment_status` enum('pending','paid') NOT NULL DEFAULT 'pending',
   `received_amount` decimal(15,2) DEFAULT '0.00' COMMENT 'ຮັບເງິນມາ',
   `change_amount` decimal(15,2) DEFAULT '0.00' COMMENT 'ທອນເງິນ',
-  `created_by` int DEFAULT NULL COMMENT 'ຜູ້ສ້າງໃບເກັບເງິນ'
+  `created_by` int NOT NULL COMMENT 'ຜູ້ສ້າງໃບເກັບເງິນ'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='ຂໍ້ມູນໃບເກັບເງິນ';
 
 --
@@ -204,12 +204,12 @@ CREATE TABLE `invoices` (
 --
 
 INSERT INTO `invoices` (`id`, `job_order_id`, `total_amount`, `total_discount`, `final_total`, `payment_method`, `paid_date`, `payment_status`, `received_amount`, `change_amount`, `created_by`) VALUES
-(1, 2, 950000.00, 0.00, 950000.00, 'transfer', '2026-05-06 08:55:04', 'paid', 950000.00, 0.00, NULL),
-(2, 1, 15700000.00, 0.00, 15700000.00, 'cash', '2026-05-06 09:58:41', 'paid', 20000000.00, 4300000.00, NULL),
-(3, 5, 100000.00, 0.00, 100000.00, 'cash', '2026-06-05 06:06:47', 'paid', 100000.00, 0.00, NULL),
-(4, 6, 3100000.00, 0.00, 3100000.00, 'cash', '2026-06-12 04:39:11', 'paid', 3100000.00, 0.00, NULL),
-(5, 3, 0.00, 0.00, 0.00, 'cash', '2026-06-12 04:42:12', 'paid', 0.00, 0.00, NULL),
-(6, 8, 0.00, 0.00, 0.00, 'transfer', '2026-06-12 07:24:52', 'paid', 500000.00, 500000.00, NULL),
+(1, 2, 950000.00, 0.00, 950000.00, 'transfer', '2026-05-06 08:55:04', 'paid', 950000.00, 0.00, 1),
+(2, 1, 15700000.00, 0.00, 15700000.00, 'cash', '2026-05-06 09:58:41', 'paid', 20000000.00, 4300000.00, 1),
+(3, 5, 100000.00, 0.00, 100000.00, 'cash', '2026-06-05 06:06:47', 'paid', 100000.00, 0.00, 1),
+(4, 6, 3100000.00, 0.00, 3100000.00, 'cash', '2026-06-12 04:39:11', 'paid', 3100000.00, 0.00, 1),
+(5, 3, 0.00, 0.00, 0.00, 'cash', '2026-06-12 04:42:12', 'paid', 0.00, 0.00, 1),
+(6, 8, 0.00, 0.00, 0.00, 'transfer', '2026-06-12 07:24:52', 'paid', 500000.00, 500000.00, 1),
 (7, 16, 150000.00, 0.00, 150000.00, 'transfer', '2026-06-18 03:42:05', 'paid', 150000.00, 0.00, 1),
 (8, 20, 1500400.00, 0.00, 1500400.00, 'cash', '2026-06-18 08:33:59', 'paid', 1500400.00, 0.00, 1),
 (9, 13, 1150000.00, 0.00, 1150000.00, 'cash', '2026-06-18 09:09:09', 'paid', 1200000.00, 50000.00, 1),
@@ -230,17 +230,17 @@ INSERT INTO `invoices` (`id`, `job_order_id`, `total_amount`, `total_discount`, 
 
 CREATE TABLE `job_orders` (
   `id` int NOT NULL,
-  `job_no` varchar(20) DEFAULT NULL,
-  `customer_id` int DEFAULT NULL,
-  `vehicle_id` int DEFAULT NULL,
-  `receive_date` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `problem_description` text,
+  `job_no` varchar(20) NOT NULL,
+  `customer_id` int NOT NULL,
+  `vehicle_id` int NOT NULL,
+  `receive_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `problem_description` text NOT NULL,
   `car_defects` text,
-  `mileage` int DEFAULT NULL,
-  `fuel_level` varchar(50) DEFAULT NULL,
+  `mileage` int DEFAULT '0',
+  `fuel_level` varchar(50) DEFAULT '',
   `signed_receipt_image` varchar(255) DEFAULT NULL,
-  `status` enum('pending','quoting','approved','repairing','finished','closed','cancelled') DEFAULT 'pending',
-  `created_by` int DEFAULT NULL,
+  `status` enum('pending','quoting','approved','repairing','finished','closed','cancelled') NOT NULL DEFAULT 'pending',
+  `created_by` int NOT NULL,
   `closed_by` int DEFAULT NULL COMMENT 'ຜູ້ປິດງານ',
   `closed_at` timestamp NULL DEFAULT NULL COMMENT 'ວັນທີປິດ'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -515,12 +515,12 @@ INSERT INTO `promotion_services` (`id`, `promotion_id`, `service_id`, `qty`) VAL
 
 CREATE TABLE `purchase_items` (
   `id` int NOT NULL,
-  `purchase_id` int DEFAULT NULL,
-  `part_id` int DEFAULT NULL,
+  `purchase_id` int NOT NULL,
+  `part_id` int NOT NULL,
   `qty` int NOT NULL,
-  `received_qty` int DEFAULT '0' COMMENT 'Quantity already received',
+  `received_qty` int NOT NULL DEFAULT '0' COMMENT 'Quantity already received',
   `unit_cost` decimal(15,2) NOT NULL,
-  `total_line` decimal(15,2) DEFAULT NULL
+  `total_line` decimal(15,2) NOT NULL DEFAULT '0.00'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
@@ -546,11 +546,11 @@ INSERT INTO `purchase_items` (`id`, `purchase_id`, `part_id`, `qty`, `received_q
 CREATE TABLE `purchase_orders` (
   `id` int NOT NULL,
   `po_no` varchar(50) NOT NULL,
-  `supplier_id` int DEFAULT NULL,
-  `order_date` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `total_amount` decimal(15,2) DEFAULT '0.00',
-  `status` enum('ordering','partial','completed','cancelled') DEFAULT 'ordering' COMMENT 'Status (ordering, partial, completed, cancelled)',
-  `created_by` int DEFAULT NULL
+  `supplier_id` int NOT NULL,
+  `order_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `total_amount` decimal(15,2) NOT NULL DEFAULT '0.00',
+  `status` enum('ordering','partial','completed','cancelled') NOT NULL DEFAULT 'ordering' COMMENT 'Status (ordering, partial, completed, cancelled)',
+  `created_by` int NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
@@ -577,15 +577,15 @@ INSERT INTO `purchase_orders` (`id`, `po_no`, `supplier_id`, `order_date`, `tota
 
 CREATE TABLE `quotations` (
   `id` int NOT NULL,
-  `job_order_id` int DEFAULT NULL,
+  `job_order_id` int NOT NULL,
   `promotion_id` int DEFAULT NULL,
-  `sub_total` decimal(15,2) DEFAULT '0.00',
+  `sub_total` decimal(15,2) NOT NULL DEFAULT '0.00',
   `discount_amount` decimal(15,2) DEFAULT '0.00',
-  `net_total` decimal(15,2) DEFAULT '0.00',
-  `status` enum('draft','approved','rejected') DEFAULT 'draft',
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `net_total` decimal(15,2) NOT NULL DEFAULT '0.00',
+  `status` enum('draft','approved','rejected') NOT NULL DEFAULT 'draft',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `approved_by` int DEFAULT NULL COMMENT 'ຜູ້ອະນຸມັດ',
-  `created_by` int DEFAULT NULL
+  `created_by` int NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
@@ -631,13 +631,13 @@ INSERT INTO `quotations` (`id`, `job_order_id`, `promotion_id`, `sub_total`, `di
 
 CREATE TABLE `quotation_items` (
   `id` int NOT NULL,
-  `quotation_id` int DEFAULT NULL,
+  `quotation_id` int NOT NULL,
   `part_id` int DEFAULT NULL COMMENT 'ອາໄຫຼ່ (ຖ້າແມ່ນ part)',
   `service_id` int DEFAULT NULL COMMENT 'ບໍລິການ (ຖ້າແມ່ນ service)',
-  `qty` int DEFAULT '1',
-  `unit_price` decimal(15,2) DEFAULT NULL,
-  `total` decimal(15,2) DEFAULT NULL,
-  `discount_amount` decimal(15,2) DEFAULT '0.00',
+  `qty` int NOT NULL DEFAULT '1',
+  `unit_price` decimal(15,2) NOT NULL DEFAULT '0.00',
+  `total` decimal(15,2) NOT NULL DEFAULT '0.00',
+  `discount_amount` decimal(15,2) NOT NULL DEFAULT '0.00',
   `custom_name` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
