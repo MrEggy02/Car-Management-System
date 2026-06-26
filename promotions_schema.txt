@@ -1,0 +1,11 @@
+CREATE TABLE `promotions` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) NOT NULL COMMENT 'ຊື່ໂປໂມຊັນ',
+  `discount_type` enum('percent','amount') NOT NULL COMMENT 'ປະເພດສ່ວນຫຼຸດ',
+  `value` decimal(15,2) NOT NULL COMMENT 'ມູນຄ່າ',
+  `min_amount` decimal(15,2) DEFAULT '0.00' COMMENT 'ມູນຄ່າຂັ້ນຕ່ຳ',
+  `start_date` date DEFAULT NULL COMMENT 'ວັນເລີ່ມ',
+  `end_date` date DEFAULT NULL COMMENT 'ວັນສິ້ນສຸດ',
+  `status` enum('active','inactive') DEFAULT 'active' COMMENT 'ສະຖານະ',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='ຂໍ້ມູນໂປໂມຊັນ'

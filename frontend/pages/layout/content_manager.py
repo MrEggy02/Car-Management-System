@@ -251,15 +251,19 @@ class ContentManager:
             self.parent.navigate_to(page_name, **kwargs)
         
         repair_id = getattr(self.parent, '_repair_id', None)
+        read_only = getattr(self.parent, '_read_only', False)
         if repair_id:
             delattr(self.parent, '_repair_id')
+            if hasattr(self.parent, '_read_only'):
+                delattr(self.parent, '_read_only')
         
         return RepairDetailContent(
             self.parent.page, 
             self.parent.client, 
             self.parent.user, 
             navigate, 
-            repair_id=repair_id
+            repair_id=repair_id,
+            read_only=read_only
         ).build()
     
     def _get_invoice_create_content(self):

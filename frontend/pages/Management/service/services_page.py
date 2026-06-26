@@ -183,11 +183,6 @@ class ServicesContent:
                     padding=ft.Padding(left=0, right=10, top=0, bottom=0),
                 ),
                 ft.Container(
-                    content=ft.Text(get_text('services_time'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=120,
-                    alignment=ft.Alignment(0, 0),
-                ),
-                ft.Container(
                     content=ft.Text(get_text('actions'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
                     width=120,
                     alignment=ft.Alignment(0, 0),
@@ -238,7 +233,6 @@ class ServicesContent:
         
         desc_display = description if description != '-' else get_text("no_description")
         desc_color = ft.Colors.GREY_600 if description != '-' else ft.Colors.GREY_400
-        time_text = self._format_time(estimated_time)
         
         price_column = ft.Column([
             ft.Text(
@@ -310,19 +304,6 @@ class ServicesContent:
                     width=130,
                     alignment=ft.Alignment(1, 0),
                     padding=ft.Padding(left=0, right=10, top=0, bottom=0),
-                ),
-                ft.Container(
-                    content=ft.Container(
-                        content=ft.Row([
-                            ft.Icon(ft.Icons.SCHEDULE, size=14, color=ft.Colors.GREY_600),
-                            ft.Text(time_text, size=12, color=ft.Colors.GREY_700),
-                        ], spacing=4),
-                        bgcolor=ft.Colors.GREY_50,
-                        border_radius=6,
-                        padding=ft.Padding(left=8, right=8, top=4, bottom=4),
-                    ),
-                    width=120,
-                    alignment=ft.Alignment(0, 0),
                 ),
                 ft.Container(
                     content=ft.Row([edit_btn, delete_btn], spacing=4),
@@ -551,19 +532,6 @@ class ServicesContent:
             expand=True,
         )
         
-        estimated_time = ft.TextField(
-            label=get_text("services_time"),
-            hint_text="ນາທີ (ຕົວຢ່າງ: 60)",
-            border_radius=10,
-            bgcolor=ft.Colors.WHITE,
-            filled=True,
-            value="0",
-            content_padding=ft.Padding(left=12, right=12, top=10, bottom=10),
-            border_color=ft.Colors.GREY_300,
-            focused_border_color=PRIMARY_COLOR,
-            expand=True,
-        )
-        
         def save(e):
             if name.value:
                 try:
@@ -571,7 +539,7 @@ class ServicesContent:
                         name=name.value,
                         price=float(price.value) if price.value else 0,
                         description=description.value,
-                        estimated_time=int(estimated_time.value) if estimated_time.value else 0
+                        estimated_time=0
                     )
                     self._close_dialog()
                     self.load_data()
@@ -610,7 +578,7 @@ class ServicesContent:
                     ft.Container(height=8),
                     description,
                     ft.Container(height=8),
-                    ft.Row([price, estimated_time], spacing=12),
+                    price,
                 ], spacing=0),
                 padding=ft.Padding(left=18, right=18, top=18, bottom=18),
                 width=500,
@@ -698,18 +666,6 @@ class ServicesContent:
             expand=True,
         )
         
-        estimated_time = ft.TextField(
-            label=get_text("services_time"),
-            value=str(service.get('estimated_time', 0)),
-            border_radius=10,
-            bgcolor=ft.Colors.WHITE,
-            filled=True,
-            content_padding=ft.Padding(left=12, right=12, top=10, bottom=10),
-            border_color=ft.Colors.GREY_300,
-            focused_border_color=PRIMARY_COLOR,
-            expand=True,
-        )
-        
         def save_edit(e):
             try:
                 if not name.value:
@@ -720,7 +676,7 @@ class ServicesContent:
                     'name': name.value,
                     'description': description.value,
                     'price': float(price.value) if price.value else 0,
-                    'estimated_time': int(estimated_time.value) if estimated_time.value else 0
+                    'estimated_time': 0
                 })
                 self._close_dialog()
                 self.load_data()
@@ -757,7 +713,7 @@ class ServicesContent:
                     ft.Container(height=8),
                     description,
                     ft.Container(height=8),
-                    ft.Row([price, estimated_time], spacing=12),
+                    price,
                 ], spacing=0),
                 padding=ft.Padding(left=18, right=18, top=18, bottom=18),
                 width=500,

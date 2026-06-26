@@ -167,8 +167,6 @@ def get_repair_summary_report(
                 COUNT(*) as total_repairs,
                 SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_repairs,
                 SUM(CASE WHEN status = 'working' THEN 1 ELSE 0 END) as working_repairs,
-                SUM(CASE WHEN status = 'waiting' THEN 1 ELSE 0 END) as waiting_repairs,
-                SUM(CASE WHEN status = 'paused' THEN 1 ELSE 0 END) as paused_repairs,
                 ROUND(AVG(CASE WHEN status = 'completed' AND end_date IS NOT NULL 
                     THEN TIMESTAMPDIFF(HOUR, start_date, end_date) 
                     ELSE NULL END), 1) as avg_repair_hours
@@ -241,8 +239,6 @@ def get_repair_summary_report(
                 "total_repairs": repair_stats.get('total_repairs', 0) or 0,
                 "completed_repairs": repair_stats.get('completed_repairs', 0) or 0,
                 "working_repairs": repair_stats.get('working_repairs', 0) or 0,
-                "waiting_repairs": repair_stats.get('waiting_repairs', 0) or 0,
-                "paused_repairs": repair_stats.get('paused_repairs', 0) or 0,
                 "completion_rate": round(completion_rate, 1),
                 "avg_repair_hours": float(repair_stats.get('avg_repair_hours', 0) or 0)
             },
@@ -678,8 +674,7 @@ def get_dashboard_summary(user: dict = Depends(authenticate_user)):
                 COUNT(*) as total_repairs,
                 SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_repairs,
                 SUM(CASE WHEN status = 'working' THEN 1 ELSE 0 END) as working_repairs,
-                SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_repairs,
-                SUM(CASE WHEN status = 'waiting' THEN 1 ELSE 0 END) as waiting_repairs
+                SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_repairs
             FROM repair_orders
         """)
         repair_stats = cursor.fetchone()
@@ -735,7 +730,6 @@ def get_dashboard_summary(user: dict = Depends(authenticate_user)):
             "pending_repairs": repair_stats.get('pending_repairs', 0) or 0,
             "working_repairs": repair_stats.get('working_repairs', 0) or 0,
             "completed_repairs": repair_stats.get('completed_repairs', 0) or 0,
-            "waiting_repairs": repair_stats.get('waiting_repairs', 0) or 0,
             "low_stock_count": low_stock.get('low_stock_count', 0) or 0,
             "pending_jobs": pending_jobs.get('pending_jobs', 0) or 0,
             "today_pending_jobs": today_pending.get('today_pending_jobs', 0) or 0,
@@ -876,8 +870,6 @@ def get_mechanic_performance_report(
                 COUNT(DISTINCT ro.id) as total_assigned,
                 SUM(CASE WHEN ro.status = 'completed' THEN 1 ELSE 0 END) as completed_count,
                 SUM(CASE WHEN ro.status = 'working' THEN 1 ELSE 0 END) as working_count,
-                SUM(CASE WHEN ro.status = 'paused' THEN 1 ELSE 0 END) as paused_count,
-                SUM(CASE WHEN ro.status = 'waiting' THEN 1 ELSE 0 END) as waiting_count,
                 ROUND(AVG(CASE WHEN ro.status = 'completed' AND ro.end_date IS NOT NULL 
                     THEN TIMESTAMPDIFF(HOUR, ro.start_date, ro.end_date) 
                     ELSE NULL END), 1) as avg_hours,
@@ -911,8 +903,6 @@ def get_mechanic_performance_report(
         total_assigned = 0
         total_completed = 0
         total_working = 0
-        total_paused = 0
-        total_waiting = 0
         total_labor_revenue = 0.0
         total_parts_profit = 0.0
         valid_durations = []
@@ -921,8 +911,6 @@ def get_mechanic_performance_report(
             m['total_assigned'] = int(m['total_assigned'] or 0)
             m['completed_count'] = int(m['completed_count'] or 0)
             m['working_count'] = int(m['working_count'] or 0)
-            m['paused_count'] = int(m['paused_count'] or 0)
-            m['waiting_count'] = int(m['waiting_count'] or 0)
             m['avg_hours'] = float(m['avg_hours'] or 0) if m['avg_hours'] is not None else None
             m['labor_revenue'] = float(m['labor_revenue'] or 0)
             m['parts_profit'] = float(m['parts_profit'] or 0)
@@ -935,8 +923,6 @@ def get_mechanic_performance_report(
             total_assigned += m['total_assigned']
             total_completed += m['completed_count']
             total_working += m['working_count']
-            total_paused += m['paused_count']
-            total_waiting += m['waiting_count']
             total_labor_revenue += m['labor_revenue']
             total_parts_profit += m['parts_profit']
             if m['avg_hours'] is not None and m['avg_hours'] > 0:
@@ -953,8 +939,6 @@ def get_mechanic_performance_report(
                 "total_assigned": total_assigned,
                 "total_completed": total_completed,
                 "total_working": total_working,
-                "total_paused": total_paused,
-                "total_waiting": total_waiting,
                 "avg_workshop_hours": avg_workshop_hours,
                 "total_labor_revenue": total_labor_revenue,
                 "total_parts_profit": total_parts_profit,

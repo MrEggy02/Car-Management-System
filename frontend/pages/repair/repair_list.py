@@ -22,7 +22,7 @@ class RepairListContent:
         self.items_per_page = 10
         self.total_pages = 1
         self.search_field = None
-        self.status_filter = None
+        self.status_filter = "all"
         self.date_from_field = None
         self.date_to_field = None
         self.table_rows = None
@@ -128,14 +128,12 @@ class RepairListContent:
             ("completed", "#4CAF50", ft.Icons.CHECK_CIRCLE),
         ]
         status_texts = {
-            "waiting":   get_text("waiting"),
             "working":   get_text("working"),
-            "paused":    get_text("paused"),
             "completed": get_text("completed"),
         }
         counts = {s: 0 for s, _, __ in statuses}
         for r in self.repair_orders:
-            st = r.get("status", "waiting")
+            st = r.get("status", "working")
             if st in counts:
                 counts[st] += 1
 
@@ -144,8 +142,7 @@ class RepairListContent:
             count = counts[status]
             label = status_texts[status]
             is_active = (
-                self.status_filter is not None
-                and self.status_filter.value == status
+                self.status_filter == status
             )
             card = ft.Container(
                 content=ft.Row(
@@ -182,7 +179,7 @@ class RepairListContent:
             cards.append(card)
 
         total = len(self.repair_orders)
-        is_all = self.status_filter is None or self.status_filter.value == "all"
+        is_all = self.status_filter == "all"
         all_card = ft.Container(
             content=ft.Row(
                 [
@@ -219,14 +216,13 @@ class RepairListContent:
         return ft.Row([all_card] + cards, spacing=12, expand=True)
 
     def _kpi_filter(self, status: str):
-        if self.status_filter:
-            self.status_filter.value = status
+        self.status_filter = status
         self.current_page = 1
         self.filter_repairs(None)
 
     # ─────────────────────────── SEARCH BAR ───────────────────────────
     def _build_search_bar(self):
-        self.status_filter = None
+        # We don't reset self.status_filter here to preserve state across rebuilds if needed.
 
         self.search_field = ft.TextField(
             hint_text=get_text("search_repair"),
@@ -252,31 +248,45 @@ class RepairListContent:
             ),
         )
 
+        def clear_date_from(e):
+            self.date_from_field.value = ""
+            self.page.update()
+            self.search_repairs(None)
+
+        def clear_date_to(e):
+            self.date_to_field.value = ""
+            self.page.update()
+            self.search_repairs(None)
+
         self.date_from_field = ft.TextField(
-            hint_text=get_text("date_from") + " (YYYY-MM-DD)",
+            hint_text=get_text("date_from"),
             border_radius=12,
             bgcolor=ft.Colors.WHITE,
             filled=True,
             prefix_icon=ft.Icons.CALENDAR_TODAY,
+            suffix=ft.IconButton(icon=ft.Icons.CLOSE, on_click=clear_date_from, icon_size=16),
             content_padding=ft.Padding(left=12, right=12, top=12, bottom=12),
             expand=True,
             border_color=ft.Colors.GREY_200,
             focused_border_color=self.primary_color,
+            read_only=True,
+            on_focus=self._pick_date_from,
         )
-        self.date_from_field.on_change = self.search_repairs
 
         self.date_to_field = ft.TextField(
-            hint_text=get_text("date_to") + " (YYYY-MM-DD)",
+            hint_text=get_text("date_to"),
             border_radius=12,
             bgcolor=ft.Colors.WHITE,
             filled=True,
             prefix_icon=ft.Icons.CALENDAR_TODAY,
+            suffix=ft.IconButton(icon=ft.Icons.CLOSE, on_click=clear_date_to, icon_size=16),
             content_padding=ft.Padding(left=12, right=12, top=12, bottom=12),
             expand=True,
             border_color=ft.Colors.GREY_200,
             focused_border_color=self.primary_color,
+            read_only=True,
+            on_focus=self._pick_date_to,
         )
-        self.date_to_field.on_change = self.search_repairs
 
         return ft.Container(
             content=ft.Column(
@@ -288,6 +298,56 @@ class RepairListContent:
             ),
             margin=ft.Margin(left=0, right=0, top=0, bottom=16),
         )
+    
+    def _pick_date_from(self, e):
+        if getattr(self, 'ignore_from_focus', False):
+            self.ignore_from_focus = False
+            return
+            
+        def on_date_selected(e):
+            self.ignore_from_focus = True
+            if e.control.value:
+                self.date_from_field.value = e.control.value.strftime("%Y-%m-%d")
+                self.page.update()
+                self.search_repairs(None)
+                
+        def on_dismiss(e):
+            self.ignore_from_focus = True
+        
+        date_picker = ft.DatePicker(
+            on_change=on_date_selected,
+            on_dismiss=on_dismiss,
+            first_date=datetime(2020, 1, 1),
+            last_date=datetime.now(),
+        )
+        self.page.overlay.append(date_picker)
+        date_picker.open = True
+        self.page.update()
+        
+    def _pick_date_to(self, e):
+        if getattr(self, 'ignore_to_focus', False):
+            self.ignore_to_focus = False
+            return
+            
+        def on_date_selected(e):
+            self.ignore_to_focus = True
+            if e.control.value:
+                self.date_to_field.value = e.control.value.strftime("%Y-%m-%d")
+                self.page.update()
+                self.search_repairs(None)
+                
+        def on_dismiss(e):
+            self.ignore_to_focus = True
+        
+        date_picker = ft.DatePicker(
+            on_change=on_date_selected,
+            on_dismiss=on_dismiss,
+            first_date=datetime(2020, 1, 1),
+            last_date=datetime.now(),
+        )
+        self.page.overlay.append(date_picker)
+        date_picker.open = True
+        self.page.update()
 
     # ─────────────────────────── TABLE ───────────────────────────
     def _build_table(self):
@@ -368,7 +428,7 @@ class RepairListContent:
 
     # ─────────────────────────── FILTERING ───────────────────────────
     def filter_repairs(self, e):
-        status = self.status_filter.value if self.status_filter else "all"
+        status = self.status_filter
         if status and status != "all":
             self.filtered_orders = [r for r in self.repair_orders if r.get("status") == status]
         else:
@@ -393,7 +453,7 @@ class RepairListContent:
             if self.search_field and self.search_field.value
             else ""
         )
-        status = self.status_filter.value if self.status_filter else "all"
+        status = self.status_filter
 
         self.filtered_orders = [r for r in self.repair_orders if self._matches_keyword(r, keyword)]
         if status and status != "all":
@@ -492,22 +552,19 @@ class RepairListContent:
         model         = order.get("model") or ""
         vehicle_text  = f"{brand} {model}".strip() or "-"
         mechanic_name = order.get("mechanic_name") or ""
-        status        = order.get("status", "waiting")
+        status        = order.get("status", "working")
         start_date_str = order.get("start_date", "")
         end_date_str   = order.get("end_date", "")
+        parts_usage_count = order.get("parts_usage_count", 0)
 
         row_bg = ft.Colors.GREY_50 if index % 2 == 0 else ft.Colors.WHITE
 
         status_colors = {
-            "waiting":   "#FF9800",
             "working":   "#2196F3",
-            "paused":    "#9C27B0",
             "completed": "#4CAF50",
         }
         status_texts = {
-            "waiting":   get_text("waiting"),
             "working":   get_text("working"),
-            "paused":    get_text("paused"),
             "completed": get_text("completed"),
         }
 
@@ -526,52 +583,54 @@ class RepairListContent:
             padding=ft.Padding(left=10, right=10, top=4, bottom=4),
             on_click=(
                 None if is_completed
-                else lambda e, rid=repair_id, cur=status: self.show_update_status_dialog(rid, cur)
+                else lambda e, rid=repair_id, cur=status, count=parts_usage_count: self.show_update_status_dialog(rid, cur, count)
             ),
         )
 
         duration_badge = self._build_duration_badge(start_date_str, end_date_str, status)
         mechanic_cell  = self._build_mechanic_cell(mechanic_name, repair_id)
 
-        view_btn = ft.Container(
-            content=ft.Row(
-                [
-                    ft.Icon(ft.Icons.VISIBILITY_OUTLINED, size=16, color=self.primary_color),
-                    ft.Text(get_text("view"), size=12, color=self.primary_color),
-                ],
-                spacing=4,
-            ),
-            on_click=lambda e, rid=repair_id: self.view_repair_detail(rid),
-            padding=ft.Padding(left=8, right=8, top=4, bottom=4),
-            border_radius=6,
+        view_btn = ft.IconButton(
+            icon=ft.Icons.VISIBILITY_OUTLINED,
+            icon_size=20,
+            icon_color=self.primary_color,
+            tooltip=get_text("view"),
+            on_click=lambda e, rid=repair_id: self.view_repair_detail(rid, read_only=True),
         )
 
         if is_completed:
-            delete_btn = ft.Container(
-                content=ft.Row(
-                    [
-                        ft.Icon(ft.Icons.DELETE_OUTLINE, size=16, color=ft.Colors.GREY_400),
-                        ft.Text(get_text("delete"), size=12, color=ft.Colors.GREY_400),
-                    ],
-                    spacing=4,
-                ),
-                padding=ft.Padding(left=8, right=8, top=4, bottom=4),
-                border_radius=6,
+            delete_btn = ft.IconButton(
+                icon=ft.Icons.DELETE_OUTLINE,
+                icon_size=20,
+                icon_color=ft.Colors.GREY_400,
                 tooltip=get_text("cannot_delete_completed_repair"),
+                disabled=True,
             )
         else:
-            delete_btn = ft.Container(
-                content=ft.Row(
-                    [
-                        ft.Icon(ft.Icons.DELETE_OUTLINE, size=16, color=ft.Colors.RED_600),
-                        ft.Text(get_text("delete"), size=12, color=ft.Colors.RED_600),
-                    ],
-                    spacing=4,
-                ),
+            delete_btn = ft.IconButton(
+                icon=ft.Icons.DELETE_OUTLINE,
+                icon_size=20,
+                icon_color=ft.Colors.RED_600,
+                tooltip=get_text("delete"),
                 on_click=lambda e, rid=repair_id, rno=repair_no: self.confirm_delete(rid, rno),
-                padding=ft.Padding(left=8, right=8, top=4, bottom=4),
-                border_radius=6,
             )
+            
+        print_btn = ft.IconButton(
+            icon=ft.Icons.PRINT_OUTLINED,
+            icon_size=20,
+            icon_color=self.primary_color,
+            tooltip=get_text("print"),
+            on_click=lambda e, rid=repair_id: self.print_repair(rid),
+        )
+        
+        add_part_btn = ft.IconButton(
+            icon=ft.Icons.ADD_SHOPPING_CART,
+            icon_size=20,
+            icon_color=ft.Colors.ORANGE_600,
+            tooltip="ເບິກອາໄຫຼ່",
+            on_click=lambda e, rid=repair_id: self.view_repair_detail(rid, read_only=False),
+            visible=not is_completed,
+        )
 
         def _cell(content, width, align=-1, left_pad=True):
             return ft.Container(
@@ -581,18 +640,26 @@ class RepairListContent:
                 padding=ft.Padding(left=10, right=0, top=0, bottom=0) if (left_pad and align == -1) else None,
             )
 
+        if parts_usage_count > 0:
+            job_no_cell = ft.Row([
+                ft.Text(job_no, size=13, color="#1E293B"),
+                ft.Icon(ft.Icons.BUILD_CIRCLE, size=14, color="#10B981", tooltip="ມີການເບິກອາໄຫຼ່ແລ້ວ")
+            ], spacing=4)
+        else:
+            job_no_cell = ft.Text(job_no, size=13, color="#1E293B")
+
         row = ft.Container(
             content=ft.Row(
                 [
                     _cell(ft.Text(repair_no, size=13, weight=ft.FontWeight.W_500, color="#1E293B"), 100),
-                    _cell(ft.Text(job_no, size=13, color="#1E293B"), 100),
+                    _cell(job_no_cell, 100),
                     _cell(ft.Container(content=ft.Text(customer_name, size=13, color="#1E293B", max_lines=1), tooltip=customer_name), 140),
                     _cell(ft.Text(plate_number, size=12, color="#64748B", max_lines=1), 80),
                     _cell(ft.Container(content=ft.Text(vehicle_text, size=12, color="#64748B", max_lines=1), tooltip=vehicle_text), 120),
                     _cell(mechanic_cell, 140),
                     _cell(status_badge, 110, 0, False),
                     _cell(duration_badge, 100, 0, False),
-                    _cell(ft.Row([view_btn, delete_btn], spacing=4), 180, 0, False),
+                    _cell(ft.Row([add_part_btn, view_btn, print_btn, delete_btn], spacing=0), 180, 0, False),
                 ],
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
@@ -606,7 +673,7 @@ class RepairListContent:
     def _build_duration_badge(self, start_date_str: str, end_date_str: str, status: str) -> ft.Control:
         try:
             if not start_date_str:
-                return ft.Text("-", size=12, color="#94A3B8")
+                return ft.Text("-", size=10, color="#94A3B8")
             start_d = datetime.strptime(str(start_date_str)[:10], "%Y-%m-%d").date()
 
             if status == "completed" and end_date_str:
@@ -615,10 +682,10 @@ class RepairListContent:
                 return ft.Container(
                     content=ft.Row(
                         [
-                            ft.Icon(ft.Icons.CHECK_CIRCLE, size=12, color="#4CAF50"),
-                            ft.Text(f"{days}d", size=11, color="#4CAF50", weight=ft.FontWeight.W_600),
+                            ft.Icon(ft.Icons.CHECK_CIRCLE, size=10, color="#4CAF50"),
+                            ft.Text(f"{days}d", size=10, color="#4CAF50", weight=ft.FontWeight.W_600),
                         ],
-                        spacing=3,
+                        spacing=2,
                     ),
                     tooltip=get_text("duration_completed").format(days),
                 )
@@ -628,15 +695,15 @@ class RepairListContent:
             return ft.Container(
                 content=ft.Row(
                     [
-                        ft.Icon(ft.Icons.TIMER, size=12, color=color),
-                        ft.Text(f"{days}d", size=11, color=color, weight=ft.FontWeight.W_600),
+                        ft.Icon(ft.Icons.TIMER, size=10, color=color),
+                        ft.Text(f"{days}d", size=10, color=color, weight=ft.FontWeight.W_600),
                     ],
-                    spacing=3,
+                    spacing=2,
                 ),
                 tooltip=get_text("days_running").format(days),
             )
         except Exception:
-            return ft.Text("-", size=12, color="#94A3B8")
+            return ft.Text("-", size=10, color="#94A3B8")
 
     # ── Mechanic cell ──
     def _build_mechanic_cell(self, mechanic_name: str, repair_id: int) -> ft.Control:
@@ -732,11 +799,12 @@ class RepairListContent:
             self.display_repairs()
 
     # ─────────────────────────── NAVIGATION ───────────────────────────
-    def view_repair_detail(self, repair_id: int):
-        self.navigate("repair_detail", repair_id=repair_id)
+    def view_repair_detail(self, repair_id: int, read_only: bool = False):
+        self.page.overlay.clear()
+        self.navigate("repair_detail", repair_id=repair_id, read_only=read_only)
 
     # ─────────────────────────── STATUS STEPPER DIALOG ───────────────────────────
-    def show_update_status_dialog(self, repair_id: int, current_status: str):
+    def show_update_status_dialog(self, repair_id: int, current_status: str, parts_usage_count: int = 0):
         if current_status == "completed":
             self.show_snack_bar(get_text("cannot_update_completed_status"), is_error=True)
             return
@@ -802,6 +870,9 @@ class RepairListContent:
                 self.close_dialog(dialog)
                 return
             if new_status == "completed":
+                if parts_usage_count == 0:
+                    self.show_snack_bar("ກະລຸນາບັນທຶກການເບິກອາໄຫຼ່ໃຊ້ຈິງກ່ອນກົດສຳເລັດ", is_error=True)
+                    return
                 confirm_dialog = ft.AlertDialog(
                     modal=True,
                     shape=ft.RoundedRectangleBorder(radius=16),
@@ -1090,3 +1161,27 @@ class RepairListContent:
             duration=3000,
         )
         self.page.update()
+
+    def print_repair(self, repair_id: int):
+        import os
+        try:
+            self.show_snack_bar(get_text("preparing_print"), is_error=False)
+            pdf_bytes = self.client.get_repair_order_pdf(repair_id)
+            if not pdf_bytes:
+                self.show_snack_bar(get_text("pdf_export_failed"), is_error=True)
+                return
+                
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            workspace_root = os.path.abspath(os.path.join(base_dir, "..", "..", ".."))
+            output_dir = os.path.join(workspace_root, "output")
+            os.makedirs(output_dir, exist_ok=True)
+            
+            file_path = os.path.join(output_dir, f"repair_work_order_{repair_id}.pdf")
+            with open(file_path, "wb") as f:
+                f.write(pdf_bytes)
+                
+            os.startfile(file_path)
+            self.show_snack_bar(get_text("pdf_export_success"), is_error=False)
+        except Exception as ex:
+            print(f"Error printing repair order: {ex}")
+            self.show_snack_bar(f"{get_text('pdf_export_failed')}: {str(ex)}", is_error=True)

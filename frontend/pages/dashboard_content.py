@@ -167,14 +167,9 @@ class DashboardContent:
             expand=True,
         )
         
-        # Revenue Chart Section
-        revenue_chart = self._build_revenue_chart()
-        revenue_chart.expand = True
-        revenue_chart.margin = ft.Margin(left=0, right=0, top=0, bottom=0)
-        
-        # Middle row side-by-side
+        # Middle row
         middle_row = ft.Row(
-            [repair_status, revenue_chart],
+            [repair_status],
             spacing=20,
             expand=True,
         )
@@ -767,9 +762,7 @@ class DashboardContent:
         mechanic_name = repair.get('mechanic_name', '-')
         
         status_colors = {
-            'waiting': ("#FF9800", get_text("waiting")),
             'working': ("#2196F3", get_text("working")),
-            'paused': ("#9C27B0", get_text("paused")),
             'completed': ("#4CAF50", get_text("completed")),
             'pending': ("#FF9800", get_text("pending")),
         }

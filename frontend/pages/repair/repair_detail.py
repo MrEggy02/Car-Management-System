@@ -10,12 +10,13 @@ from i18n import get_text
 
 
 class RepairDetailContent:
-    def __init__(self, page: ft.Page, client, user: dict, navigate: Callable, repair_id: int = None):
+    def __init__(self, page: ft.Page, client, user: dict, navigate: Callable, repair_id: int = None, read_only: bool = False):
         self.page = page
         self.client = client
         self.user = user
         self.navigate = navigate
         self.repair_id = repair_id
+        self.read_only = read_only
         self.repair_data = None
         self.primary_color = "#1565C0"
         self.primary_dark = "#0D47A1"
@@ -86,6 +87,7 @@ class RepairDetailContent:
                 elevation=0,
                 padding=ft.Padding(left=20, right=20, top=12, bottom=12),
             ),
+            visible=not getattr(self, 'read_only', False)
         )
         
         return ft.Container(
@@ -185,20 +187,16 @@ class RepairDetailContent:
         data = self.repair_data
         
         status_colors = {
-            "waiting": "#FF9800",
             "working": "#2196F3",
-            "paused": "#9C27B0",
             "completed": "#4CAF50"
         }
         status_texts = {
-            "waiting": get_text("waiting"),
             "working": get_text("working"),
-            "paused": get_text("paused"),
             "completed": get_text("completed")
         }
         
         repair_no = f"R{data.get('id', 0):04d}"
-        status = data.get("status", "waiting")
+        status = data.get("status", "working")
         job_no = data.get("job_no", "-")
         customer_name = data.get("customer_name", "-")
         customer_phone = data.get("customer_phone", "-")
@@ -423,6 +421,7 @@ class RepairDetailContent:
                             tooltip=get_text("return_part"),
                             on_click=lambda e, uid=usage_id: self.return_part(uid),
                             padding=0,
+                            visible=not getattr(self, 'read_only', False),
                         ),
                     ], spacing=6, vertical_alignment=ft.CrossAxisAlignment.CENTER),
                     padding=ft.Padding(left=0, right=0, top=6, bottom=6),
@@ -455,7 +454,7 @@ class RepairDetailContent:
             )
         
         add_part_btn = None
-        if status != "completed":
+        if status != "completed" and not getattr(self, 'read_only', False):
             add_part_btn = ft.ElevatedButton(
                 content=ft.Row([
                     ft.Icon(ft.Icons.ADD, size=14, color=ft.Colors.WHITE),
@@ -470,7 +469,7 @@ class RepairDetailContent:
             )
 
         pull_parts_btn = None
-        if status != "completed" and self.repair_data.get('quotation_items'):
+        if status != "completed" and self.repair_data.get('quotation_items') and not getattr(self, 'read_only', False):
             has_parts = any(item.get('item_type') == 'part' for item in self.repair_data.get('quotation_items', []))
             if has_parts:
                 pull_parts_btn = ft.ElevatedButton(
@@ -851,7 +850,7 @@ class RepairDetailContent:
             return ft.Text("-", size=13, color="#94A3B8")
 
     def show_update_status_dialog(self, e):
-        current_status = self.repair_data.get("status", "waiting")
+        current_status = self.repair_data.get("status", "working")
 
         if current_status == "completed":
             self.show_snack_bar(get_text("cannot_update_completed_status"), is_error=True)

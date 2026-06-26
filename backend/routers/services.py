@@ -9,7 +9,7 @@ def get_services(user: dict = Depends(authenticate_user)):
     """ດຶງຂໍ້ມູນບໍລິການທັງໝົດ"""
     db = get_db()
     cursor = db.cursor(dictionary=True)
-    cursor.execute("SELECT id, name, price, description, estimated_time FROM Services ORDER BY id DESC")
+    cursor.execute("SELECT id, name, price, description FROM Services ORDER BY id DESC")
     services = cursor.fetchall()
     cursor.close()
     db.close()
@@ -20,16 +20,15 @@ def add_service(
     name: str = Form(...),
     price: float = Form(0),
     description: str = Form(""),
-    estimated_time: int = Form(0),
     user: dict = Depends(authenticate_user)
 ):
     """ເພີ່ມບໍລິການໃໝ່"""
     db = get_db()
     cursor = db.cursor()
     cursor.execute("""
-        INSERT INTO Services (name, price, description, estimated_time)
-        VALUES (%s, %s, %s, %s)
-    """, (name, price, description, estimated_time))
+        INSERT INTO Services (name, price, description)
+        VALUES (%s, %s, %s)
+    """, (name, price, description))
     db.commit()
     service_id = cursor.lastrowid
     cursor.close()
@@ -42,7 +41,6 @@ def update_service(
     name: str = Form(...),
     price: float = Form(0),
     description: str = Form(""),
-    estimated_time: int = Form(0),
     user: dict = Depends(authenticate_user)
 ):
     """ອັບເດດຂໍ້ມູນບໍລິການ"""
@@ -50,9 +48,9 @@ def update_service(
     cursor = db.cursor()
     cursor.execute("""
         UPDATE Services SET 
-            name=%s, price=%s, description=%s, estimated_time=%s
+            name=%s, price=%s, description=%s
         WHERE id=%s
-    """, (name, price, description, estimated_time, service_id))
+    """, (name, price, description, service_id))
     db.commit()
     cursor.close()
     db.close()

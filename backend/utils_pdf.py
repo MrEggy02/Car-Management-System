@@ -283,9 +283,7 @@ def generate_repair_work_order_pdf(repair_id: int) -> bytes:
     status = repair.get('status', 'waiting')
     
     status_translations = {
-        "waiting": "ລໍຖ້າຊ່ອມ (Waiting)",
         "working": "ກຳລັງສ້ອມແປງ (Working)",
-        "paused": "ຢຸດຊົ່ວຄາວ (Paused)",
         "completed": "ສຳເລັດແລ້ວ (Completed)"
     }
     status_text = status_translations.get(status, status)
@@ -2248,8 +2246,6 @@ def generate_repair_summary_pdf(start_date: str = None, end_date: str = None) ->
                 COUNT(*) as total_repairs,
                 SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_repairs,
                 SUM(CASE WHEN status = 'working' THEN 1 ELSE 0 END) as working_repairs,
-                SUM(CASE WHEN status = 'waiting' THEN 1 ELSE 0 END) as waiting_repairs,
-                SUM(CASE WHEN status = 'paused' THEN 1 ELSE 0 END) as paused_repairs,
                 ROUND(AVG(CASE WHEN status = 'completed' AND end_date IS NOT NULL 
                     THEN TIMESTAMPDIFF(HOUR, start_date, end_date) 
                     ELSE NULL END), 1) as avg_repair_hours
@@ -2303,8 +2299,6 @@ def generate_repair_summary_pdf(start_date: str = None, end_date: str = None) ->
     total_repairs = repair_stats.get('total_repairs', 0) or 0
     completed_repairs = repair_stats.get('completed_repairs', 0) or 0
     working_repairs = repair_stats.get('working_repairs', 0) or 0
-    waiting_repairs = repair_stats.get('waiting_repairs', 0) or 0
-    paused_repairs = repair_stats.get('paused_repairs', 0) or 0
     avg_hours = repair_stats.get('avg_repair_hours', 0) or 0
     completion_rate = (completed_repairs / total_repairs * 100) if total_repairs > 0 else 0
     
@@ -2351,8 +2345,6 @@ def generate_repair_summary_pdf(start_date: str = None, end_date: str = None) ->
         [Paragraph("ວຽກສ້ອມແປງທັງໝົດ / Total Repair Orders", table_cell), Paragraph(str(total_repairs), table_cell)],
         [Paragraph("ສຳເລັດແລ້ວ / Completed", table_cell), Paragraph(str(completed_repairs), table_cell)],
         [Paragraph("ກຳລັງດຳເນີນການ / In-Progress", table_cell), Paragraph(str(working_repairs), table_cell)],
-        [Paragraph("ລໍຖ້າອາໄຫຼ່/ຄິວ / Waiting", table_cell), Paragraph(str(waiting_repairs), table_cell)],
-        [Paragraph("ຢຸດຊົ່ວຄາວ / Paused", table_cell), Paragraph(str(paused_repairs), table_cell)],
         [Paragraph("ອັດຕາຊ່ອມສຳເລັດ / Completion Success Rate", table_cell), Paragraph(f"{completion_rate:.1f}%", table_cell)],
         [Paragraph("ໄລຍະເວລາຊ່ອມສະເລ່ຍ / Average Repair Time", table_cell), Paragraph(f"{avg_hours:.1f} ຊົ່ວໂມງ (Hours)", table_cell)]
     ]
@@ -2705,8 +2697,6 @@ def generate_mechanic_performance_pdf(start_date: str = None, end_date: str = No
                 COUNT(DISTINCT ro.id) as total_assigned,
                 SUM(CASE WHEN ro.status = 'completed' THEN 1 ELSE 0 END) as completed_count,
                 SUM(CASE WHEN ro.status = 'working' THEN 1 ELSE 0 END) as working_count,
-                SUM(CASE WHEN ro.status = 'paused' THEN 1 ELSE 0 END) as paused_count,
-                SUM(CASE WHEN ro.status = 'waiting' THEN 1 ELSE 0 END) as waiting_count,
                 ROUND(AVG(CASE WHEN ro.status = 'completed' AND ro.end_date IS NOT NULL 
                     THEN TIMESTAMPDIFF(HOUR, ro.start_date, ro.end_date) 
                     ELSE NULL END), 1) as avg_hours,

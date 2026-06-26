@@ -39,6 +39,7 @@ def display_to_db_date(date_str):
 
 
 def show_add_promotion_dialog(page, primary_color, client, on_close, on_success, show_snackbar):
+    dialog = None
     """Show add promotion dialog"""
     
     name = ft.TextField(
@@ -95,13 +96,15 @@ def show_add_promotion_dialog(page, primary_color, client, on_close, on_success,
         nonlocal ignore_start_focus
         ignore_start_focus = True
         start_date.value = ""
-        dialog.update()
+        if dialog:
+            dialog.update()
 
     def clear_end_date(e):
         nonlocal ignore_end_focus
         ignore_end_focus = True
         end_date.value = ""
-        dialog.update()
+        if dialog:
+            dialog.update()
 
     def _pick_start_date(e):
         nonlocal ignore_start_focus
@@ -115,7 +118,8 @@ def show_add_promotion_dialog(page, primary_color, client, on_close, on_success,
             if e_picker.control.value:
                 start_date.value = e_picker.control.value.strftime("%d-%m-%Y")
                 start_date.error_text = None
-                dialog.update()
+                if dialog:
+                    dialog.update()
         
         def on_dismiss(e_picker):
             nonlocal ignore_start_focus
@@ -151,7 +155,8 @@ def show_add_promotion_dialog(page, primary_color, client, on_close, on_success,
             if e_picker.control.value:
                 end_date.value = e_picker.control.value.strftime("%d-%m-%Y")
                 end_date.error_text = None
-                dialog.update()
+                if dialog:
+                    dialog.update()
         
         def on_dismiss(e_picker):
             nonlocal ignore_end_focus
@@ -232,85 +237,51 @@ def show_add_promotion_dialog(page, primary_color, client, on_close, on_success,
     selected_parts = []
     selected_parts_list = ft.Column(spacing=4, height=120, scroll=ft.ScrollMode.AUTO)
     
-    parts_search = ft.TextField(
-        hint_text=get_text("search_parts"),
+    all_parts = []
+    try:
+        all_parts = client.get_parts()
+    except:
+        pass
+        
+    parts_dropdown = ft.Dropdown(
+        hint_text=get_text("select_parts"),
         border_radius=8,
         bgcolor=ft.Colors.WHITE,
         filled=True,
-        prefix_icon=ft.Icons.SEARCH,
-        content_padding=ft.Padding(left=12, right=12, top=8, bottom=8),
         expand=True,
+        options=[ft.dropdown.Option(key=str(p.get('id')), text=f"{p.get('name')} ({int(p.get('sell_price', 0)):,} KIP)") for p in all_parts]
     )
     
-    parts_list = ft.Column(spacing=4, scroll=ft.ScrollMode.AUTO, height=180)
-    
-    def load_parts(search=""):
-        try:
-            parts = client.get_parts()
-            if search:
-                parts = [p for p in parts if search.lower() in p.get('name', '').lower()]
+    def add_part_click(e):
+        if not parts_dropdown.value:
+            return
+        part_id = int(parts_dropdown.value)
+        if any(sp['id'] == part_id for sp in selected_parts):
+            show_snackbar(get_text("error") or "Already added")
+            return
             
-            parts_list.controls.clear()
-            for part in parts[:15]:
-                part_id = part.get('id')
-                part_name = part.get('name')
-                part_price = part.get('sell_price', 0)
-                is_selected = part_id in [sp['id'] for sp in selected_parts]
-                
-                parts_list.controls.append(
-                    ft.Container(
-                        content=ft.Row([
-                            ft.Checkbox(
-                                value=is_selected,
-                                on_change=lambda e, pid=part_id, pname=part_name, pprice=part_price: toggle_part(pid, pname, pprice, e.control.value),
-                            ),
-                            ft.Text(part_name, size=13, weight=ft.FontWeight.W_500, expand=True),
-                            ft.Text(f"{int(part_price):,} KIP", size=11, color="#1565C0"),
-                        ], spacing=8),
-                        padding=ft.Padding(left=8, right=8, top=4, bottom=4),
-                        bgcolor=ft.Colors.GREY_50 if is_selected else None,
-                        border_radius=6,
-                    )
-                )
-            dialog.update()
-        except Exception as e:
-            print(f"Error loading parts: {e}")
-    
-    def toggle_part(part_id, part_name, part_price, is_selected):
-        if is_selected:
-            selected_parts.append({'id': part_id, 'name': part_name, 'price': part_price})
-        else:
-            for i, sp in enumerate(selected_parts):
-                if sp['id'] == part_id:
-                    selected_parts.pop(i)
-                    break
-        
-        selected_parts_list.controls.clear()
-        for sp in selected_parts:
-            selected_parts_list.controls.append(
-                ft.Container(
-                    content=ft.Row([
-                        ft.Text(sp['name'], size=12, weight=ft.FontWeight.W_500, expand=True),
-                        ft.Text(f"{int(sp['price']):,} KIP", size=11, color="#1565C0"),
-                        ft.IconButton(
-                            icon=ft.Icons.CLOSE,
-                            icon_size=16,
-                            icon_color=ft.Colors.RED_400,
-                            on_click=lambda e, pid=sp['id']: remove_part(pid),
-                        ),
-                    ], spacing=8),
-                    padding=ft.Padding(left=8, right=8, top=4, bottom=4),
-                    bgcolor=ft.Colors.BLUE_50,
-                    border_radius=6,
-                )
-            )
-        load_parts()
-    
+        part = next((p for p in all_parts if p.get('id') == part_id), None)
+        if part:
+            qty_field = ft.TextField(value="1", width=60, text_align=ft.TextAlign.CENTER, border_radius=4, content_padding=ft.Padding(0, 0, 0, 0), keyboard_type=ft.KeyboardType.NUMBER)
+            selected_parts.append({
+                'id': part_id,
+                'name': part.get('name'),
+                'price': part.get('sell_price', 0),
+                'qty_field': qty_field
+            })
+            update_selected_parts_ui()
+            parts_dropdown.value = None
+            if dialog:
+                dialog.update()
+            
     def remove_part(part_id):
         for i, sp in enumerate(selected_parts):
             if sp['id'] == part_id:
                 selected_parts.pop(i)
                 break
+        update_selected_parts_ui()
+        
+    def update_selected_parts_ui():
         selected_parts_list.controls.clear()
         for sp in selected_parts:
             selected_parts_list.controls.append(
@@ -318,103 +289,77 @@ def show_add_promotion_dialog(page, primary_color, client, on_close, on_success,
                     content=ft.Row([
                         ft.Text(sp['name'], size=12, weight=ft.FontWeight.W_500, expand=True),
                         ft.Text(f"{int(sp['price']):,} KIP", size=11, color="#1565C0"),
+                        ft.Text("Qty:", size=11, color=ft.Colors.GREY_600),
+                        sp['qty_field'],
                         ft.IconButton(
                             icon=ft.Icons.CLOSE,
                             icon_size=16,
                             icon_color=ft.Colors.RED_400,
                             on_click=lambda e, pid=sp['id']: remove_part(pid),
                         ),
-                    ], spacing=8),
+                    ], spacing=8, vertical_alignment=ft.CrossAxisAlignment.CENTER),
                     padding=ft.Padding(left=8, right=8, top=4, bottom=4),
                     bgcolor=ft.Colors.BLUE_50,
                     border_radius=6,
                 )
             )
-        load_parts()
+        
+    parts_selection_row = ft.Row([
+        parts_dropdown,
+        ft.ElevatedButton(
+            content=ft.Row([ft.Icon(ft.Icons.ADD, color=ft.Colors.WHITE, size=16), ft.Text(get_text("add"), color=ft.Colors.WHITE)]),
+            on_click=add_part_click,
+            style=ft.ButtonStyle(bgcolor=primary_color, shape=ft.RoundedRectangleBorder(radius=8))
+        )
+    ])
     
     # Services selection
     selected_services = []
     selected_services_list = ft.Column(spacing=4, height=120, scroll=ft.ScrollMode.AUTO)
     
-    services_search = ft.TextField(
-        hint_text=get_text("search_services"),
+    all_services = []
+    try:
+        all_services = client.get_services()
+    except:
+        pass
+        
+    services_dropdown = ft.Dropdown(
+        hint_text=get_text("select_services"),
         border_radius=8,
         bgcolor=ft.Colors.WHITE,
         filled=True,
-        prefix_icon=ft.Icons.SEARCH,
-        content_padding=ft.Padding(left=12, right=12, top=8, bottom=8),
         expand=True,
+        options=[ft.dropdown.Option(key=str(s.get('id')), text=f"{s.get('name')} ({int(s.get('price', 0)):,} KIP)") for s in all_services]
     )
     
-    services_list = ft.Column(spacing=4, scroll=ft.ScrollMode.AUTO, height=180)
-    
-    def load_services(search=""):
-        try:
-            services = client.get_services()
-            if search:
-                services = [s for s in services if search.lower() in s.get('name', '').lower()]
+    def add_service_click(e):
+        if not services_dropdown.value:
+            return
+        service_id = int(services_dropdown.value)
+        if any(ss['id'] == service_id for ss in selected_services):
+            show_snackbar(get_text("error") or "Already added")
+            return
             
-            services_list.controls.clear()
-            for service in services[:15]:
-                service_id = service.get('id')
-                service_name = service.get('name')
-                service_price = service.get('price', 0)
-                is_selected = service_id in [ss['id'] for ss in selected_services]
-                
-                services_list.controls.append(
-                    ft.Container(
-                        content=ft.Row([
-                            ft.Checkbox(
-                                value=is_selected,
-                                on_change=lambda e, sid=service_id, sname=service_name, sprice=service_price: toggle_service(sid, sname, sprice, e.control.value),
-                            ),
-                            ft.Text(service_name, size=13, weight=ft.FontWeight.W_500, expand=True),
-                            ft.Text(f"{int(service_price):,} KIP", size=11, color="#1565C0"),
-                        ], spacing=8),
-                        padding=ft.Padding(left=8, right=8, top=4, bottom=4),
-                        bgcolor=ft.Colors.GREY_50 if is_selected else None,
-                        border_radius=6,
-                    )
-                )
-            dialog.update()
-        except Exception as e:
-            print(f"Error loading services: {e}")
-    
-    def toggle_service(service_id, service_name, service_price, is_selected):
-        if is_selected:
-            selected_services.append({'id': service_id, 'name': service_name, 'price': service_price})
-        else:
-            for i, ss in enumerate(selected_services):
-                if ss['id'] == service_id:
-                    selected_services.pop(i)
-                    break
-        
-        selected_services_list.controls.clear()
-        for ss in selected_services:
-            selected_services_list.controls.append(
-                ft.Container(
-                    content=ft.Row([
-                        ft.Text(ss['name'], size=12, weight=ft.FontWeight.W_500, expand=True),
-                        ft.Text(f"{int(ss['price']):,} KIP", size=11, color="#1565C0"),
-                        ft.IconButton(
-                            icon=ft.Icons.CLOSE,
-                            icon_size=16,
-                            icon_color=ft.Colors.RED_400,
-                            on_click=lambda e, sid=ss['id']: remove_service(sid),
-                        ),
-                    ], spacing=8),
-                    padding=ft.Padding(left=8, right=8, top=4, bottom=4),
-                    bgcolor=ft.Colors.GREEN_50,
-                    border_radius=6,
-                )
-            )
-        load_services()
-    
+        service = next((s for s in all_services if s.get('id') == service_id), None)
+        if service:
+            selected_services.append({
+                'id': service_id,
+                'name': service.get('name'),
+                'price': service.get('price', 0)
+            })
+            update_selected_services_ui()
+            services_dropdown.value = None
+            if dialog:
+                dialog.update()
+            
     def remove_service(service_id):
         for i, ss in enumerate(selected_services):
             if ss['id'] == service_id:
                 selected_services.pop(i)
                 break
+        update_selected_services_ui()
+        
+    def update_selected_services_ui():
         selected_services_list.controls.clear()
         for ss in selected_services:
             selected_services_list.controls.append(
@@ -428,40 +373,50 @@ def show_add_promotion_dialog(page, primary_color, client, on_close, on_success,
                             icon_color=ft.Colors.RED_400,
                             on_click=lambda e, sid=ss['id']: remove_service(sid),
                         ),
-                    ], spacing=8),
+                    ], spacing=8, vertical_alignment=ft.CrossAxisAlignment.CENTER),
                     padding=ft.Padding(left=8, right=8, top=4, bottom=4),
                     bgcolor=ft.Colors.GREEN_50,
                     border_radius=6,
                 )
             )
-        load_services()
-    
-    parts_search.on_change = lambda e: load_parts(e.control.value)
-    services_search.on_change = lambda e: load_services(e.control.value)
-    
-    load_parts()
-    load_services()
+            if dialog:
+                dialog.update()
+
+    update_selected_services_ui()
+
+    services_selection_row = ft.Row([
+        services_dropdown,
+        ft.ElevatedButton(
+            content=ft.Row([ft.Icon(ft.Icons.ADD, color=ft.Colors.WHITE, size=16), ft.Text(get_text("add"), color=ft.Colors.WHITE)]),
+            on_click=add_service_click,
+            style=ft.ButtonStyle(bgcolor=primary_color, shape=ft.RoundedRectangleBorder(radius=8))
+        )
+    ])
     
     def save(e):
         if not name.value:
             name.error_text = get_text("required_field")
-            dialog.update()
+            if dialog:
+                dialog.update()
             return
         if not value.value:
             value.error_text = get_text("required_field")
-            dialog.update()
+            if dialog:
+                dialog.update()
             return
         
         start_date.error_text = None
         end_date.error_text = None
-        dialog.update()
+        if dialog:
+            dialog.update()
 
         formatted_start = None
         if start_date.value:
             formatted_start = display_to_db_date(start_date.value)
             if not formatted_start:
                 start_date.error_text = get_text("invalid_date_format")
-                dialog.update()
+                if dialog:
+                    dialog.update()
                 return
 
         formatted_end = None
@@ -469,14 +424,16 @@ def show_add_promotion_dialog(page, primary_color, client, on_close, on_success,
             formatted_end = display_to_db_date(end_date.value)
             if not formatted_end:
                 end_date.error_text = get_text("invalid_date_format")
-                dialog.update()
+                if dialog:
+                    dialog.update()
                 return
 
         if formatted_start and formatted_end:
             if formatted_start > formatted_end:
                 start_date.error_text = get_text("start_date_error")
                 end_date.error_text = get_text("end_date_error")
-                dialog.update()
+                if dialog:
+                    dialog.update()
                 return
 
         try:
@@ -494,7 +451,12 @@ def show_add_promotion_dialog(page, primary_color, client, on_close, on_success,
             
             for part in selected_parts:
                 try:
-                    client.add_promotion_part(promo_id, part['id'], 1)
+                    qty_val = 1
+                    try:
+                        qty_val = int(part['qty_field'].value) if part['qty_field'].value.isdigit() else 1
+                    except:
+                        pass
+                    client.add_promotion_part(promo_id, part['id'], qty_val)
                 except:
                     pass
             
@@ -541,15 +503,13 @@ def show_add_promotion_dialog(page, primary_color, client, on_close, on_success,
                 ft.Container(height=12),
                 ft.Text(get_text("select_parts"), size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
                 ft.Divider(height=1, color=ft.Colors.GREY_200),
-                parts_search,
-                ft.Container(content=parts_list, height=200),
+                parts_selection_row,
                 ft.Text(get_text("selected_parts"), size=12, weight=ft.FontWeight.W_500, color="#1565C0"),
                 selected_parts_list,
                 ft.Container(height=12),
                 ft.Text(get_text("select_services"), size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
                 ft.Divider(height=1, color=ft.Colors.GREY_200),
-                services_search,
-                ft.Container(content=services_list, height=200),
+                services_selection_row,
                 ft.Text(get_text("selected_services"), size=12, weight=ft.FontWeight.W_500, color="#1565C0"),
                 selected_services_list,
             ], spacing=8, scroll=ft.ScrollMode.AUTO),
@@ -582,6 +542,7 @@ def show_add_promotion_dialog(page, primary_color, client, on_close, on_success,
 
 
 def show_edit_promotion_dialog(page, primary_color, client, promo, on_close, on_success, show_snackbar):
+    dialog = None
     """Show edit promotion dialog with parts/services selection (same as add dialog)"""
     
     name = ft.TextField(
@@ -637,13 +598,15 @@ def show_edit_promotion_dialog(page, primary_color, client, promo, on_close, on_
         nonlocal ignore_start_focus
         ignore_start_focus = True
         start_date.value = ""
-        dialog.update()
+        if dialog:
+            dialog.update()
 
     def clear_end_date(e):
         nonlocal ignore_end_focus
         ignore_end_focus = True
         end_date.value = ""
-        dialog.update()
+        if dialog:
+            dialog.update()
 
     def _pick_start_date(e):
         nonlocal ignore_start_focus
@@ -657,7 +620,8 @@ def show_edit_promotion_dialog(page, primary_color, client, promo, on_close, on_
             if e_picker.control.value:
                 start_date.value = e_picker.control.value.strftime("%d-%m-%Y")
                 start_date.error_text = None
-                dialog.update()
+                if dialog:
+                    dialog.update()
         
         def on_dismiss(e_picker):
             nonlocal ignore_start_focus
@@ -693,7 +657,8 @@ def show_edit_promotion_dialog(page, primary_color, client, promo, on_close, on_
             if e_picker.control.value:
                 end_date.value = e_picker.control.value.strftime("%d-%m-%Y")
                 end_date.error_text = None
-                dialog.update()
+                if dialog:
+                    dialog.update()
         
         def on_dismiss(e_picker):
             nonlocal ignore_end_focus
@@ -774,6 +739,7 @@ def show_edit_promotion_dialog(page, primary_color, client, promo, on_close, on_
         expand=True,
     )
     
+
     # Load existing parts and services
     existing_parts = []
     existing_services = []
@@ -784,134 +750,60 @@ def show_edit_promotion_dialog(page, primary_color, client, promo, on_close, on_
         existing_parts = client.get_promotion_parts(promo.get('id')) or []
         existing_services = client.get_promotion_services(promo.get('id')) or []
         for p in existing_parts:
-            selected_parts.append({'id': p.get('part_id'), 'name': p.get('part_name'), 'price': p.get('sell_price', 0)})
+            qty_field = ft.TextField(value=str(p.get('qty', 1)), width=60, text_align=ft.TextAlign.CENTER, border_radius=4, content_padding=ft.Padding(0, 0, 0, 0), keyboard_type=ft.KeyboardType.NUMBER)
+            selected_parts.append({'id': p.get('part_id'), 'name': p.get('part_name'), 'price': p.get('sell_price', 0), 'qty_field': qty_field})
         for s in existing_services:
             selected_services.append({'id': s.get('service_id'), 'name': s.get('service_name'), 'price': s.get('price', 0)})
     except:
         pass
     
     selected_parts_list = ft.Column(spacing=4, height=120, scroll=ft.ScrollMode.AUTO)
-    selected_services_list = ft.Column(spacing=4, height=120, scroll=ft.ScrollMode.AUTO)
     
-    # Display selected parts
-    for sp in selected_parts:
-        selected_parts_list.controls.append(
-            ft.Container(
-                content=ft.Row([
-                    ft.Text(sp['name'], size=12, weight=ft.FontWeight.W_500, expand=True),
-                    ft.Text(f"{int(sp['price']):,} KIP", size=11, color="#1565C0"),
-                    ft.IconButton(
-                        icon=ft.Icons.CLOSE,
-                        icon_size=16,
-                        icon_color=ft.Colors.RED_400,
-                        on_click=lambda e, pid=sp['id']: remove_part(pid),
-                    ),
-                ], spacing=8),
-                padding=ft.Padding(left=8, right=8, top=4, bottom=4),
-                bgcolor=ft.Colors.BLUE_50,
-                border_radius=6,
-            )
-        )
-    
-    for ss in selected_services:
-        selected_services_list.controls.append(
-            ft.Container(
-                content=ft.Row([
-                    ft.Text(ss['name'], size=12, weight=ft.FontWeight.W_500, expand=True),
-                    ft.Text(f"{int(ss['price']):,} KIP", size=11, color="#1565C0"),
-                    ft.IconButton(
-                        icon=ft.Icons.CLOSE,
-                        icon_size=16,
-                        icon_color=ft.Colors.RED_400,
-                        on_click=lambda e, sid=ss['id']: remove_service(sid),
-                    ),
-                ], spacing=8),
-                padding=ft.Padding(left=8, right=8, top=4, bottom=4),
-                bgcolor=ft.Colors.GREEN_50,
-                border_radius=6,
-            )
-        )
-    
-    # Parts selection
-    parts_search = ft.TextField(
-        hint_text=get_text("search_parts"),
+    all_parts = []
+    try:
+        all_parts = client.get_parts()
+    except:
+        pass
+        
+    parts_dropdown = ft.Dropdown(
+        hint_text=get_text("select_parts"),
         border_radius=8,
         bgcolor=ft.Colors.WHITE,
         filled=True,
-        prefix_icon=ft.Icons.SEARCH,
-        content_padding=ft.Padding(left=12, right=12, top=8, bottom=8),
         expand=True,
+        options=[ft.dropdown.Option(key=str(p.get('id')), text=f"{p.get('name')} ({int(p.get('sell_price', 0)):,} KIP)") for p in all_parts]
     )
     
-    parts_list = ft.Column(spacing=4, scroll=ft.ScrollMode.AUTO, height=180)
-    
-    def load_parts(search=""):
-        try:
-            parts = client.get_parts()
-            if search:
-                parts = [p for p in parts if search.lower() in p.get('name', '').lower()]
+    def add_part_click(e):
+        if not parts_dropdown.value:
+            return
+        part_id = int(parts_dropdown.value)
+        if any(sp['id'] == part_id for sp in selected_parts):
+            show_snackbar(get_text("error") or "Already added")
+            return
             
-            parts_list.controls.clear()
-            for part in parts[:15]:
-                part_id = part.get('id')
-                part_name = part.get('name')
-                part_price = part.get('sell_price', 0)
-                is_selected = part_id in [sp['id'] for sp in selected_parts]
-                
-                parts_list.controls.append(
-                    ft.Container(
-                        content=ft.Row([
-                            ft.Checkbox(
-                                value=is_selected,
-                                on_change=lambda e, pid=part_id, pname=part_name, pprice=part_price: toggle_part(pid, pname, pprice, e.control.value),
-                            ),
-                            ft.Text(part_name, size=13, weight=ft.FontWeight.W_500, expand=True),
-                            ft.Text(f"{int(part_price):,} KIP", size=11, color="#1565C0"),
-                        ], spacing=8),
-                        padding=ft.Padding(left=8, right=8, top=4, bottom=4),
-                        bgcolor=ft.Colors.GREY_50 if is_selected else None,
-                        border_radius=6,
-                    )
-                )
-            dialog.update()
-        except Exception as e:
-            print(f"Error loading parts: {e}")
-    
-    def toggle_part(part_id, part_name, part_price, is_selected):
-        if is_selected:
-            selected_parts.append({'id': part_id, 'name': part_name, 'price': part_price})
-        else:
-            for i, sp in enumerate(selected_parts):
-                if sp['id'] == part_id:
-                    selected_parts.pop(i)
-                    break
-        
-        selected_parts_list.controls.clear()
-        for sp in selected_parts:
-            selected_parts_list.controls.append(
-                ft.Container(
-                    content=ft.Row([
-                        ft.Text(sp['name'], size=12, weight=ft.FontWeight.W_500, expand=True),
-                        ft.Text(f"{int(sp['price']):,} KIP", size=11, color="#1565C0"),
-                        ft.IconButton(
-                            icon=ft.Icons.CLOSE,
-                            icon_size=16,
-                            icon_color=ft.Colors.RED_400,
-                            on_click=lambda e, pid=sp['id']: remove_part(pid),
-                        ),
-                    ], spacing=8),
-                    padding=ft.Padding(left=8, right=8, top=4, bottom=4),
-                    bgcolor=ft.Colors.BLUE_50,
-                    border_radius=6,
-                )
-            )
-        load_parts()
-    
+        part = next((p for p in all_parts if p.get('id') == part_id), None)
+        if part:
+            qty_field = ft.TextField(value="1", width=60, text_align=ft.TextAlign.CENTER, border_radius=4, content_padding=ft.Padding(0, 0, 0, 0), keyboard_type=ft.KeyboardType.NUMBER)
+            selected_parts.append({
+                'id': part_id,
+                'name': part.get('name'),
+                'price': part.get('sell_price', 0),
+                'qty_field': qty_field
+            })
+            update_selected_parts_ui()
+            parts_dropdown.value = None
+            if dialog:
+                dialog.update()
+            
     def remove_part(part_id):
         for i, sp in enumerate(selected_parts):
             if sp['id'] == part_id:
                 selected_parts.pop(i)
                 break
+        update_selected_parts_ui()
+        
+    def update_selected_parts_ui():
         selected_parts_list.controls.clear()
         for sp in selected_parts:
             selected_parts_list.controls.append(
@@ -919,100 +811,78 @@ def show_edit_promotion_dialog(page, primary_color, client, promo, on_close, on_
                     content=ft.Row([
                         ft.Text(sp['name'], size=12, weight=ft.FontWeight.W_500, expand=True),
                         ft.Text(f"{int(sp['price']):,} KIP", size=11, color="#1565C0"),
+                        ft.Text("Qty:", size=11, color=ft.Colors.GREY_600),
+                        sp['qty_field'],
                         ft.IconButton(
                             icon=ft.Icons.CLOSE,
                             icon_size=16,
                             icon_color=ft.Colors.RED_400,
                             on_click=lambda e, pid=sp['id']: remove_part(pid),
                         ),
-                    ], spacing=8),
+                    ], spacing=8, vertical_alignment=ft.CrossAxisAlignment.CENTER),
                     padding=ft.Padding(left=8, right=8, top=4, bottom=4),
                     bgcolor=ft.Colors.BLUE_50,
                     border_radius=6,
                 )
             )
-        load_parts()
+        
+    update_selected_parts_ui()
+        
+    parts_selection_row = ft.Row([
+        parts_dropdown,
+        ft.ElevatedButton(
+            content=ft.Row([ft.Icon(ft.Icons.ADD, color=ft.Colors.WHITE, size=16), ft.Text(get_text("add"), color=ft.Colors.WHITE)]),
+            on_click=add_part_click,
+            style=ft.ButtonStyle(bgcolor=primary_color, shape=ft.RoundedRectangleBorder(radius=8))
+        )
+    ])
     
     # Services selection
-    services_search = ft.TextField(
-        hint_text=get_text("search_services"),
+    selected_services_list = ft.Column(spacing=4, height=120, scroll=ft.ScrollMode.AUTO)
+    
+    all_services = []
+    try:
+        all_services = client.get_services()
+    except:
+        pass
+        
+    services_dropdown = ft.Dropdown(
+        hint_text=get_text("select_services"),
         border_radius=8,
         bgcolor=ft.Colors.WHITE,
         filled=True,
-        prefix_icon=ft.Icons.SEARCH,
-        content_padding=ft.Padding(left=12, right=12, top=8, bottom=8),
         expand=True,
+        options=[ft.dropdown.Option(key=str(s.get('id')), text=f"{s.get('name')} ({int(s.get('price', 0)):,} KIP)") for s in all_services]
     )
     
-    services_list = ft.Column(spacing=4, scroll=ft.ScrollMode.AUTO, height=180)
-    
-    def load_services(search=""):
-        try:
-            services = client.get_services()
-            if search:
-                services = [s for s in services if search.lower() in s.get('name', '').lower()]
+    def add_service_click(e):
+        if not services_dropdown.value:
+            return
+        service_id = int(services_dropdown.value)
+        if any(ss['id'] == service_id for ss in selected_services):
+            show_snackbar(get_text("error") or "Already added")
+            return
             
-            services_list.controls.clear()
-            for service in services[:15]:
-                service_id = service.get('id')
-                service_name = service.get('name')
-                service_price = service.get('price', 0)
-                is_selected = service_id in [ss['id'] for ss in selected_services]
-                
-                services_list.controls.append(
-                    ft.Container(
-                        content=ft.Row([
-                            ft.Checkbox(
-                                value=is_selected,
-                                on_change=lambda e, sid=service_id, sname=service_name, sprice=service_price: toggle_service(sid, sname, sprice, e.control.value),
-                            ),
-                            ft.Text(service_name, size=13, weight=ft.FontWeight.W_500, expand=True),
-                            ft.Text(f"{int(service_price):,} KIP", size=11, color="#1565C0"),
-                        ], spacing=8),
-                        padding=ft.Padding(left=8, right=8, top=4, bottom=4),
-                        bgcolor=ft.Colors.GREY_50 if is_selected else None,
-                        border_radius=6,
-                    )
-                )
-            dialog.update()
-        except Exception as e:
-            print(f"Error loading services: {e}")
-    
-    def toggle_service(service_id, service_name, service_price, is_selected):
-        if is_selected:
-            selected_services.append({'id': service_id, 'name': service_name, 'price': service_price})
-        else:
-            for i, ss in enumerate(selected_services):
-                if ss['id'] == service_id:
-                    selected_services.pop(i)
-                    break
-        
-        selected_services_list.controls.clear()
-        for ss in selected_services:
-            selected_services_list.controls.append(
-                ft.Container(
-                    content=ft.Row([
-                        ft.Text(ss['name'], size=12, weight=ft.FontWeight.W_500, expand=True),
-                        ft.Text(f"{int(ss['price']):,} KIP", size=11, color="#1565C0"),
-                        ft.IconButton(
-                            icon=ft.Icons.CLOSE,
-                            icon_size=16,
-                            icon_color=ft.Colors.RED_400,
-                            on_click=lambda e, sid=ss['id']: remove_service(sid),
-                        ),
-                    ], spacing=8),
-                    padding=ft.Padding(left=8, right=8, top=4, bottom=4),
-                    bgcolor=ft.Colors.GREEN_50,
-                    border_radius=6,
-                )
-            )
-        load_services()
-    
+        service = next((s for s in all_services if s.get('id') == service_id), None)
+        if service:
+            selected_services.append({
+                'id': service_id,
+                'name': service.get('name'),
+                'price': service.get('price', 0)
+            })
+            update_selected_services_ui()
+            services_dropdown.value = None
+            if dialog:
+                dialog.update()
+            
     def remove_service(service_id):
         for i, ss in enumerate(selected_services):
             if ss['id'] == service_id:
                 selected_services.pop(i)
                 break
+        update_selected_services_ui()
+        
+    def update_selected_services_ui():
         selected_services_list.controls.clear()
         for ss in selected_services:
             selected_services_list.controls.append(
@@ -1026,40 +896,48 @@ def show_edit_promotion_dialog(page, primary_color, client, promo, on_close, on_
                             icon_color=ft.Colors.RED_400,
                             on_click=lambda e, sid=ss['id']: remove_service(sid),
                         ),
-                    ], spacing=8),
+                    ], spacing=8, vertical_alignment=ft.CrossAxisAlignment.CENTER),
                     padding=ft.Padding(left=8, right=8, top=4, bottom=4),
                     bgcolor=ft.Colors.GREEN_50,
                     border_radius=6,
                 )
             )
-        load_services()
-    
-    parts_search.on_change = lambda e: load_parts(e.control.value)
-    services_search.on_change = lambda e: load_services(e.control.value)
-    
-    load_parts()
-    load_services()
+
+    update_selected_services_ui()
+
+    services_selection_row = ft.Row([
+        services_dropdown,
+        ft.ElevatedButton(
+            content=ft.Row([ft.Icon(ft.Icons.ADD, color=ft.Colors.WHITE, size=16), ft.Text(get_text("add"), color=ft.Colors.WHITE)]),
+            on_click=add_service_click,
+            style=ft.ButtonStyle(bgcolor=primary_color, shape=ft.RoundedRectangleBorder(radius=8))
+        )
+    ])
     
     def save(e):
         if not name.value:
             name.error_text = get_text("required_field")
-            dialog.update()
+            if dialog:
+                dialog.update()
             return
         if not value.value:
             value.error_text = get_text("required_field")
-            dialog.update()
+            if dialog:
+                dialog.update()
             return
         
         start_date.error_text = None
         end_date.error_text = None
-        dialog.update()
+        if dialog:
+            dialog.update()
 
         formatted_start = None
         if start_date.value:
             formatted_start = display_to_db_date(start_date.value)
             if not formatted_start:
                 start_date.error_text = get_text("invalid_date_format")
-                dialog.update()
+                if dialog:
+                    dialog.update()
                 return
 
         formatted_end = None
@@ -1067,14 +945,16 @@ def show_edit_promotion_dialog(page, primary_color, client, promo, on_close, on_
             formatted_end = display_to_db_date(end_date.value)
             if not formatted_end:
                 end_date.error_text = get_text("invalid_date_format")
-                dialog.update()
+                if dialog:
+                    dialog.update()
                 return
 
         if formatted_start and formatted_end:
             if formatted_start > formatted_end:
                 start_date.error_text = get_text("start_date_error")
                 end_date.error_text = get_text("end_date_error")
-                dialog.update()
+                if dialog:
+                    dialog.update()
                 return
 
         try:
@@ -1096,7 +976,12 @@ def show_edit_promotion_dialog(page, primary_color, client, promo, on_close, on_
             # Add new parts and services
             for part in selected_parts:
                 try:
-                    client.add_promotion_part(promo['id'], part['id'], 1)
+                    qty_val = 1
+                    try:
+                        qty_val = int(part['qty_field'].value) if part['qty_field'].value.isdigit() else 1
+                    except:
+                        pass
+                    client.add_promotion_part(promo['id'], part['id'], qty_val)
                 except:
                     pass
             
@@ -1143,15 +1028,13 @@ def show_edit_promotion_dialog(page, primary_color, client, promo, on_close, on_
                 ft.Container(height=12),
                 ft.Text(get_text("select_parts"), size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
                 ft.Divider(height=1, color=ft.Colors.GREY_200),
-                parts_search,
-                ft.Container(content=parts_list, height=200),
+                parts_selection_row,
                 ft.Text(get_text("selected_parts"), size=12, weight=ft.FontWeight.W_500, color="#1565C0"),
                 selected_parts_list,
                 ft.Container(height=12),
                 ft.Text(get_text("select_services"), size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
                 ft.Divider(height=1, color=ft.Colors.GREY_200),
-                services_search,
-                ft.Container(content=services_list, height=200),
+                services_selection_row,
                 ft.Text(get_text("selected_services"), size=12, weight=ft.FontWeight.W_500, color="#1565C0"),
                 selected_services_list,
             ], spacing=8, scroll=ft.ScrollMode.AUTO),
@@ -1364,7 +1247,8 @@ def show_detail_promotion_dialog(primary_color, client, promotion_id, promotion_
                 )
             )
         
-        detail_dialog.update()
+            if detail_dialog:
+                detail_dialog.update()
     
     load_items()
     

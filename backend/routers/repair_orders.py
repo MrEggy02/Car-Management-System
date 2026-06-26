@@ -28,7 +28,8 @@ def get_repair_orders(
                    b.name as brand, 
                    v.model,
                    e.name as mechanic_name,
-                   q.net_total as quotation_total
+                   q.net_total as quotation_total,
+                   (SELECT COUNT(*) FROM parts_usage pu WHERE pu.repair_id = ro.id) as parts_usage_count
             FROM repair_orders ro
             LEFT JOIN job_orders jo ON ro.job_order_id = jo.id
             LEFT JOIN customers c ON jo.customer_id = c.id
@@ -262,12 +263,6 @@ def update_repair_status(
         if status == 'working' and current_status != 'working':
             update_fields.append("start_date = %s")
             params.append(datetime.now())
-        
-        # If paused, set pause_reason
-        if status == 'paused':
-            pause_reason = "Paused by mechanic"
-            update_fields.append("pause_reason = %s")
-            params.append(pause_reason)
         
         # If completed, set end_date
         if status == 'completed':

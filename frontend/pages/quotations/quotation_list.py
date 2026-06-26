@@ -31,10 +31,12 @@ class QuotationListContent:
         self.selected_quotation = None
         self.detail_dialog = None
         self.search_field = None
+        self.status_filter = "all"
         self.current_page = 1
         self.items_per_page = 10
         self.total_pages = 1
         self.current_dialog = None
+        self.kpi_container = None
         self.parts_list = []
         self.services_list = []
 
@@ -79,6 +81,12 @@ class QuotationListContent:
                 colors=[self.primary_color, self.primary_dark],
             ),
             border_radius=ft.BorderRadius.only(bottom_left=20, bottom_right=20),
+        )
+        
+        # ส่วน KPI Cards
+        self.kpi_container = ft.Container(
+            content=ft.Row([], spacing=12),
+            padding=ft.Padding(left=0, right=0, top=8, bottom=8),
         )
         
         # ช่องค้นหา
@@ -169,6 +177,7 @@ class QuotationListContent:
         # ส่วนเนื้อหาหลัก
         content_area = ft.Container(
             content=ft.Column([
+                self.kpi_container,
                 ft.Container(
                     content=ft.Row([self.search_field, refresh_button], spacing=10),
                     margin=ft.Margin(left=0, right=0, top=0, bottom=16),
@@ -192,6 +201,104 @@ class QuotationListContent:
         self.load_quotations()
         
         return main_content
+    
+    def _build_kpi_cards(self):
+        statuses = [
+            ("draft",    "#FF9800", ft.Icons.EDIT_DOCUMENT),
+            ("approved", "#4CAF50", ft.Icons.CHECK_CIRCLE),
+            ("rejected", "#F44336", ft.Icons.CANCEL),
+        ]
+        status_texts = {
+            "draft": get_text("draft"),
+            "approved": get_text("approved"),
+            "rejected": get_text("rejected"),
+        }
+        counts = {s: 0 for s, _, __ in statuses}
+        for q in self.quotations:
+            st = q.get("status", "draft")
+            if st in counts:
+                counts[st] += 1
+
+        cards = []
+        for status, color, icon in statuses:
+            count = counts[status]
+            label = status_texts.get(status, status)
+            is_active = (self.status_filter == status)
+            card = ft.Container(
+                content=ft.Row(
+                    [
+                        ft.Container(
+                            content=ft.Icon(icon, size=22, color=ft.Colors.WHITE),
+                            bgcolor=color,
+                            border_radius=10,
+                            padding=ft.Padding(left=8, right=8, top=8, bottom=8),
+                        ),
+                        ft.Column(
+                            [
+                                ft.Text(str(count), size=22, weight=ft.FontWeight.BOLD, color="#1E293B"),
+                                ft.Text(label, size=11, color="#64748B"),
+                            ],
+                            spacing=1,
+                        ),
+                    ],
+                    spacing=10,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                ),
+                padding=ft.Padding(left=14, right=14, top=10, bottom=10),
+                bgcolor=ft.Colors.WHITE,
+                border_radius=12,
+                border=ft.Border(top=ft.BorderSide(2, color), right=ft.BorderSide(2, color), bottom=ft.BorderSide(2, color), left=ft.BorderSide(2, color)) if is_active else ft.Border(top=ft.BorderSide(1, "#E2E8F0"), right=ft.BorderSide(1, "#E2E8F0"), bottom=ft.BorderSide(1, "#E2E8F0"), left=ft.BorderSide(1, "#E2E8F0")),
+                expand=True,
+                ink=True,
+                on_click=lambda e, s=status: self._kpi_filter(s),
+                shadow=ft.BoxShadow(
+                    blur_radius=4,
+                    color=ft.Colors.with_opacity(0.06, ft.Colors.BLACK),
+                ),
+            )
+            cards.append(card)
+
+        total = len(self.quotations)
+        is_all = self.status_filter == "all"
+        all_card = ft.Container(
+            content=ft.Row(
+                [
+                    ft.Container(
+                        content=ft.Icon(ft.Icons.LIST_ALT, size=22, color=ft.Colors.WHITE),
+                        bgcolor="#607D8B",
+                        border_radius=10,
+                        padding=ft.Padding(left=8, right=8, top=8, bottom=8),
+                    ),
+                    ft.Column(
+                        [
+                            ft.Text(str(total), size=22, weight=ft.FontWeight.BOLD, color="#1E293B"),
+                            ft.Text(get_text("all_status"), size=11, color="#64748B"),
+                        ],
+                        spacing=1,
+                    ),
+                ],
+                spacing=10,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            ),
+            padding=ft.Padding(left=14, right=14, top=10, bottom=10),
+            bgcolor=ft.Colors.WHITE,
+            border_radius=12,
+            border=ft.Border(top=ft.BorderSide(2, "#607D8B"), right=ft.BorderSide(2, "#607D8B"), bottom=ft.BorderSide(2, "#607D8B"), left=ft.BorderSide(2, "#607D8B")) if is_all else ft.Border(top=ft.BorderSide(1, "#E2E8F0"), right=ft.BorderSide(1, "#E2E8F0"), bottom=ft.BorderSide(1, "#E2E8F0"), left=ft.BorderSide(1, "#E2E8F0")),
+            expand=True,
+            ink=True,
+            on_click=lambda e: self._kpi_filter("all"),
+            shadow=ft.BoxShadow(
+                blur_radius=4,
+                color=ft.Colors.with_opacity(0.06, ft.Colors.BLACK),
+            ),
+        )
+
+        return ft.Row([all_card] + cards, spacing=12, expand=True)
+
+    def _kpi_filter(self, status: str):
+        self.status_filter = status
+        self.current_page = 1
+        self.filter_quotations(None)
     
     def _create_table_header(self):
         """สร้างส่วนหัวตาราง"""
@@ -397,28 +504,37 @@ class QuotationListContent:
             quotations = self.client.get_quotations(job_order_id=self.job_order_id)
             self.quotations = quotations
             self.filtered_quotations = quotations.copy()
-            self.display_quotations()
+            self.kpi_container.content = self._build_kpi_cards()
+            self.filter_quotations(None)
         except Exception as ex:
             print(f"Error loading quotations: {ex}")
             self.loading_indicator.visible = False
             self.page.update()
     
     def filter_quotations(self, e):
-        """กรองใบเสนอราคาตามคำค้นหา"""
-        keyword = self.search_field.value.lower() if self.search_field.value else ""
+        """กรองใบเสนอราคาตามคำค้นหาและสถานะ"""
+        keyword = self.search_field.value.lower() if self.search_field and self.search_field.value else ""
         self.current_page = 1
         
+        status = self.status_filter
+        if status and status != "all":
+            filtered = [q for q in self.quotations if q.get("status") == status]
+        else:
+            filtered = self.quotations.copy()
+        
         if not keyword:
-            self.filtered_quotations = self.quotations.copy()
+            self.filtered_quotations = filtered
         else:
             self.filtered_quotations = [
-                q for q in self.quotations
+                q for q in filtered
                 if keyword in f"QT-{q.get('id', 0):04d}".lower()
                 or keyword in q.get("customer_name", "").lower()
                 or keyword in q.get("plate_number", "").lower()
-                or keyword in q.get("job_no", "").lower()
+                or keyword in (q.get("job_no") or "").lower()
             ]
         
+        if self.kpi_container:
+            self.kpi_container.content = self._build_kpi_cards()
         self.display_quotations()
     
     def display_quotations(self):

@@ -306,18 +306,14 @@ class RepairSummaryReportContent:
         status_colors = {
             'pending': "#FF9800",
             'working': "#2196F3",
-            'paused': "#9C27B0",
             'completed': "#4CAF50",
-            'cancelled': "#F44336",
-            'waiting': "#FF9800"
+            'cancelled': "#F44336"
         }
         status_texts = {
             'pending': get_text("pending"),
             'working': get_text("working"),
-            'paused': get_text("paused"),
             'completed': get_text("completed"),
-            'cancelled': get_text("cancelled"),
-            'waiting': "ລໍຖ້າ"
+            'cancelled': get_text("cancelled")
         }
         
         if not status_summary:
@@ -374,8 +370,6 @@ class RepairSummaryReportContent:
         total = repair_stats.get('total_repairs') or 0
         completed = repair_stats.get('completed_repairs') or 0
         working = repair_stats.get('working_repairs') or 0
-        waiting = repair_stats.get('waiting_repairs') or 0
-        paused = repair_stats.get('paused_repairs') or 0
         completion_rate = repair_stats.get('completion_rate') or 0
         avg_hours = repair_stats.get('avg_repair_hours') or 0
         
@@ -430,8 +424,6 @@ class RepairSummaryReportContent:
                 ),
                 ft.Row([
                     ft.Text(f"{get_text('working')}: {working}", size=11, color="#64748B"),
-                    ft.Text(f"{get_text('waiting')}: {waiting}", size=11, color="#64748B"),
-                    ft.Text(f"{get_text('paused')}: {paused}", size=11, color="#64748B"),
                 ], spacing=16),
             ]),
             padding=ft.Padding(left=14, right=14, top=14, bottom=14),
