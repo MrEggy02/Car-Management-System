@@ -1,5 +1,6 @@
 # pages/job_orders/job_order_list.py
 import flet as ft
+import asyncio
 from flet import Alignment
 from typing import Dict, Callable
 from datetime import datetime
@@ -276,9 +277,13 @@ class JobOrderListContent:
         )
         
         # Load orders using new fast API
-        self.load_orders()
+        self.page.run_task(self._load_data_async)
         
         return main_content
+
+    async def _load_data_async(self):
+        await asyncio.sleep(0.1)
+        await asyncio.to_thread(self.load_orders)
     
 
     

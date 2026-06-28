@@ -390,6 +390,17 @@ class InvoiceListContent:
         )
         
         actions_list = [view_btn, print_btn]
+        if payment_status == "paid":
+            delivery_btn = ft.Container(
+                content=ft.Row([
+                    ft.Icon(ft.Icons.LOCAL_SHIPPING, size=16, color=self.success_color),
+                    ft.Text("ໃບສົ່ງມອບ", size=12, color=self.success_color),
+                ], spacing=4),
+                on_click=lambda e, iid=invoice_id: self.print_delivery_note(iid),
+                padding=ft.Padding(left=8, right=8, top=4, bottom=4),
+                border_radius=6,
+            )
+            actions_list.append(delivery_btn)
         if payment_status == "pending":
             pay_btn = ft.Container(
                 content=ft.Row([
@@ -550,6 +561,76 @@ class InvoiceListContent:
             print(f"Error printing invoice: {ex}")
             self.show_snack_bar(f"{get_text('pdf_export_failed')}: {str(ex)}", is_error=True)
 
+    def print_delivery_note(self, invoice_id: int):
+        """ພິມໃບສົ່ງມອບລົດໂດຍໃຊ້ backend PDF generator ແລະເປີດດ້ວຍໂປຣແກຣມ PDF ຂອງລະບົບ"""
+        try:
+            self.show_snack_bar("ກຳລັງກຽມພິມໃບສົ່ງມອບລົດ...", is_error=False)
+            
+            pdf_bytes = self.client.get_delivery_note_pdf(invoice_id)
+            if not pdf_bytes:
+                self.show_snack_bar("ບໍ່ສາມາດພິມໃບສົ່ງມອບລົດໄດ້", is_error=True)
+                return
+                
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            workspace_root = os.path.abspath(os.path.join(base_dir, "..", "..", ".."))
+            output_dir = os.path.join(workspace_root, "output")
+            os.makedirs(output_dir, exist_ok=True)
+            
+            invoice_no = f"INV-{invoice_id:04d}"
+            pdf_path = os.path.join(output_dir, f"delivery_note_{invoice_no}.pdf")
+            
+            with open(pdf_path, "wb") as f:
+                f.write(pdf_bytes)
+                
+            os.startfile(pdf_path)
+            self.show_snack_bar("ພິມໃບສົ່ງມອບລົດສຳເລັດແລ້ວ!", is_error=False)
+            
+        except Exception as ex:
+            print(f"Error printing delivery note: {ex}")
+            self.show_snack_bar(f"Error: {str(ex)}", is_error=True)
+
+    def show_post_payment_dialog(self, invoice_id: int):
+        """Show options to print delivery note or invoice after successful payment"""
+        dialog = ft.AlertDialog(
+            modal=True,
+            shape=ft.RoundedRectangleBorder(radius=16),
+            bgcolor=ft.Colors.WHITE,
+            title=ft.Row([
+                ft.Icon(ft.Icons.CHECK_CIRCLE, color=self.success_color, size=28),
+                ft.Text("ຊຳລະເງິນສຳເລັດ", size=18, weight=ft.FontWeight.BOLD),
+            ], spacing=10),
+            content=ft.Container(
+                content=ft.Column([
+                    ft.Text("ການຊຳລະເງິນສຳເລັດຮຽບຮ້ອຍແລ້ວ. ທ່ານຕ້ອງການພິມເອກະສານໃດ?", size=14, color="#475569"),
+                ], tight=True),
+                width=350,
+                padding=10,
+            ),
+            actions=[
+                ft.ElevatedButton(
+                    "ພິມໃບສົ່ງມອບລົດ",
+                    icon=ft.Icons.LOCAL_SHIPPING,
+                    bgcolor=self.success_color,
+                    color=ft.Colors.WHITE,
+                    on_click=lambda e: (self._close_dialog(dialog), self.print_delivery_note(invoice_id)),
+                ),
+                ft.ElevatedButton(
+                    "ພິມໃບຮັບເງິນ",
+                    icon=ft.Icons.PRINT,
+                    bgcolor=self.primary_color,
+                    color=ft.Colors.WHITE,
+                    on_click=lambda e: (self._close_dialog(dialog), self.print_invoice(invoice_id)),
+                ),
+                ft.TextButton(
+                    "ປິດ",
+                    on_click=lambda e: self._close_dialog(dialog),
+                    style=ft.ButtonStyle(color="#64748B"),
+                ),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+        self._open_dialog(dialog)
+
     def _show_invoice_detail_dialog(self, invoice: Dict):
         """Show invoice detail in dialog"""
         
@@ -588,6 +669,28 @@ class InvoiceListContent:
             "transfer": get_text("payment_transfer")
         }
         
+        dialog_actions = [
+            ft.TextButton(
+                get_text("close"),
+                on_click=lambda e: self._close_dialog(dialog),
+                style=ft.ButtonStyle(color="#64748B"),
+            ),
+            ft.ElevatedButton(
+                get_text("print"),
+                on_click=lambda e: self.print_invoice(invoice.get('id')),
+                style=ft.ButtonStyle(bgcolor=self.primary_color, color=ft.Colors.WHITE),
+            ),
+        ]
+        if payment_status == "paid":
+            dialog_actions.append(
+                ft.ElevatedButton(
+                    "ພິມໃບສົ່ງມອບລົດ",
+                    icon=ft.Icons.LOCAL_SHIPPING,
+                    on_click=lambda e: (self._close_dialog(dialog), self.print_delivery_note(invoice.get('id'))),
+                    style=ft.ButtonStyle(bgcolor=self.success_color, color=ft.Colors.WHITE),
+                )
+            )
+
         dialog = ft.AlertDialog(
             modal=True,
             shape=ft.RoundedRectangleBorder(radius=16),
@@ -684,18 +787,7 @@ class InvoiceListContent:
                 ]),
                 width=450,
             ),
-            actions=[
-                ft.TextButton(
-                    get_text("close"),
-                    on_click=lambda e: self._close_dialog(dialog),
-                    style=ft.ButtonStyle(color="#64748B"),
-                ),
-                ft.ElevatedButton(
-                    get_text("print"),
-                    on_click=lambda e: self.print_invoice(invoice.get('id')),
-                    style=ft.ButtonStyle(bgcolor=self.primary_color, color=ft.Colors.WHITE),
-                ),
-            ],
+            actions=dialog_actions,
             actions_alignment=ft.MainAxisAlignment.END,
         )
         
@@ -786,9 +878,9 @@ class InvoiceListContent:
                     received_amount=received,
                     change_amount=change
                 )
-                self.show_snack_bar("Payment successful", is_error=False)
                 self._close_dialog(dialog)
                 self.load_invoices()
+                self.show_post_payment_dialog(invoice_id)
             except Exception as ex:
                 self.show_snack_bar(f"Payment failed: {ex}", is_error=True)
                 

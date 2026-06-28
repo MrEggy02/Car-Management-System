@@ -722,6 +722,10 @@ class APIClient:
         """Get invoice PDF as bytes"""
         return self._request("GET", f"/invoices/{invoice_id}/pdf")
 
+    def get_delivery_note_pdf(self, invoice_id: int) -> bytes:
+        """Get car delivery note PDF as bytes"""
+        return self._request("GET", f"/invoices/{invoice_id}/delivery-note/pdf")
+
     def create_repair_order(self, job_order_id: int, mechanic_id: int = None) -> Dict:
         data = {"job_order_id": job_order_id}
         if mechanic_id:

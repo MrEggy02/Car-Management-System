@@ -12,6 +12,8 @@ import time
 from i18n import get_text, get_current_language
 
 
+import asyncio
+
 class RepairSummaryReportContent:
     def __init__(self, page: ft.Page, client, user: dict, navigate: Callable):
         self.page = page
@@ -52,9 +54,13 @@ class RepairSummaryReportContent:
             bgcolor="#F5F7FA",
         )
         
-        self.load_report()
+        self.page.run_task(self._load_data_async)
         
         return main_content
+
+    async def _load_data_async(self):
+        await asyncio.sleep(0.1)
+        await asyncio.to_thread(self.load_report)
     
     def _build_header(self):
         return ft.Container(

@@ -393,8 +393,8 @@ class RepairCreateContent:
     
     async def _load_data(self):
         await asyncio.sleep(0.2)
-        self.load_mechanics()
-        self.load_approved_job_orders()
+        await asyncio.to_thread(self.load_mechanics)
+        await asyncio.to_thread(self.load_approved_job_orders)
     
     def load_mechanics(self):
         try:

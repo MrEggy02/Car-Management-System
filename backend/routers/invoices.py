@@ -551,3 +551,25 @@ def get_invoice_pdf(invoice_id: int, user: dict = Depends(authenticate_user)):
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/invoices/{invoice_id}/delivery-note/pdf")
+def get_delivery_note_pdf(invoice_id: int, user: dict = Depends(authenticate_user)):
+    """Generate a formal A4 car delivery note PDF"""
+    try:
+        from utils_pdf import generate_delivery_note_pdf
+        pdf_bytes = generate_delivery_note_pdf(invoice_id)
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"inline; filename=delivery_note_{invoice_id}.pdf"
+            }
+        )
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        print(f"Error generating delivery note PDF: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))

@@ -540,9 +540,9 @@ class QuotationCreateContent:
     
     async def _load_data_async(self):
         await asyncio.sleep(0.3)
-        self.load_parts_and_services()
-        self.load_pending_orders()
-        self.load_promotions()
+        await asyncio.to_thread(self.load_parts_and_services)
+        await asyncio.to_thread(self.load_pending_orders)
+        await asyncio.to_thread(self.load_promotions)
     
     def _calculate_promotion_discount(self, promo):
         """Calculate the discount amount for a promotion based on current temp_items.

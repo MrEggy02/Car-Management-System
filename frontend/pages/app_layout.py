@@ -508,6 +508,9 @@ class AppLayout:
             "mechanic_performance_report": 32,
             "promotion_usage_report": 33,
             "goods_receipt_list": 34,
+            "purchase_management": 35,
+            "receiving_management": 36,
+            "receiving_po_list": 37,
         }
 
         # Store IDs for pages

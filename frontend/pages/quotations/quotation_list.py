@@ -17,6 +17,8 @@ from pages.quotations.quotation_dialogs import (
 )
 
 
+import asyncio
+
 class QuotationListContent:
     def __init__(self, page: ft.Page, client, user: dict, navigate: Callable, job_order_id: int = None):
         self.page = page
@@ -198,9 +200,13 @@ class QuotationListContent:
             bgcolor="#F5F7FA",
         )
         
-        self.load_quotations()
+        self.page.run_task(self._load_data_async)
         
         return main_content
+
+    async def _load_data_async(self):
+        await asyncio.sleep(0.1)
+        await asyncio.to_thread(self.load_quotations)
     
     def _build_kpi_cards(self):
         statuses = [

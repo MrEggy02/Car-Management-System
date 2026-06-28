@@ -199,7 +199,7 @@ class ShopContent:
     async def _delayed_load(self):
         """Async delayed load to prevent UI blocking"""
         await asyncio.sleep(0.2)
-        self.load_data()
+        await asyncio.to_thread(self.load_data)
     
     def load_data(self):
         """Load shop data from server"""

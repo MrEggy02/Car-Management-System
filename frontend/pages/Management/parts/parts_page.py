@@ -539,7 +539,7 @@ class PartsContent:
     
     async def _delayed_load(self):
         await asyncio.sleep(0.2)
-        self.load_data()
+        await asyncio.to_thread(self.load_data)
     
     def load_data(self, force=False):
         if self.is_loading and not force:

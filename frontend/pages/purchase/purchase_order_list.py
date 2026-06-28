@@ -6,6 +6,8 @@ from typing import Dict, Callable
 from i18n import get_text
 
 
+import asyncio
+
 class PurchaseOrderListContent:
     def __init__(self, page: ft.Page, client, user: dict, navigate: Callable):
         self.page = page
@@ -53,10 +55,14 @@ class PurchaseOrderListContent:
             bgcolor="#F5F7FA",
         )
         
-        self.load_low_stock_parts()
-        self.load_purchase_orders()
+        self.page.run_task(self._load_data_async)
         
         return main_content
+
+    async def _load_data_async(self):
+        await asyncio.sleep(0.1)
+        await asyncio.to_thread(self.load_low_stock_parts)
+        await asyncio.to_thread(self.load_purchase_orders)
     
     def _build_notification_button(self):
         """Build notification button with badge"""

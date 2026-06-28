@@ -88,6 +88,12 @@ class ContentManager:
             content = self._get_promotion_usage_report_content()
         elif index == 34:
             content = self._get_goods_receipt_list_content()
+        elif index == 35:
+            content = self._get_purchase_management_content()
+        elif index == 36:
+            content = self._get_receiving_management_content()
+        elif index == 37:
+            content = self._get_receiving_po_list_content()
         else:
             content = self._get_placeholder(f"📄 {get_text('under_development')}")
         
@@ -483,15 +489,38 @@ class ContentManager:
     def _get_promotion_usage_report_content(self):
         """Get promotion usage report page (Process 8.5)"""
         from pages.reports.promotion_usage_report import PromotionUsageReportContent
-        
-        def navigate(page_name, *args, **kwargs):
-            self.parent.navigate_to(page_name, **kwargs)
-        
         return PromotionUsageReportContent(
-            self.parent.page,
-            self.parent.client,
-            self.parent.user,
-            navigate
+            page=self.parent.page,
+            client=self.parent.client,
+            user=self.parent.user,
+            navigate=self.parent.navigate_to
+        ).build()
+        
+    def _get_purchase_management_content(self):
+        from pages.purchase.purchase_management import PurchaseManagementContent
+        return PurchaseManagementContent(
+            page=self.parent.page,
+            client=self.parent.client,
+            user=self.parent.user,
+            navigate=self.parent.navigate_to
+        ).build()
+        
+    def _get_receiving_management_content(self):
+        from pages.purchase.receiving_management import ReceivingManagementContent
+        return ReceivingManagementContent(
+            page=self.parent.page,
+            client=self.parent.client,
+            user=self.parent.user,
+            navigate=self.parent.navigate_to
+        ).build()
+        
+    def _get_receiving_po_list_content(self):
+        from pages.purchase.receiving_po_list import ReceivingPoListContent
+        return ReceivingPoListContent(
+            page=self.parent.page,
+            client=self.parent.client,
+            user=self.parent.user,
+            navigate=self.parent.navigate_to
         ).build()
     
     def _get_goods_receipt_list_content(self):

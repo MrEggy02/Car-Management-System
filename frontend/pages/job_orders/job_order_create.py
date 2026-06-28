@@ -388,7 +388,7 @@ class JobOrderCreateContent:
     async def _load_data_async(self):
         """Load data asynchronously"""
         await asyncio.sleep(0.3)
-        self.load_customers()
+        await asyncio.to_thread(self.load_customers)
     
     def load_customers(self):
         """Load all customers"""

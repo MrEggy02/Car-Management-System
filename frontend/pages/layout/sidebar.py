@@ -56,6 +56,12 @@ class SidebarManager:
         # สร้าง Purchase Management (Single Menu - ไปที่ purchase_order_list)
         self._create_purchase_management_menu(nav_column)
         
+        # สร้าง สั่งซื้อสินค้า (Single Menu - ไปที่ purchase_management)
+        self._create_purchase_order_menu(nav_column)
+        
+        # สร้าง รับเข้าสินค้า (Single Menu - ไปที่ receiving_management)
+        self._create_receiving_menu(nav_column)
+        
         # สร้าง Reports Management (Dropdown)
         self._create_reports_management_menu(nav_column)
         
@@ -339,7 +345,60 @@ class SidebarManager:
             on_hover=lambda e: self._on_single_menu_hover(e, self.purchase_main_btn),
         )
         
+        
         nav_column.controls.append(self.purchase_main_btn)
+
+    def _create_purchase_order_menu(self, nav_column):
+        """สร้างเมนู สั่งซื้อสินค้า (Process 7.1 & 7.2)"""
+        self.po_main_btn = ft.Container(
+            content=ft.Row(
+                [
+                    ft.Image(src="assets/icons/purchase.png", width=22, height=22, color=self.parent.unselected_color),
+                    ft.Text(
+                        get_text("purchase_management") + " (New)",
+                        size=14,
+                        weight=ft.FontWeight.W_500,
+                        color=self.parent.unselected_color,
+                        expand=True,
+                    ),
+                ],
+                spacing=16,
+            ),
+            padding=ft.Padding(left=16, right=16, top=10, bottom=10),
+            margin=ft.Margin(left=12, right=12, top=2, bottom=2),
+            border_radius=12,
+            ink=True,
+            data="po_menu",
+            on_click=lambda e: self.parent.on_nav_click(35),
+            on_hover=lambda e: self._on_single_menu_hover(e, self.po_main_btn),
+        )
+        nav_column.controls.append(self.po_main_btn)
+        
+    def _create_receiving_menu(self, nav_column):
+        """สร้างเมนู รับเข้าสินค้า (Process 7.3)"""
+        self.receiving_main_btn = ft.Container(
+            content=ft.Row(
+                [
+                    ft.Icon(ft.Icons.INVENTORY_2_OUTLINED, size=22, color=self.parent.unselected_color),
+                    ft.Text(
+                        get_text("receiving") if get_text("receiving") else "Receiving Management",
+                        size=14,
+                        weight=ft.FontWeight.W_500,
+                        color=self.parent.unselected_color,
+                        expand=True,
+                    ),
+                ],
+                spacing=16,
+            ),
+            padding=ft.Padding(left=16, right=16, top=10, bottom=10),
+            margin=ft.Margin(left=12, right=12, top=2, bottom=2),
+            border_radius=12,
+            ink=True,
+            data="receiving_menu",
+            on_click=lambda e: self.parent.on_nav_click(36),
+            on_hover=lambda e: self._on_single_menu_hover(e, self.receiving_main_btn),
+        )
+        nav_column.controls.append(self.receiving_main_btn)
     
     def _create_reports_management_menu(self, nav_column):
         """สร้างเมนู Reports Management - มี dropdown"""

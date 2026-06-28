@@ -442,9 +442,9 @@ class CustomerListContent:
     
     async def _delayed_load(self):
         await asyncio.sleep(0.2)
-        self.load_brands()
+        await asyncio.to_thread(self.load_brands)
         await asyncio.sleep(0.1)
-        self.load_data()
+        await asyncio.to_thread(self.load_data)
     
     def load_data(self):
         if self.is_loading:

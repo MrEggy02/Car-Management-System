@@ -56,8 +56,8 @@ class RepairDetailContent:
     
     async def _load_data(self):
         await asyncio.sleep(0.1)
-        self.load_repair_data()
-        self.load_parts()
+        await asyncio.to_thread(self.load_repair_data)
+        await asyncio.to_thread(self.load_parts)
         self._refresh_content()
     
     def _refresh_content(self):
