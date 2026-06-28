@@ -29,7 +29,10 @@ def get_repair_orders(
                    v.model,
                    e.name as mechanic_name,
                    q.net_total as quotation_total,
-                   (SELECT COUNT(*) FROM parts_usage pu WHERE pu.repair_id = ro.id) as parts_usage_count
+                   (SELECT COUNT(*) FROM parts_usage pu WHERE pu.repair_id = ro.id) as parts_usage_count,
+                   (SELECT COUNT(*) FROM quotation_items qi
+                    INNER JOIN quotations q ON qi.quotation_id = q.id
+                    WHERE q.job_order_id = ro.job_order_id AND q.status = 'approved' AND qi.part_id IS NOT NULL) as quotation_parts_count
             FROM repair_orders ro
             LEFT JOIN job_orders jo ON ro.job_order_id = jo.id
             LEFT JOIN customers c ON jo.customer_id = c.id
@@ -86,7 +89,10 @@ def get_repair_order(repair_id: int, user: dict = Depends(authenticate_user)):
                    jo.job_no, jo.problem_description,
                    c.name as customer_name, c.phone as customer_phone,
                    v.plate_number, b.name as brand, v.model, v.year, v.color,
-                   e.name as mechanic_name
+                   e.name as mechanic_name,
+                   (SELECT COUNT(*) FROM quotation_items qi
+                    INNER JOIN quotations q ON qi.quotation_id = q.id
+                    WHERE q.job_order_id = ro.job_order_id AND q.status = 'approved' AND qi.part_id IS NOT NULL) as quotation_parts_count
             FROM repair_orders ro
             LEFT JOIN job_orders jo ON ro.job_order_id = jo.id
             LEFT JOIN customers c ON jo.customer_id = c.id
@@ -430,11 +436,12 @@ def pull_quotation_parts(
         if not job_order_id:
             raise HTTPException(status_code=400, detail="Repair order is not associated with any Job Order")
             
-        # 2. Find approved quotation for this job order
-        cursor.execute("SELECT id FROM quotations WHERE job_order_id = %s AND status = 'approved'", (job_order_id,))
+        # 2. Find approved quotation for this job order (most recent one)
+        cursor.execute("SELECT id FROM quotations WHERE job_order_id = %s AND status = 'approved' ORDER BY id DESC LIMIT 1", (job_order_id,))
         quotation = cursor.fetchone()
         if not quotation:
             raise HTTPException(status_code=404, detail="No approved quotation found for this Job Order")
+
             
         quotation_id = quotation["id"]
         
@@ -442,7 +449,7 @@ def pull_quotation_parts(
         cursor.execute("""
             SELECT qi.part_id, SUM(qi.qty) as qty, p.name as part_name, p.cost_price, p.stock_qty
             FROM quotation_items qi
-            JOIN parts p ON qi.part_id = p.id
+            LEFT JOIN parts p ON qi.part_id = p.id
             WHERE qi.quotation_id = %s AND qi.part_id IS NOT NULL
             GROUP BY qi.part_id, p.name, p.cost_price, p.stock_qty
         """, (quotation_id,))
@@ -465,21 +472,26 @@ def pull_quotation_parts(
         to_withdraw = []
         for qp in quoted_parts:
             part_id = qp["part_id"]
-            qty_quoted = qp["qty"]
-            qty_used = already_used_map.get(part_id, 0)
+            if not qp.get("part_name"):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Part ID {part_id} in quotation is not found in inventory"
+                )
+            qty_quoted = int(qp["qty"] or 0)
+            qty_used = int(already_used_map.get(part_id, 0))
             qty_to_withdraw = qty_quoted - qty_used
             
             if qty_to_withdraw > 0:
-                # Validate stock level
-                if qp["stock_qty"] < qty_to_withdraw:
+                stock_qty = int(qp["stock_qty"] or 0)
+                if stock_qty < qty_to_withdraw:
                     raise HTTPException(
                         status_code=400,
-                        detail=f"Insufficient stock for {qp['part_name']}. Required: {qty_to_withdraw}, Available: {qp['stock_qty']}"
+                        detail=f"Insufficient stock for {qp['part_name']}. Required: {qty_to_withdraw}, Available: {stock_qty}"
                     )
                 to_withdraw.append({
                     "part_id": part_id,
                     "qty": qty_to_withdraw,
-                    "cost_price": qp["cost_price"],
+                    "cost_price": float(qp["cost_price"] or 0),
                     "part_name": qp["part_name"]
                 })
                 

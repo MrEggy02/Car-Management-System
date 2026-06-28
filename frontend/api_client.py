@@ -11,7 +11,7 @@ class APIClient:
     def __init__(self, username: str = None, password: str = None):
         self.username = username
         self.password = password
-        self.mock_mode = APIClient.GLOBAL_MOCK_MODE
+        self.mock_mode = False
 
     def _get_auth(self):
         if self.username and self.password:

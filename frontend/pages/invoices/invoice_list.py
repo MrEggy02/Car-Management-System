@@ -390,17 +390,6 @@ class InvoiceListContent:
         )
         
         actions_list = [view_btn, print_btn]
-        if payment_status == "paid":
-            delivery_btn = ft.Container(
-                content=ft.Row([
-                    ft.Icon(ft.Icons.LOCAL_SHIPPING, size=16, color=self.success_color),
-                    ft.Text("ໃບສົ່ງມອບ", size=12, color=self.success_color),
-                ], spacing=4),
-                on_click=lambda e, iid=invoice_id: self.print_delivery_note(iid),
-                padding=ft.Padding(left=8, right=8, top=4, bottom=4),
-                border_radius=6,
-            )
-            actions_list.append(delivery_btn)
         if payment_status == "pending":
             pay_btn = ft.Container(
                 content=ft.Row([
@@ -681,15 +670,6 @@ class InvoiceListContent:
                 style=ft.ButtonStyle(bgcolor=self.primary_color, color=ft.Colors.WHITE),
             ),
         ]
-        if payment_status == "paid":
-            dialog_actions.append(
-                ft.ElevatedButton(
-                    "ພິມໃບສົ່ງມອບລົດ",
-                    icon=ft.Icons.LOCAL_SHIPPING,
-                    on_click=lambda e: (self._close_dialog(dialog), self.print_delivery_note(invoice.get('id'))),
-                    style=ft.ButtonStyle(bgcolor=self.success_color, color=ft.Colors.WHITE),
-                )
-            )
 
         dialog = ft.AlertDialog(
             modal=True,

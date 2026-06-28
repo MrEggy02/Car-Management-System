@@ -562,6 +562,7 @@ class RepairListContent:
         start_date_str = order.get("start_date", "")
         end_date_str   = order.get("end_date", "")
         parts_usage_count = order.get("parts_usage_count", 0)
+        quotation_parts_count = order.get("quotation_parts_count", 0)
 
         row_bg = ft.Colors.GREY_50 if index % 2 == 0 else ft.Colors.WHITE
 
@@ -589,7 +590,7 @@ class RepairListContent:
             padding=ft.Padding(left=10, right=10, top=4, bottom=4),
             on_click=(
                 None if is_completed
-                else lambda e, rid=repair_id, cur=status, count=parts_usage_count: self.show_update_status_dialog(rid, cur, count)
+                else lambda e, rid=repair_id, cur=status, used=parts_usage_count, quoted=quotation_parts_count: self.show_update_status_dialog(rid, cur, used, quoted)
             ),
         )
 
@@ -810,7 +811,7 @@ class RepairListContent:
         self.navigate("repair_detail", repair_id=repair_id, read_only=read_only)
 
     # ─────────────────────────── STATUS STEPPER DIALOG ───────────────────────────
-    def show_update_status_dialog(self, repair_id: int, current_status: str, parts_usage_count: int = 0):
+    def show_update_status_dialog(self, repair_id: int, current_status: str, parts_usage_count: int = 0, quotation_parts_count: int = 0):
         if current_status == "completed":
             self.show_snack_bar(get_text("cannot_update_completed_status"), is_error=True)
             return
@@ -876,8 +877,8 @@ class RepairListContent:
                 self.close_dialog(dialog)
                 return
             if new_status == "completed":
-                if parts_usage_count == 0:
-                    self.show_snack_bar("ກະລຸນາບັນທຶກການເບິກອາໄຫຼ່ໃຊ້ຈິງກ່ອນກົດສຳເລັດ", is_error=True)
+                if quotation_parts_count > 0 and parts_usage_count == 0:
+                    self.show_snack_bar(get_text("must_withdraw_parts_before_complete"), is_error=True)
                     return
                 confirm_dialog = ft.AlertDialog(
                     modal=True,

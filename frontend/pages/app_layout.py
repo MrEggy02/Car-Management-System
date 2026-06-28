@@ -436,7 +436,7 @@ class AppLayout:
                 self.sidebar_manager.update_arrow_icons()
                 self.page.update()
 
-        if index in range(19, 22) and not self.invoice_menu_expanded:
+        if index in [20, 38] and not self.invoice_menu_expanded:
             self.invoice_menu_expanded = True
             if hasattr(self.sidebar_manager, 'invoice_submenu_column') and self.sidebar_manager.invoice_submenu_column:
                 self.sidebar_manager.invoice_submenu_column.visible = True
@@ -495,7 +495,7 @@ class AppLayout:
             "invoice_list": 20,
             "invoice_detail": 21,
             "purchase_order_create": 22,
-            "purchase_order_list": 23,
+            "purchase_order_list": 35,
             "purchase_order_detail": 24,
             "purchase_order_receive": 25,
             "stock_movement": 26,
@@ -511,6 +511,7 @@ class AppLayout:
             "purchase_management": 35,
             "receiving_management": 36,
             "receiving_po_list": 37,
+            "delivery_note_list": 38,
         }
 
         # Store IDs for pages

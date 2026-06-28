@@ -25,7 +25,6 @@ class CustomerListContent:
         self.current_dialog = None
         self.customers_data = []
         self.filtered_customers = []
-        self.all_vehicles = []  # Cache all vehicles for detail dialogs
         self.search_input = None
         self.current_page = 1
         self.items_per_page = 10
@@ -424,27 +423,13 @@ class CustomerListContent:
             print(f"Error loading brands: {ex}")
             self.brands_list = []
     
-    def load_all_vehicles(self):
-        """Load all vehicles once for caching (used in detail/ edit dialogs)"""
-        try:
-            self.all_vehicles = self.client.get_vehicles() or []
-            # Enrich with brand names
-            for vehicle in self.all_vehicles:
-                brand_id = vehicle.get('brand_id')
-                if brand_id:
-                    brand = next((b for b in self.brands_list if b.get('id') == brand_id), None)
-                    vehicle['brand_name'] = brand.get('name') if brand else "-"
-                else:
-                    vehicle['brand_name'] = "-"
-        except Exception as ex:
-            print(f"Error loading vehicles: {ex}")
-            self.all_vehicles = []
+
     
     async def _delayed_load(self):
-        await asyncio.sleep(0.2)
-        await asyncio.to_thread(self.load_brands)
-        await asyncio.sleep(0.1)
-        await asyncio.to_thread(self.load_data)
+        await asyncio.gather(
+            asyncio.to_thread(self.load_brands),
+            asyncio.to_thread(self.load_data)
+        )
     
     def load_data(self):
         if self.is_loading:
@@ -457,9 +442,6 @@ class CustomerListContent:
             self.customers_data = self.client.get_customers_with_vehicles()
             self.filtered_customers = self.customers_data.copy()
             print(f"DEBUG: Loaded {len(self.customers_data)} customers with vehicle counts")
-            
-            # Load all vehicles once for caching (for detail/edit dialogs)
-            self.load_all_vehicles()
             
             self.display_customers()
             
@@ -533,8 +515,19 @@ class CustomerListContent:
             self.show_snackbar(f"❌ {get_text('error')}", is_error=True)
             return
         
-        # Get vehicles for this customer from cached all_vehicles
-        vehicles = [v for v in self.all_vehicles if v.get('customer_id') == customer_id]
+        # Get vehicles dynamically for this customer
+        try:
+            vehicles = self.client.get_vehicles(customer_id=customer_id) or []
+            for vehicle in vehicles:
+                brand_id = vehicle.get('brand_id')
+                if brand_id:
+                    brand = next((b for b in self.brands_list if b.get('id') == brand_id), None)
+                    vehicle['brand_name'] = brand.get('name') if brand else "-"
+                else:
+                    vehicle['brand_name'] = "-"
+        except Exception as ex:
+            print(f"Error loading vehicles for customer details: {ex}")
+            vehicles = []
         
         dialog = show_detail_dialog(customer, vehicles, self.brands_list, self.primary_color, self._close_dialog)
         self._open_dialog(dialog)
@@ -545,8 +538,19 @@ class CustomerListContent:
             self.show_snackbar(f"❌ {get_text('error')}", is_error=True)
             return
         
-        # Get vehicles for this customer from cached all_vehicles
-        vehicles = [v for v in self.all_vehicles if v.get('customer_id') == customer_id]
+        # Get vehicles dynamically for this customer
+        try:
+            vehicles = self.client.get_vehicles(customer_id=customer_id) or []
+            for vehicle in vehicles:
+                brand_id = vehicle.get('brand_id')
+                if brand_id:
+                    brand = next((b for b in self.brands_list if b.get('id') == brand_id), None)
+                    vehicle['brand_name'] = brand.get('name') if brand else "-"
+                else:
+                    vehicle['brand_name'] = "-"
+        except Exception as ex:
+            print(f"Error loading vehicles for customer edit: {ex}")
+            vehicles = []
         
         def on_save_customer(update_data):
             try:
@@ -579,8 +583,6 @@ class CustomerListContent:
                     }
                     if callback:
                         callback(new_vehicle)
-                    # Update cache
-                    self.all_vehicles.append(new_vehicle)
                     self.show_snackbar(get_text("vehicle_added_successfully"), is_error=False)
             except Exception as err:
                 self.show_snackbar(f"{get_text('error')}: {err}", is_error=True)
@@ -606,11 +608,6 @@ class CustomerListContent:
                 }
                 if callback:
                     callback(updated_vehicle)
-                # Update cache
-                for i, v in enumerate(self.all_vehicles):
-                    if v.get('id') == vehicle_id:
-                        self.all_vehicles[i] = updated_vehicle
-                        break
                 self.show_snackbar(f"✅ {get_text('edit_success')}", is_error=False)
             except Exception as err:
                 self.show_snackbar(f"{get_text('error')}: {err}", is_error=True)
@@ -620,8 +617,6 @@ class CustomerListContent:
                 self.client.delete_vehicle(vehicle_id)
                 if callback:
                     callback(vehicles)
-                # Update cache
-                self.all_vehicles = [v for v in self.all_vehicles if v.get('id') != vehicle_id]
                 self.show_snackbar(get_text("vehicle_deleted_successfully"), is_error=False)
             except Exception as err:
                 self.show_snackbar(f"{get_text('error')}: {err}", is_error=True)

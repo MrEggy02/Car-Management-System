@@ -554,6 +554,7 @@ LO: Dict[str, str] = {
     "select_new_status": "ເລືອກສະຖານະໃໝ່",
     "confirm_complete_repair": "ຢືນຢັນການສຳເລັດ",
     "confirm_complete_repair_msg": "ທ່ານແນ່ໃຈບໍ່ທີ່ຈະໝາຍວ່ານີ້ສຳເລັດ?",
+    "must_withdraw_parts_before_complete": "ກະລຸນາບັນທຶກການເບິກອາໄຫຼ່ໃຊ້ຈິງກ່ອນກົດສຳເລັດ",
     "duration_label": "ໄລຍະເວລາ",
     "cannot_update_completed_status": "ບໍ່ສາມາດອັບເດດສະຖານະທີ່ສຳເລັດແລ້ວ",
     # Repair Detail Page
@@ -2509,6 +2510,7 @@ EN: Dict[str, str] = {
     "select_new_status": "Select New Status",
     "confirm_complete_repair": "Confirm Completion",
     "confirm_complete_repair_msg": "Are you sure you want to mark this repair as completed?",
+    "must_withdraw_parts_before_complete": "Please record actual parts withdrawal before marking as completed",
     "duration_label": "Duration",
     "cannot_update_completed_status": "Cannot update a completed repair status",
     "goods_receipt_history_title": "Goods Receipt History",

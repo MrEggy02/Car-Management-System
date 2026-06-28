@@ -64,7 +64,7 @@ class ContentManager:
         elif index == 22:
             content = self._get_purchase_order_create_content()
         elif index == 23:
-            content = self._get_purchase_order_list_content()
+            content = self._get_purchase_management_content()
         elif index == 24:
             content = self._get_purchase_order_detail_content()
         elif index == 25:
@@ -94,6 +94,8 @@ class ContentManager:
             content = self._get_receiving_management_content()
         elif index == 37:
             content = self._get_receiving_po_list_content()
+        elif index == 38:
+            content = self._get_delivery_note_list_content()
         else:
             content = self._get_placeholder(f"📄 {get_text('under_development')}")
         
@@ -517,6 +519,16 @@ class ContentManager:
     def _get_receiving_po_list_content(self):
         from pages.purchase.receiving_po_list import ReceivingPoListContent
         return ReceivingPoListContent(
+            page=self.parent.page,
+            client=self.parent.client,
+            user=self.parent.user,
+            navigate=self.parent.navigate_to
+        ).build()
+
+    def _get_delivery_note_list_content(self):
+        """ໜ້າລາຍຊື່ໃບສົ່ງມອບລົດ"""
+        from pages.invoices.delivery_note_list import DeliveryNoteListContent
+        return DeliveryNoteListContent(
             page=self.parent.page,
             client=self.parent.client,
             user=self.parent.user,

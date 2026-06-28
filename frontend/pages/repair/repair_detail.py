@@ -469,10 +469,12 @@ class RepairDetailContent:
             )
 
         pull_parts_btn = None
-        if status != "completed" and self.repair_data.get('quotation_items') and not getattr(self, 'read_only', False):
-            has_parts = any(item.get('item_type') == 'part' for item in self.repair_data.get('quotation_items', []))
-            if has_parts:
-                pull_parts_btn = ft.ElevatedButton(
+        quotation_parts_count = int(data.get("quotation_parts_count") or 0)
+        has_quotation_parts = quotation_parts_count > 0 or any(
+            item.get('item_type') == 'part' for item in quotation_items
+        )
+        if status != "completed" and has_quotation_parts and not getattr(self, 'read_only', False):
+            pull_parts_btn = ft.ElevatedButton(
                     content=ft.Row([
                         ft.Icon(ft.Icons.DOWNLOAD, size=14, color=ft.Colors.WHITE),
                         ft.Text(get_text("pull_quotation_parts"), size=12, color=ft.Colors.WHITE, weight=ft.FontWeight.W_600),
@@ -729,8 +731,7 @@ class RepairDetailContent:
         try:
             result = self.client.add_part_usage(self.repair_id, part_id, qty)
             if result:
-                dialog.open = False
-                self.current_dialog = None
+                self._close_dialog(dialog)
                 self.load_repair_data()
                 self.load_parts()
                 self._refresh_content()
@@ -803,8 +804,7 @@ class RepairDetailContent:
         try:
             result = self.client.delete_part_usage(self.repair_id, usage_id)
             if result:
-                dialog.open = False
-                self.current_dialog = None
+                self._close_dialog(dialog)
                 self.load_repair_data()
                 self.load_parts()
                 self._refresh_content()
@@ -848,6 +848,16 @@ class RepairDetailContent:
             ], spacing=4)
         except Exception:
             return ft.Text("-", size=13, color="#94A3B8")
+
+    def _quotation_requires_parts(self) -> bool:
+        if self.repair_data and int(self.repair_data.get("quotation_parts_count") or 0) > 0:
+            return True
+        items = self.repair_data.get("quotation_items", []) if self.repair_data else []
+        return any(item.get("item_type") == "part" for item in items)
+
+    def _has_parts_usage(self) -> bool:
+        usage = self.repair_data.get("parts_usage", []) if self.repair_data else []
+        return len(usage) > 0
 
     def show_update_status_dialog(self, e):
         current_status = self.repair_data.get("status", "working")
@@ -919,6 +929,9 @@ class RepairDetailContent:
                 return
 
             if new_status == "completed":
+                if self._quotation_requires_parts() and not self._has_parts_usage():
+                    self.show_snack_bar(get_text("must_withdraw_parts_before_complete"), is_error=True)
+                    return
                 confirm_dialog = ft.AlertDialog(
                     modal=True,
                     shape=ft.RoundedRectangleBorder(radius=16),
@@ -1012,21 +1025,16 @@ class RepairDetailContent:
     
     def _open_dialog(self, dialog):
         try:
-            if self.current_dialog:
-                self.current_dialog.open = False
-                if self.current_dialog in self.page.overlay:
-                    self.page.overlay.remove(self.current_dialog)
             self.current_dialog = dialog
-            self.page.overlay.append(dialog)
-            dialog.open = True
-            self.page.update()
+            self.page.show_dialog(dialog)
         except Exception as e:
             print(f"DEBUG: Error opening dialog: {e}")
     
     def _close_dialog(self, dialog):
         try:
-            dialog.open = False
-            self.page.update()
+            self.page.pop_dialog()
+            if self.current_dialog is dialog:
+                self.current_dialog = None
         except Exception as ex:
             print(f"DEBUG: Error closing dialog: {ex}")
     
@@ -1067,7 +1075,7 @@ class RepairDetailContent:
                 ft.TextButton(get_text("cancel"), on_click=lambda e: self._close_dialog(confirm_dialog),
                               style=ft.ButtonStyle(color="#64748B")),
                 ft.ElevatedButton(get_text("confirm"),
-                    on_click=lambda e: self._do_pull_quotation_parts(confirm_dialog),
+                    on_click=lambda e: self.page.run_task(self._pull_quotation_parts_async, confirm_dialog),
                     style=ft.ButtonStyle(bgcolor=ft.Colors.GREEN_600, color=ft.Colors.WHITE,
                                          shape=ft.RoundedRectangleBorder(radius=8))),
             ],
@@ -1075,20 +1083,21 @@ class RepairDetailContent:
         )
         self._open_dialog(confirm_dialog)
 
-    def _do_pull_quotation_parts(self, dialog):
+    async def _pull_quotation_parts_async(self, dialog):
+        self._close_dialog(dialog)
         try:
-            self._close_dialog(dialog)
-            self.page.update()
-            
-            result = self.client.pull_quotation_parts(self.repair_id)
+            result = await asyncio.to_thread(self.client.pull_quotation_parts, self.repair_id)
             if result:
-                self.load_repair_data()
-                self.load_parts()
+                await asyncio.to_thread(self.load_repair_data)
+                await asyncio.to_thread(self.load_parts)
                 self._refresh_content()
                 self.show_snack_bar(f"✅ {get_text('pull_parts_success')}", is_error=False)
         except Exception as ex:
             error_msg = str(ex)
-            if "already been pulled" in error_msg.lower() or "no parts are listed" in error_msg.lower():
+            lower = error_msg.lower()
+            if "already been pulled" in lower or "no parts are listed" in lower:
                 self.show_snack_bar(get_text("no_new_parts_to_pull"), is_error=True)
+            elif "insufficient stock" in lower:
+                self.show_snack_bar(error_msg, is_error=True)
             else:
                 self.show_snack_bar(f"Error: {error_msg}", is_error=True)

@@ -20,12 +20,15 @@ class PurchaseOrderCreateContent:
         self.success_color = "#10B981"
         self.suppliers = []
         self.parts = []
+        self.categories = []
         self.selected_supplier_id = None
+        self.selected_category_id = None
         self.items = []
         self.items_list = None
         self.parts_search = None
         self.parts_results = None
         self.supplier_dropdown = None
+        self.category_dropdown = None
         self.total_text = None
         self.content_area = None
         self.create_btn = None
@@ -113,6 +116,10 @@ class PurchaseOrderCreateContent:
         try:
             self.suppliers = self.client.get_suppliers()
             self.parts = self.client.get_parts()
+            try:
+                self.categories = self.client.get_active_part_categories()
+            except:
+                self.categories = []
             self._build_form()
         except Exception as ex:
             print(f"Error loading data: {ex}")
@@ -159,14 +166,27 @@ class PurchaseOrderCreateContent:
             filled=True,
             content_padding=ft.Padding(left=14, right=14, top=10, bottom=10),
         )
-        self.supplier_dropdown.on_change = self.on_supplier_change
+        
+        apply_supplier_btn = ft.ElevatedButton(
+            content=ft.Row([
+                ft.Icon(ft.Icons.SEARCH, size=16, color=ft.Colors.WHITE),
+                ft.Text(get_text("select") if get_text("select") != "select" else "ບັນທຶກ", size=13, color=ft.Colors.WHITE),
+            ], spacing=6, tight=True),
+            on_click=self.apply_supplier_filter,
+            style=ft.ButtonStyle(
+                bgcolor=self.primary_color,
+                shape=ft.RoundedRectangleBorder(radius=8),
+                elevation=0,
+                padding=ft.Padding(left=14, right=14, top=12, bottom=12),
+            ),
+        )
         
         supplier_section = ft.Container(
             content=ft.Column([
                 ft.Row([ft.Icon(ft.Icons.BUSINESS, size=16, color=self.primary_color), ft.Text(get_text("supplier_info"), size=14, weight=ft.FontWeight.BOLD, color="#1E293B")], spacing=6),
                 ft.Divider(height=1, color=ft.Colors.GREY_200),
                 ft.Container(height=8),
-                self.supplier_dropdown,
+                ft.Row([self.supplier_dropdown, apply_supplier_btn], spacing=8, vertical_alignment=ft.CrossAxisAlignment.CENTER),
             ], spacing=0),
             padding=ft.Padding(left=12, right=12, top=12, bottom=12),
             bgcolor=ft.Colors.WHITE,
@@ -190,9 +210,15 @@ class PurchaseOrderCreateContent:
             prefix_icon=ft.Icons.SEARCH,
             border_color=ft.Colors.TRANSPARENT,
             content_padding=ft.Padding(left=14, right=14, top=10, bottom=10),
-            expand=True,
             on_change=self.search_parts,
         )
+        
+        self.category_chips_row = ft.Row(wrap=True, spacing=6, run_spacing=6)
+        self._build_category_chips()
+        
+        search_row = ft.Row([
+            self.parts_search,
+        ], spacing=8)
         
         self.parts_results = ft.Column(spacing=8, scroll=ft.ScrollMode.AUTO, height=300)
         
@@ -201,7 +227,9 @@ class PurchaseOrderCreateContent:
                 ft.Row([ft.Icon(ft.Icons.SHOPPING_CART, size=16, color=self.primary_color), ft.Text(get_text("select_parts"), size=14, weight=ft.FontWeight.BOLD, color="#1E293B")], spacing=6),
                 ft.Divider(height=1, color=ft.Colors.GREY_200),
                 ft.Container(height=8),
-                self.parts_search,
+                search_row,
+                ft.Container(height=6),
+                self.category_chips_row,
                 ft.Container(height=8),
                 ft.Container(
                     content=self.parts_results,
@@ -292,21 +320,20 @@ class PurchaseOrderCreateContent:
         # Show all parts initially (no supplier selected yet)
         self.search_parts(None)
         self.page.update()
-    
-    def on_supplier_change(self, e):
-        new_supplier_id = int(e.control.value) if e.control.value else None
+
+    def apply_supplier_filter(self, e):
+        val = self.supplier_dropdown.value if self.supplier_dropdown else ""
+        new_supplier_id = int(val) if val and val != "" else None
         # If items already exist, block manual supplier change
         if self.items and new_supplier_id != self.selected_supplier_id:
-            # Revert dropdown to the locked supplier
             if self.supplier_dropdown:
                 self.supplier_dropdown.value = str(self.selected_supplier_id) if self.selected_supplier_id else ""
             self.show_snack_bar(
-                "ບໍ່ສາມາດປ່ຽນຜູ້ສະໜອງໄດ້ ກະລຸນາລຶບອາໄຫຼ່ທີ່ເລືອກໄວ້ກ່ອນ",
+                "ບໍ່ສາມາດປ່ຽນຜູ້ສະໜອງໄດ້ ກະລຸນາລຶບອາໄຫລ່ທີ່ເລືອກໄວ້ກ່ອນ",
                 is_error=True
             )
             self.page.update()
             return
-        # If supplier changed (no items), clear items and refresh
         if new_supplier_id != self.selected_supplier_id:
             self.items = []
             self.update_items_display()
@@ -315,7 +342,55 @@ class PurchaseOrderCreateContent:
             self.parts_search.value = ""
         self.search_parts(None)
         self.page.update()
-    
+
+    def on_supplier_change(self, e):
+        pass  # Replaced by apply_supplier_filter button
+
+    def _build_category_chips(self):
+        self.category_chips_row.controls.clear()
+        # "All" chip
+        all_selected = self.selected_category_id is None
+        all_chip = ft.Container(
+            content=ft.Text(f"ທັງໝົດ", size=11, color=ft.Colors.WHITE if all_selected else "#1E293B", weight=ft.FontWeight.W_600 if all_selected else ft.FontWeight.NORMAL),
+            bgcolor=self.primary_color if all_selected else ft.Colors.GREY_200,
+            border_radius=20,
+            padding=ft.Padding(left=12, right=12, top=4, bottom=4),
+            on_click=lambda e: self.select_category(None),
+            ink=True,
+        )
+        self.category_chips_row.controls.append(all_chip)
+        for cat in self.categories:
+            cat_id = cat.get('id')
+            cat_name = cat.get('name', '')
+            selected = self.selected_category_id == cat_id
+            chip = ft.Container(
+                content=ft.Text(cat_name, size=11, color=ft.Colors.WHITE if selected else "#1E293B", weight=ft.FontWeight.W_600 if selected else ft.FontWeight.NORMAL),
+                bgcolor=self.primary_color if selected else ft.Colors.GREY_200,
+                border_radius=20,
+                padding=ft.Padding(left=12, right=12, top=4, bottom=4),
+                on_click=lambda e, cid=cat_id: self.select_category(cid),
+                ink=True,
+            )
+            self.category_chips_row.controls.append(chip)
+
+    def select_category(self, category_id):
+        self.selected_category_id = category_id
+        self._build_category_chips()
+        self.search_parts(None)
+        self.page.update()
+
+    def on_category_change(self, e):
+        val = e.control.value
+        if val and val != "":
+            try:
+                self.selected_category_id = int(val)
+            except (ValueError, TypeError):
+                self.selected_category_id = None
+        else:
+            self.selected_category_id = None
+        self.search_parts(None)
+        self.page.update()
+
     def search_parts(self, e):
         keyword = ""
         if self.parts_search and self.parts_search.value:
@@ -328,6 +403,10 @@ class PurchaseOrderCreateContent:
         else:
             # No supplier yet — show all parts
             results = list(self.parts)
+            
+        # Filter by category if selected
+        if self.selected_category_id is not None:
+            results = [p for p in results if int(p.get("category_id") or 0) == self.selected_category_id]
         
         # Further filter by keyword if provided
         if keyword:
@@ -337,6 +416,8 @@ class PurchaseOrderCreateContent:
             for part in results[:50]:
                 part_id = part.get('id')
                 part_name = part.get('name', '')
+                category_name = part.get('category_name') or "ບໍ່ລະບຸປະເພດ"
+                supplier_name = part.get('supplier_name') or "ບໍ່ລະບຸຜູ້ສະໜອງ"
                 current_stock = part.get('stock_qty', 0)
                 min_stock = part.get('min_stock', 5)
                 
@@ -369,6 +450,7 @@ class PurchaseOrderCreateContent:
                         ),
                         ft.Column([
                             ft.Text(part_name, size=13, weight=ft.FontWeight.W_600, color="#1E293B"),
+                            ft.Text(f"{get_text('category')}: {category_name} | {get_text('supplier')}: {supplier_name}", size=11, color="#64748B"),
                             ft.Row([
                                 ft.Container(
                                     content=ft.Text(stock_text, size=10, color=stock_color),
@@ -522,13 +604,10 @@ class PurchaseOrderCreateContent:
         self._open_dialog(dialog)
     
     def _open_dialog(self, dialog):
-        self.page.overlay.append(dialog)
-        dialog.open = True
-        self.page.update()
+        self.page.show_dialog(dialog)
     
     def _close_dialog(self, dialog):
-        dialog.open = False
-        self.page.update()
+        self.page.pop_dialog()
     
     def update_items_display(self):
         self.items_list.controls.clear()
