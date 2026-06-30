@@ -790,7 +790,6 @@ INSERT INTO `services` (`id`, `name`, `price`, `description`, `estimated_time`) 
 (4, 'ປ່ຽນນ້ຳມັນເຄື່ອງ', 650000.00, 'ປ່ຽນນ້ຳມັນເຄື່ອງຄົບຊຸດ ພ້ອມກວດເຊັກສະພາບທົ່ວໄປ', 60),
 (5, 'ປ່ຽນຜ້າເບຼກໜ້າ', 750000.00, 'ປ່ຽນຜ້າເບຼກໃໝ່ (ຊຸດ 2 ລໍ້ໜ້າ)', 120),
 (6, 'ລ້າງວາວ ແລະ ພອດໄອເສຍ ', 2200000.00, 'ລ້າງຄາບຂີ້ໝິ່ນ (Carbon Cleaning) ໃນເຄື່ອງຈັກ', 300),
-(7, 'ລ້າງວາວ ແລະ ພອດໄອເສຍ ', 2200000.00, 'ລ້າງຄາບຂີ້ໝິ່ນ (Carbon Cleaning) ໃນເຄື່ອງຈັກ', 300),
 (8, 'ປ່ຽນຜ້າເບຼກໃໝ່ (ຊຸດ 2 ລໍ້ຫຼັງ)', 650000.00, 'ປ່ຽນຜ້າເບຼກໃໝ່ (ຊຸດ 2 ລໍ້ຫຼັງ)', 120),
 (9, 'ປ່ຽນນ້ຳມັນເກຍ', 850000.00, 'ປ່ຽນນ້ຳມັນເກຍອໍໂຕ້ (ATF)', 120),
 (10, 'ປ່ຽນຫົວທຽນ', 400000.00, 'ປ່ຽນຫົວທຽນມາດຕະຖານ 4 ຫົວ', 60),
@@ -981,8 +980,6 @@ INSERT INTO `vehicles` (`id`, `customer_id`, `plate_number`, `model`, `year`, `c
 (10, 9, 'ຜພ 7890', 'Hilux', 2019, 'ເງິນ', NULL),
 (11, 10, 'ພຟ 2468', 'D-Max', 2020, 'ດຳ', NULL),
 (12, 11, 'ຮຮ 7375', 'x1', 2019, 'black', NULL),
-(14, 20, 'ຮຮ 7375', 'x1', 2019, 'black', NULL),
-(15, 22, 'ຮຮ 7375', 'x1', 2019, 'black', NULL),
 (17, 31, 'ກສ 2908', 'x1', 2019, 'white', NULL),
 (18, 24, 'ກຮ 8999', 'x2', 2099, 'white', NULL),
 (19, 32, 'VB 1234', 'etc', 2013, 'ດຳ', NULL),
@@ -1004,7 +1001,8 @@ INSERT INTO `vehicles` (`id`, `customer_id`, `plate_number`, `model`, `year`, `c
 -- Indexes for table `brands`
 --
 ALTER TABLE `brands`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_brand_name` (`name`);
 
 --
 -- Indexes for table `customers`
@@ -1118,6 +1116,7 @@ ALTER TABLE `purchase_items`
 --
 ALTER TABLE `purchase_orders`
   ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_po_no` (`po_no`),
   ADD KEY `supplier_id` (`supplier_id`),
   ADD KEY `created_by` (`created_by`);
 
@@ -1154,7 +1153,8 @@ ALTER TABLE `repair_orders`
 -- Indexes for table `services`
 --
 ALTER TABLE `services`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_service_name` (`name`);
 
 --
 -- Indexes for table `shop`
@@ -1186,6 +1186,7 @@ ALTER TABLE `units`
 --
 ALTER TABLE `vehicles`
   ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_plate_number` (`plate_number`),
   ADD KEY `customer_id` (`customer_id`),
   ADD KEY `vehicles_ibfk_brand` (`brand_id`);
 
@@ -1360,7 +1361,8 @@ ALTER TABLE `goods_receipt_items`
 -- Constraints for table `invoices`
 --
 ALTER TABLE `invoices`
-  ADD CONSTRAINT `invoices_ibfk_1` FOREIGN KEY (`job_order_id`) REFERENCES `job_orders` (`id`);
+  ADD CONSTRAINT `invoices_ibfk_1` FOREIGN KEY (`job_order_id`) REFERENCES `job_orders` (`id`),
+  ADD CONSTRAINT `invoices_ibfk_created_by` FOREIGN KEY (`created_by`) REFERENCES `employees` (`id`) ON DELETE RESTRICT;
 
 --
 -- Constraints for table `job_orders`
@@ -1420,7 +1422,8 @@ ALTER TABLE `purchase_orders`
 ALTER TABLE `quotations`
   ADD CONSTRAINT `fk_quotations_approved_by` FOREIGN KEY (`approved_by`) REFERENCES `employees` (`id`),
   ADD CONSTRAINT `quotations_ibfk_1` FOREIGN KEY (`job_order_id`) REFERENCES `job_orders` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `quotations_ibfk_promotion` FOREIGN KEY (`promotion_id`) REFERENCES `promotions` (`id`) ON DELETE SET NULL;
+  ADD CONSTRAINT `quotations_ibfk_promotion` FOREIGN KEY (`promotion_id`) REFERENCES `promotions` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `quotations_ibfk_created_by` FOREIGN KEY (`created_by`) REFERENCES `employees` (`id`) ON DELETE RESTRICT;
 
 --
 -- Constraints for table `quotation_items`
