@@ -288,6 +288,7 @@ INSERT INTO `job_orders` (`id`, `job_no`, `customer_id`, `vehicle_id`, `receive_
 
 CREATE TABLE `parts` (
   `id` int NOT NULL,
+  `part_code` varchar(100) DEFAULT NULL COMMENT 'ລະຫັດອາໄຫຼ່',
   `name` varchar(255) NOT NULL COMMENT 'ຊື່ອາໄຫຼ່',
   `cost_price` decimal(15,2) DEFAULT '0.00' COMMENT 'ລາຄາຕົ້ນທຶນ',
   `sell_price` decimal(15,2) DEFAULT '0.00' COMMENT 'ລາຄາຂາຍ',
@@ -1063,6 +1064,7 @@ ALTER TABLE `job_orders`
 --
 ALTER TABLE `parts`
   ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `part_code` (`part_code`),
   ADD KEY `supplier_id` (`supplier_id`),
   ADD KEY `parts_ibfk_category` (`category_id`),
   ADD KEY `parts_ibfk_unit` (`unit_id`);

@@ -381,7 +381,8 @@ class APIClient:
         min_stock: int = 5,
         unit_id: Optional[int] = None,
         category_id: Optional[int] = None,
-        supplier_id: Optional[int] = None
+        supplier_id: Optional[int] = None,
+        part_code: Optional[str] = None
     ) -> Dict:
         data = {
             "name": name,
@@ -389,8 +390,9 @@ class APIClient:
             "sell_price": sell_price,
             "stock_qty": stock_qty,
             "min_stock": min_stock,
-            
         }
+        if part_code:
+            data["part_code"] = part_code
         if unit_id:
             data["unit_id"] = unit_id
         if category_id:

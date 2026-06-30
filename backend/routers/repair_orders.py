@@ -115,9 +115,8 @@ def get_repair_order(repair_id: int, user: dict = Depends(authenticate_user)):
             if repair_order.get('brand') is None:
                 repair_order['brand'] = "-"
             
-            # Get parts usage - from parts table
             cursor.execute("""
-                SELECT pu.*, p.name as part_name
+                SELECT pu.*, p.name as part_name, p.part_code
                 FROM parts_usage pu
                 LEFT JOIN parts p ON pu.part_id = p.id
                 WHERE pu.repair_id = %s

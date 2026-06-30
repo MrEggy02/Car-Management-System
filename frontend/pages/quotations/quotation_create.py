@@ -860,7 +860,7 @@ class QuotationCreateContent:
         if self.current_tab == "parts":
             results = self.parts_list
             if keyword:
-                results = [p for p in results if keyword in p.get("name", "").lower()]
+                results = [p for p in results if keyword in p.get("name", "").lower() or (p.get("part_code") and keyword in p.get("part_code", "").lower())]
             if self.current_category_id is not None:
                 results = [p for p in results if p.get("category_id") == self.current_category_id]
             
@@ -878,6 +878,9 @@ class QuotationCreateContent:
                 for part in results[:30]:
                     stock = part.get('stock_qty', 0)
                     min_stock = part.get('min_stock', 5)
+                    part_code = part.get('part_code')
+                    part_name = part.get('name', '-')
+                    display_name = f"[{part_code}] {part_name}" if part_code else part_name
                     
                     if stock <= min_stock:
                         stock_color = "#EF4444"
@@ -892,13 +895,13 @@ class QuotationCreateContent:
                         stock_bg = "#D1FAE5"
                         stock_text = f"{get_text('stock')}: {stock}"
                     
-                    add_callback = functools.partial(self.add_item, "part", part.get('id'), part.get('name'), part.get('sell_price', 0))
+                    add_callback = functools.partial(self.add_item, "part", part.get('id'), display_name, part.get('sell_price', 0))
                     
                     item_card = ft.Container(
                         content=ft.Row([
                             ft.Container(content=ft.Icon(ft.Icons.INVENTORY_2, size=28, color=self.primary_color), bgcolor=ft.Colors.with_opacity(0.1, self.primary_color), border_radius=12, padding=ft.Padding(left=10, right=10, top=10, bottom=10)),
                             ft.Column([
-                                ft.Text(part.get("name", "-"), size=14, weight=ft.FontWeight.W_600, color="#1E293B"),
+                                ft.Text(display_name, size=14, weight=ft.FontWeight.W_600, color="#1E293B"),
                                 ft.Row([
                                     ft.Container(content=ft.Text(stock_text, size=11, color=stock_color), bgcolor=stock_bg, border_radius=12, padding=ft.Padding(left=8, right=8, top=2, bottom=2)),
                                     ft.Text(f"{int(part.get('sell_price', 0)):,} KIP", size=13, weight=ft.FontWeight.W_600, color=self.primary_color),

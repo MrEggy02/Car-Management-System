@@ -249,7 +249,13 @@ def show_add_promotion_dialog(page, primary_color, client, on_close, on_success,
         bgcolor=ft.Colors.WHITE,
         filled=True,
         expand=True,
-        options=[ft.dropdown.Option(key=str(p.get('id')), text=f"{p.get('name')} ({int(p.get('sell_price', 0)):,} KIP)") for p in all_parts]
+        options=[
+            ft.dropdown.Option(
+                key=str(p.get('id')),
+                text=f"[{p.get('part_code')}] {p.get('name')} ({int(p.get('sell_price', 0)):,} KIP)" if p.get('part_code') else f"{p.get('name')} ({int(p.get('sell_price', 0)):,} KIP)"
+            )
+            for p in all_parts
+        ]
     )
     
     def add_part_click(e):
@@ -263,9 +269,11 @@ def show_add_promotion_dialog(page, primary_color, client, on_close, on_success,
         part = next((p for p in all_parts if p.get('id') == part_id), None)
         if part:
             qty_field = ft.TextField(value="1", width=60, text_align=ft.TextAlign.CENTER, border_radius=4, content_padding=ft.Padding(0, 0, 0, 0), keyboard_type=ft.KeyboardType.NUMBER)
+            part_code = part.get('part_code')
+            display_name = f"[{part_code}] {part.get('name')}" if part_code else part.get('name')
             selected_parts.append({
                 'id': part_id,
-                'name': part.get('name'),
+                'name': display_name,
                 'price': part.get('sell_price', 0),
                 'qty_field': qty_field
             })
@@ -751,7 +759,9 @@ def show_edit_promotion_dialog(page, primary_color, client, promo, on_close, on_
         existing_services = client.get_promotion_services(promo.get('id')) or []
         for p in existing_parts:
             qty_field = ft.TextField(value=str(p.get('qty', 1)), width=60, text_align=ft.TextAlign.CENTER, border_radius=4, content_padding=ft.Padding(0, 0, 0, 0), keyboard_type=ft.KeyboardType.NUMBER)
-            selected_parts.append({'id': p.get('part_id'), 'name': p.get('part_name'), 'price': p.get('sell_price', 0), 'qty_field': qty_field})
+            part_code = p.get('part_code')
+            display_name = f"[{part_code}] {p.get('part_name')}" if part_code else p.get('part_name')
+            selected_parts.append({'id': p.get('part_id'), 'name': display_name, 'price': p.get('sell_price', 0), 'qty_field': qty_field})
         for s in existing_services:
             selected_services.append({'id': s.get('service_id'), 'name': s.get('service_name'), 'price': s.get('price', 0)})
     except:
@@ -771,7 +781,13 @@ def show_edit_promotion_dialog(page, primary_color, client, promo, on_close, on_
         bgcolor=ft.Colors.WHITE,
         filled=True,
         expand=True,
-        options=[ft.dropdown.Option(key=str(p.get('id')), text=f"{p.get('name')} ({int(p.get('sell_price', 0)):,} KIP)") for p in all_parts]
+        options=[
+            ft.dropdown.Option(
+                key=str(p.get('id')),
+                text=f"[{p.get('part_code')}] {p.get('name')} ({int(p.get('sell_price', 0)):,} KIP)" if p.get('part_code') else f"{p.get('name')} ({int(p.get('sell_price', 0)):,} KIP)"
+            )
+            for p in all_parts
+        ]
     )
     
     def add_part_click(e):
@@ -785,9 +801,11 @@ def show_edit_promotion_dialog(page, primary_color, client, promo, on_close, on_
         part = next((p for p in all_parts if p.get('id') == part_id), None)
         if part:
             qty_field = ft.TextField(value="1", width=60, text_align=ft.TextAlign.CENTER, border_radius=4, content_padding=ft.Padding(0, 0, 0, 0), keyboard_type=ft.KeyboardType.NUMBER)
+            part_code = part.get('part_code')
+            display_name = f"[{part_code}] {part.get('name')}" if part_code else part.get('name')
             selected_parts.append({
                 'id': part_id,
-                'name': part.get('name'),
+                'name': display_name,
                 'price': part.get('sell_price', 0),
                 'qty_field': qty_field
             })

@@ -132,6 +132,7 @@ def generate_repair_work_order_pdf(repair_id: int) -> bytes:
                            ELSE 'custom'
                        END AS item_type,
                        COALESCE(p.name, s.name, qi.custom_name) AS name,
+                       p.part_code,
                        u.name as unit_name
                 FROM quotation_items qi
                 LEFT JOIN parts p ON qi.part_id = p.id
@@ -144,7 +145,7 @@ def generate_repair_work_order_pdf(repair_id: int) -> bytes:
 
         # 4. Fetch actual parts withdrawn (parts_usage)
         cursor.execute("""
-            SELECT pu.*, p.name as part_name, u.name as unit_name
+            SELECT pu.*, p.name as part_name, p.part_code, u.name as unit_name
             FROM parts_usage pu
             LEFT JOIN parts p ON pu.part_id = p.id
             LEFT JOIN units u ON p.unit_id = u.id
@@ -464,6 +465,7 @@ def generate_repair_work_order_pdf(repair_id: int) -> bytes:
             part_id = item.get('part_id')
             parts_merged[part_id] = {
                 'name': item.get('name', '-'),
+                'part_code': item.get('part_code'),
                 'approved_qty': item.get('qty', 0),
                 'withdrawn_qty': 0,
                 'unit': item.get('unit_name') or 'ລາຍການ'
@@ -478,6 +480,7 @@ def generate_repair_work_order_pdf(repair_id: int) -> bytes:
             # Unplanned part withdrawn!
             parts_merged[part_id] = {
                 'name': usage.get('part_name', '-'),
+                'part_code': usage.get('part_code'),
                 'approved_qty': 0,
                 'withdrawn_qty': qty,
                 'unit': usage.get('unit_name') or 'ລາຍການ'
@@ -511,9 +514,10 @@ def generate_repair_work_order_pdf(repair_id: int) -> bytes:
         else:
             status_note = "ເບີກເພີ່ມ (Extra)"
 
+        part_name_display = f"[{p_info['part_code']}] {p_info['name']}" if p_info.get('part_code') else p_info['name']
         parts_data.append([
             Paragraph(str(part_index), table_cell_center_style),
-            Paragraph(p_info['name'], table_cell_style),
+            Paragraph(part_name_display, table_cell_style),
             Paragraph(str(int(approved_qty)) if approved_qty > 0 else "-", table_cell_center_style),
             Paragraph(str(int(withdrawn_qty)) if withdrawn_qty > 0 else "-", table_cell_center_style),
             Paragraph(unit, table_cell_center_style),
@@ -962,6 +966,7 @@ def generate_quotation_pdf(quotation_id: int) -> bytes:
                        ELSE 'custom'
                    END AS item_type,
                    COALESCE(p.name, s.name, qi.custom_name) AS name,
+                   p.part_code,
                    u.name as unit_name
             FROM quotation_items qi
             LEFT JOIN parts p ON qi.part_id = p.id
@@ -1235,6 +1240,8 @@ def generate_quotation_pdf(quotation_id: int) -> bytes:
 
     for idx, item in enumerate(items, 1):
         name = item.get('name', '-')
+        if item.get('item_type') == 'part' and item.get('part_code'):
+            name = f"[{item.get('part_code')}] {name}"
         qty = item.get('qty', 1)
         unit_price = float(item.get('unit_price', 0) or 0)
         discount_amount = float(item.get('discount_amount', 0) or 0)
@@ -1393,6 +1400,7 @@ def generate_invoice_pdf(invoice_id: int) -> bytes:
                            ELSE 'custom'
                        END AS item_type,
                        COALESCE(p.name, s.name, qi.custom_name) AS name,
+                       p.part_code,
                        u.name as unit_name
                 FROM quotation_items qi
                 LEFT JOIN parts p ON qi.part_id = p.id
@@ -1679,6 +1687,8 @@ def generate_invoice_pdf(invoice_id: int) -> bytes:
     if items:
         for idx, item in enumerate(items, 1):
             name = item.get('name', '-')
+            if item.get('item_type') == 'part' and item.get('part_code'):
+                name = f"[{item.get('part_code')}] {name}"
             qty = item.get('qty', 1)
             unit_price = float(item.get('unit_price', 0) or 0)
             discount_amount = float(item.get('discount_amount', 0) or 0)
@@ -1842,6 +1852,7 @@ def generate_delivery_note_pdf(invoice_id: int) -> bytes:
                            ELSE 'custom'
                        END AS item_type,
                        COALESCE(p.name, s.name, qi.custom_name) AS name,
+                       p.part_code,
                        u.name as unit_name
                 FROM quotation_items qi
                 LEFT JOIN parts p ON qi.part_id = p.id
@@ -2098,6 +2109,8 @@ def generate_delivery_note_pdf(invoice_id: int) -> bytes:
     if items:
         for idx, item in enumerate(items, 1):
             name = item.get('name', '-')
+            if item.get('item_type') == 'part' and item.get('part_code'):
+                name = f"[{item.get('part_code')}] {name}"
             qty = item.get('qty', 1)
             unit_name = item.get('unit_name', '-') or '-'
 
@@ -2878,6 +2891,7 @@ def generate_parts_service_sales_pdf(start_date: str = None, end_date: str = Non
         cursor.execute("""
             SELECT 
                 p.name as part_name,
+                p.part_code,
                 COALESCE(c.name, 'ບໍ່ມີປະເພດ') as category_name,
                 p.stock_qty as current_stock,
                 u.name as unit_name,
@@ -2893,7 +2907,7 @@ def generate_parts_service_sales_pdf(start_date: str = None, end_date: str = Non
             LEFT JOIN quotations q ON qi.quotation_id = q.id
             WHERE qi.part_id IS NOT NULL AND q.status = 'approved'
             AND DATE(q.created_at) BETWEEN %s AND %s
-            GROUP BY p.id, p.name, c.name, u.name, p.stock_qty
+            GROUP BY p.id, p.name, p.part_code, c.name, u.name, p.stock_qty
             ORDER BY total_sales_amount DESC
             LIMIT 30
         """, (start_date, end_date))
@@ -3021,9 +3035,12 @@ def generate_parts_service_sales_pdf(start_date: str = None, end_date: str = Non
         ]
     ]
     for idx, p in enumerate(parts_sales[:15]): # top 15 parts
+        part_name = p.get('part_name', '-')
+        if p.get('part_code'):
+            part_name = f"[{p.get('part_code')}] {part_name}"
         prt_data.append([
             Paragraph(str(idx + 1), table_cell),
-            Paragraph(p.get('part_name', '-'), table_cell),
+            Paragraph(part_name, table_cell),
             Paragraph(p.get('category_name', '-'), table_cell),
             Paragraph(f"{int(p.get('quantity_sold', 0))} {p.get('unit_name', 'ອັນ')}", table_cell),
             Paragraph(format_kip(p.get('total_sales_amount', 0)), table_cell),
@@ -3558,7 +3575,7 @@ def generate_purchase_order_pdf(po_id: int) -> bytes:
 
         # Fetch PO items
         cursor.execute("""
-            SELECT pi.*, p.name as part_name, u.name as unit_name
+            SELECT pi.*, p.name as part_name, p.part_code, u.name as unit_name
             FROM purchase_items pi
             LEFT JOIN parts p ON pi.part_id = p.id
             LEFT JOIN units u ON p.unit_id = u.id
@@ -3821,6 +3838,8 @@ def generate_purchase_order_pdf(po_id: int) -> bytes:
 
     for idx, item in enumerate(items, 1):
         name = item.get('part_name', '-')
+        if item.get('part_code'):
+            name = f"[{item.get('part_code')}] {name}"
         qty = item.get('qty', 1)
         unit_name = item.get('unit_name', '-')
         unit_cost = float(item.get('unit_cost', 0) or 0)

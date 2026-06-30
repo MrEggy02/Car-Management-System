@@ -168,15 +168,16 @@ class PartsContent:
         return ft.Container(
             content=ft.Row([
                 ft.Container(content=ft.Text("#", size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=40, alignment=ft.Alignment(0, 0)),
-                ft.Container(content=ft.Text(get_text('parts_name'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=160, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=8, right=0, top=0, bottom=0)),
-                ft.Container(content=ft.Text(get_text('category'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=90, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=8, right=0, top=0, bottom=0)),
+                ft.Container(content=ft.Text(get_text('parts_code'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=90, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=8, right=0, top=0, bottom=0)),
+                ft.Container(content=ft.Text(get_text('parts_name'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=140, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=8, right=0, top=0, bottom=0)),
+                ft.Container(content=ft.Text(get_text('category'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=80, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=8, right=0, top=0, bottom=0)),
                 ft.Container(content=ft.Text(get_text('parts_stock'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=60, alignment=ft.Alignment(0, 0)),
-                ft.Container(content=ft.Text(get_text('unit'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=50, alignment=ft.Alignment(0, 0)),
-                ft.Container(content=ft.Text(get_text('cost_price'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=90, alignment=ft.Alignment(1, 0), padding=ft.Padding(left=0, right=8, top=0, bottom=0)),
-                ft.Container(content=ft.Text(get_text('sell_price'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=90, alignment=ft.Alignment(1, 0), padding=ft.Padding(left=0, right=8, top=0, bottom=0)),
-                ft.Container(content=ft.Text(get_text('supplier'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=100, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=8, right=0, top=0, bottom=0)),
-                ft.Container(content=ft.Text(get_text('status'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=70, alignment=ft.Alignment(0, 0)),
-                ft.Container(content=ft.Text(get_text('actions'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=90, alignment=ft.Alignment(0, 0)),
+                ft.Container(content=ft.Text(get_text('unit'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=40, alignment=ft.Alignment(0, 0)),
+                ft.Container(content=ft.Text(get_text('cost_price'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=80, alignment=ft.Alignment(1, 0), padding=ft.Padding(left=0, right=8, top=0, bottom=0)),
+                ft.Container(content=ft.Text(get_text('sell_price'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=80, alignment=ft.Alignment(1, 0), padding=ft.Padding(left=0, right=8, top=0, bottom=0)),
+                ft.Container(content=ft.Text(get_text('supplier'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=90, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=8, right=0, top=0, bottom=0)),
+                ft.Container(content=ft.Text(get_text('status'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=60, alignment=ft.Alignment(0, 0)),
+                ft.Container(content=ft.Text(get_text('actions'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=80, alignment=ft.Alignment(0, 0)),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
             padding=ft.Padding(left=8, right=8, top=12, bottom=12),
             bgcolor=ft.Colors.GREY_100,
@@ -221,6 +222,7 @@ class PartsContent:
         """Create a single table row with reduced widths"""
         part_id = part.get('id')
         name = part.get('name', '-')
+        part_code = part.get('part_code') or '-'
         stock_qty = part.get('stock_qty', 0)
         min_stock = part.get('min_stock', 5)
         cost_price = part.get('cost_price', 0)
@@ -299,10 +301,11 @@ class PartsContent:
         )
         
         # Truncate long names
-        display_name = name[:22] + "..." if len(name) > 22 else name
-        display_supplier = supplier_name[:10] + "..." if len(supplier_name) > 10 else supplier_name
-        display_category = category_name[:12] + "..." if len(category_name) > 12 else category_name
-        display_unit = unit_name[:5] + "..." if len(unit_name) > 5 else unit_name
+        display_code = part_code[:12] + "..." if len(part_code) > 12 else part_code
+        display_name = name[:18] + "..." if len(name) > 18 else name
+        display_supplier = supplier_name[:9] + "..." if len(supplier_name) > 9 else supplier_name
+        display_category = category_name[:10] + "..." if len(category_name) > 10 else category_name
+        display_unit = unit_name[:4] + "..." if len(unit_name) > 4 else unit_name
         
         row = ft.Container(
             content=ft.Row([
@@ -312,15 +315,22 @@ class PartsContent:
                     alignment=ft.Alignment(0, 0),
                 ),
                 ft.Container(
+                    content=ft.Text(display_code, size=11, color="#64748B", max_lines=1),
+                    width=90,
+                    alignment=ft.Alignment(-1, 0),
+                    padding=ft.Padding(left=8, right=0, top=0, bottom=0),
+                    tooltip=part_code,
+                ),
+                ft.Container(
                     content=ft.Text(display_name, size=12, weight=ft.FontWeight.W_500, color="#1E293B", max_lines=1),
-                    width=160,
+                    width=140,
                     alignment=ft.Alignment(-1, 0),
                     padding=ft.Padding(left=8, right=0, top=0, bottom=0),
                     tooltip=name,
                 ),
                 ft.Container(
                     content=ft.Text(display_category, size=11, color="#64748B", max_lines=1),
-                    width=90,
+                    width=80,
                     alignment=ft.Alignment(-1, 0),
                     padding=ft.Padding(left=8, right=0, top=0, bottom=0),
                     tooltip=category_name,
@@ -332,37 +342,37 @@ class PartsContent:
                 ),
                 ft.Container(
                     content=ft.Text(display_unit, size=11, color="#64748B"),
-                    width=50,
+                    width=40,
                     alignment=ft.Alignment(0, 0),
                     tooltip=unit_name,
                 ),
                 ft.Container(
                     content=ft.Text(self._format_price(cost_price), size=11, color="#64748B"),
-                    width=90,
+                    width=80,
                     alignment=ft.Alignment(1, 0),
                     padding=ft.Padding(left=0, right=8, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(self._format_price(sell_price), size=12, weight=ft.FontWeight.W_600, color=ft.Colors.GREEN_700),
-                    width=90,
+                    width=80,
                     alignment=ft.Alignment(1, 0),
                     padding=ft.Padding(left=0, right=8, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(display_supplier, size=11, color="#64748B", max_lines=1),
-                    width=100,
+                    width=90,
                     alignment=ft.Alignment(-1, 0),
                     padding=ft.Padding(left=8, right=0, top=0, bottom=0),
                     tooltip=supplier_name,
                 ),
                 ft.Container(
                     content=status_badge,
-                    width=70,
+                    width=60,
                     alignment=ft.Alignment(0, 0),
                 ),
                 ft.Container(
                     content=ft.Row([edit_btn, delete_btn], spacing=4),
-                    width=90,
+                    width=80,
                     alignment=ft.Alignment(0, 0),
                 ),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
@@ -460,6 +470,7 @@ class PartsContent:
             filtered = [
                 part for part in filtered
                 if query in part.get('name', '').lower()
+                or (part.get('part_code') and query in part.get('part_code', '').lower())
                 or (part.get('supplier_name') and query in part.get('supplier_name', '').lower())
             ]
         

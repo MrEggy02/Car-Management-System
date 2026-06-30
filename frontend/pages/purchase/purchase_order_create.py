@@ -410,12 +410,14 @@ class PurchaseOrderCreateContent:
         
         # Further filter by keyword if provided
         if keyword:
-            results = [p for p in results if keyword in p.get("name", "").lower()]
+            results = [p for p in results if keyword in p.get("name", "").lower() or (p.get("part_code") and keyword in p.get("part_code", "").lower())]
         
         if results:
             for part in results[:50]:
                 part_id = part.get('id')
                 part_name = part.get('name', '')
+                part_code = part.get('part_code')
+                display_name = f"[{part_code}] {part_name}" if part_code else part_name
                 category_name = part.get('category_name') or "ບໍ່ລະບຸປະເພດ"
                 supplier_name = part.get('supplier_name') or "ບໍ່ລະບຸຜູ້ສະໜອງ"
                 current_stock = part.get('stock_qty', 0)
@@ -436,7 +438,7 @@ class PurchaseOrderCreateContent:
                     icon=ft.Icons.ADD_CIRCLE_OUTLINE,
                     icon_size=24,
                     icon_color=self.primary_color if not already_added else ft.Colors.GREY_400,
-                    on_click=lambda e, pid=part_id, pname=part_name: self.show_add_item_dialog(pid, pname),
+                    on_click=lambda e, pid=part_id, pname=display_name: self.show_add_item_dialog(pid, pname),
                     disabled=already_added,
                 )
                 
@@ -449,7 +451,7 @@ class PurchaseOrderCreateContent:
                             padding=ft.Padding(left=8, right=8, top=8, bottom=8),
                         ),
                         ft.Column([
-                            ft.Text(part_name, size=13, weight=ft.FontWeight.W_600, color="#1E293B"),
+                            ft.Text(display_name, size=13, weight=ft.FontWeight.W_600, color="#1E293B"),
                             ft.Text(f"{get_text('category')}: {category_name} | {get_text('supplier')}: {supplier_name}", size=11, color="#64748B"),
                             ft.Row([
                                 ft.Container(

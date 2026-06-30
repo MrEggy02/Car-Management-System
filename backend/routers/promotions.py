@@ -145,7 +145,7 @@ def get_promotion_parts(promotion_id: int, user: dict = Depends(authenticate_use
     cursor = db.cursor(dictionary=True)
     try:
         cursor.execute("""
-            SELECT pp.id, pp.part_id, pp.qty, p.name as part_name, p.sell_price
+            SELECT pp.id, pp.part_id, pp.qty, p.name as part_name, p.part_code, p.sell_price
             FROM Promotion_Parts pp
             LEFT JOIN Parts p ON pp.part_id = p.id
             WHERE pp.promotion_id = %s

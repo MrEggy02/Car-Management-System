@@ -26,6 +26,7 @@ def get_parts(user: dict = Depends(authenticate_user)):
 @router.post("/parts")
 def add_part(
     name: str = Form(...),
+    part_code: Optional[str] = Form(None),
     cost_price: float = Form(0),
     sell_price: float = Form(0),
     stock_qty: int = Form(0),
@@ -39,17 +40,22 @@ def add_part(
     db = get_db()
     cursor = db.cursor()
     
+    db_part_code = part_code.strip() if part_code and part_code.strip() else None
+    
     try:
         cursor.execute("""
-            INSERT INTO Parts (name, cost_price, sell_price, stock_qty, min_stock, unit_id, category_id, supplier_id)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-        """, (name, cost_price, sell_price, stock_qty, min_stock, unit_id, category_id, supplier_id))
+            INSERT INTO Parts (part_code, name, cost_price, sell_price, stock_qty, min_stock, unit_id, category_id, supplier_id)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (db_part_code, name, cost_price, sell_price, stock_qty, min_stock, unit_id, category_id, supplier_id))
         db.commit()
         part_id = cursor.lastrowid
         return {"message": "ເພີ່ມອາໄຫຼ່ສຳເລັດ", "id": part_id}
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=400, detail=f"Error: {str(e)}")
+        err_msg = str(e)
+        if "Duplicate entry" in err_msg:
+            raise HTTPException(status_code=400, detail="ລະຫັດອາໄຫຼ່ນີ້ມີໃນລະບົບແລ້ວ")
+        raise HTTPException(status_code=400, detail=f"Error: {err_msg}")
     finally:
         cursor.close()
         db.close()
@@ -58,6 +64,7 @@ def add_part(
 def update_part(
     part_id: int,
     name: str = Form(...),
+    part_code: Optional[str] = Form(None),
     cost_price: float = Form(0),
     sell_price: float = Form(0),
     stock_qty: int = Form(0),
@@ -76,9 +83,12 @@ def update_part(
     if not cursor.fetchone():
         raise HTTPException(status_code=404, detail="ບໍ່ພົບອາໄຫຼ່")
     
+    db_part_code = part_code.strip() if part_code and part_code.strip() else None
+    
     try:
         cursor.execute("""
             UPDATE Parts SET 
+                part_code=%s,
                 name=%s, 
                 cost_price=%s, 
                 sell_price=%s, 
@@ -88,12 +98,15 @@ def update_part(
                 category_id=%s, 
                 supplier_id=%s
             WHERE id=%s
-        """, (name, cost_price, sell_price, stock_qty, min_stock, unit_id, category_id, supplier_id, part_id))
+        """, (db_part_code, name, cost_price, sell_price, stock_qty, min_stock, unit_id, category_id, supplier_id, part_id))
         db.commit()
         return {"message": "ແກ້ໄຂອາໄຫຼ່ສຳເລັດ"}
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=400, detail=f"Error: {str(e)}")
+        err_msg = str(e)
+        if "Duplicate entry" in err_msg:
+            raise HTTPException(status_code=400, detail="ລະຫັດອາໄຫຼ່ນີ້ມີໃນລະບົບແລ້ວ")
+        raise HTTPException(status_code=400, detail=f"Error: {err_msg}")
     finally:
         cursor.close()
         db.close()
@@ -151,10 +164,10 @@ def search_parts(keyword: str = "", user: dict = Depends(authenticate_user)):
             LEFT JOIN Suppliers s ON p.supplier_id = s.id
             LEFT JOIN Units u ON p.unit_id = u.id
             LEFT JOIN Part_Categories c ON p.category_id = c.id
-            WHERE p.name LIKE %s OR p.id LIKE %s
+            WHERE p.name LIKE %s OR p.id LIKE %s OR p.part_code LIKE %s
             ORDER BY p.name
             LIMIT 20
-        """, (f"%{keyword}%", f"%{keyword}%"))
+        """, (f"%{keyword}%", f"%{keyword}%", f"%{keyword}%"))
     else:
         cursor.execute("""
             SELECT p.*, s.name as supplier_name, u.name as unit_name, c.name as category_name

@@ -400,6 +400,8 @@ class RepairDetailContent:
             for idx, part in enumerate(parts_usage):
                 usage_id = part.get("id")
                 part_name = part.get("part_name", "-")
+                part_code = part.get("part_code")
+                display_name = f"[{part_code}] {part_name}" if part_code else part_name
                 qty = part.get("qty", 0)
                 cost_price = part.get("cost_price", 0)
                 total = qty * cost_price
@@ -410,7 +412,7 @@ class RepairDetailContent:
                 item_row = ft.Container(
                     content=ft.Row([
                         ft.Text(f"{idx+1}", size=12, color="#64748B", width=30),
-                        ft.Text(part_name, size=12, color="#1E293B", expand=True, max_lines=2),
+                        ft.Text(display_name, size=12, color="#1E293B", expand=True, max_lines=2),
                         ft.Text(f"x{qty}", size=12, color="#64748B", width=45, text_align=ft.TextAlign.CENTER),
                         ft.Text(f"{int(cost_price):,}", size=12, color="#64748B", width=90, text_align=ft.TextAlign.RIGHT),
                         ft.Text(f"{int(total):,}", size=12, weight=ft.FontWeight.W_600, color=self.success_color, width=110, text_align=ft.TextAlign.RIGHT),
@@ -626,11 +628,13 @@ class RepairDetailContent:
         
         for part in self.parts_list:
             part_name = part.get("name", "-")
+            part_code = part.get("part_code")
+            display_name = f"[{part_code}] {part_name}" if part_code else part_name
             stock_qty = part.get("stock_qty", 0)
             part_options.append(
                 ft.dropdown.Option(
                     str(part.get('id')),
-                    f"{part_name} [{stock_qty}]"
+                    f"{display_name} [{stock_qty}]"
                 )
             )
         

@@ -220,6 +220,19 @@ class PartsDialogs:
             on_change=on_supplier_selected
         )
         
+        part_code = ft.TextField(
+            label=get_text("parts_code"),
+            hint_text="ປ້ອນລະຫັດອາໄຫຼ່",
+            border_radius=10,
+            bgcolor=ft.Colors.WHITE,
+            filled=True,
+            prefix_icon=ft.Icons.QR_CODE,
+            content_padding=ft.Padding(left=14, right=14, top=12, bottom=12),
+            border_color=ft.Colors.GREY_300,
+            focused_border_color=self.parent.primary_color,
+            expand=True,
+        )
+        
         name = ft.TextField(
             label=f"{get_text('parts_name')} *",
             hint_text=get_text("parts_name_hint"),
@@ -317,6 +330,7 @@ class PartsDialogs:
                     unit_id=selected_unit_id[0] if selected_unit_id[0] else None,
                     category_id=selected_category_id[0] if selected_category_id[0] else None,
                     supplier_id=selected_supplier_id[0] if selected_supplier_id[0] else None,
+                    part_code=part_code.value or None,
                 )
                 self._close_dialog()
                 self.parent.load_data(force=True)
@@ -356,7 +370,7 @@ class PartsDialogs:
             content=ft.Container(
                 content=ft.Column(
                     [
-                        name,
+                        ft.Row([part_code, name], spacing=12),
                         ft.Container(height=8),
                         category_container,
                         ft.Container(height=8),
@@ -449,6 +463,20 @@ class PartsDialogs:
             on_change=on_supplier_selected
         )
         
+        part_code = ft.TextField(
+            label=get_text("parts_code"),
+            hint_text="ປ້ອນລະຫັດອາໄຫຼ່",
+            value=part.get('part_code') or '',
+            border_radius=10,
+            bgcolor=ft.Colors.WHITE,
+            filled=True,
+            prefix_icon=ft.Icons.QR_CODE,
+            content_padding=ft.Padding(left=14, right=14, top=12, bottom=12),
+            border_color=ft.Colors.GREY_300,
+            focused_border_color=self.parent.primary_color,
+            expand=True,
+        )
+        
         name = ft.TextField(
             label=f"{get_text('parts_name')} *",
             hint_text=get_text("parts_name_hint"),
@@ -539,6 +567,7 @@ class PartsDialogs:
                 
                 update_data = {
                     'name': name.value,
+                    'part_code': part_code.value or None,
                     'cost_price': cost_price_val,
                     'sell_price': sell_price_val,
                     'stock_qty': stock_qty_val,
@@ -587,7 +616,7 @@ class PartsDialogs:
             content=ft.Container(
                 content=ft.Column(
                     [
-                        name,
+                        ft.Row([part_code, name], spacing=12),
                         ft.Container(height=8),
                         category_container,
                         ft.Container(height=8),
