@@ -304,7 +304,7 @@ class EmployeesContent:
                 traceback.print_exc()
                 self.show_error_popup(f"{get_text('error')}: {err}")
         
-        dialog = create_add_dialog(on_save, self._close_dialog)
+        dialog = create_add_dialog(on_save, self._close_dialog, self.show_error_popup)
         self._open_dialog(dialog)
     
     def edit_employee(self, emp_id):
@@ -324,7 +324,7 @@ class EmployeesContent:
                 traceback.print_exc()
                 self.show_error_popup(f"{get_text('error')}: {err}")
         
-        dialog = create_edit_dialog(emp, on_save, self._close_dialog)
+        dialog = create_edit_dialog(emp, on_save, self._close_dialog, self.show_error_popup)
         self._open_dialog(dialog)
     
     def delete_employee(self, emp_id):

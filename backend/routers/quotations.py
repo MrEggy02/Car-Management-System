@@ -572,12 +572,39 @@ def update_quotation_status(
     db = get_db()
     cursor = db.cursor()
     try:
+        # Get job_order_id of this quotation
+        cursor.execute("SELECT job_order_id, status FROM quotations WHERE id = %s", (quotation_id,))
+        quote_info = cursor.fetchone()
+        if not quote_info:
+            raise HTTPException(status_code=404, detail="Quotation not found")
+        job_order_id, current_status = quote_info[0], quote_info[1]
+
         if status == 'approved':
+            # Check if there is already an approved quotation for this job order
+            cursor.execute("""
+                SELECT id FROM quotations 
+                WHERE job_order_id = %s AND status = 'approved' AND id != %s
+            """, (job_order_id, quotation_id))
+            already_approved = cursor.fetchone()
+            if already_approved:
+                raise HTTPException(
+                    status_code=400, 
+                    detail="Another quotation for this Job Order has already been approved. Please reject it first."
+                )
+
+            # Update status to approved
             cursor.execute("""
                 UPDATE quotations 
                 SET status = %s, approved_by = %s 
                 WHERE id = %s
             """, (status, user.get('id'), quotation_id))
+            
+            # Automatically reject all other draft quotations for this job order
+            cursor.execute("""
+                UPDATE quotations 
+                SET status = 'rejected' 
+                WHERE job_order_id = %s AND id != %s AND status = 'draft'
+            """, (job_order_id, quotation_id))
         else:
             cursor.execute("""
                 UPDATE quotations 
@@ -588,12 +615,8 @@ def update_quotation_status(
         
         # If status is 'approved', update the job order status
         if status == 'approved':
-            cursor.execute("SELECT job_order_id FROM quotations WHERE id = %s", (quotation_id,))
-            result = cursor.fetchone()
-            if result:
-                job_order_id = result[0]
-                cursor.execute("UPDATE job_orders SET status = 'approved' WHERE id = %s", (job_order_id,))
-                db.commit()
+            cursor.execute("UPDATE job_orders SET status = 'approved' WHERE id = %s", (job_order_id,))
+            db.commit()
         
         return {"message": f"Quotation status updated to {status}"}
     except Exception as e:

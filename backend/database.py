@@ -12,4 +12,4 @@ db_pool = pooling.MySQLConnectionPool(
 )
 
 def get_db():
-    return db_pool.get_connection()
+    return db_pool.get_connection()

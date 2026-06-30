@@ -627,7 +627,7 @@ class RepairSummaryReportContent:
         # Table header
         header = ft.Container(
             content=ft.Row([
-                ft.Text(get_text("date"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=120),
+                ft.Text(get_text("date"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", expand=True),
                 ft.Text(get_text("daily_repairs"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=100),
                 ft.Text(get_text("completed"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=100),
                 ft.Text(get_text("in_progress"), size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=100),
@@ -653,7 +653,7 @@ class RepairSummaryReportContent:
             table_body.controls.append(
                 ft.Container(
                     content=ft.Row([
-                        ft.Text(date, size=13, color="#1E293B", width=120),
+                        ft.Text(date, size=13, color="#1E293B", expand=True),
                         ft.Text(str(daily_repair), size=13, color="#1E293B", width=100),
                         ft.Text(str(daily_completed), size=13, color=completed_color, width=100),
                         ft.Text(str(daily_in_progress), size=13, color=progress_color, width=100),

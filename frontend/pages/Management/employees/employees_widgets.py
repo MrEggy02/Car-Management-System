@@ -254,7 +254,7 @@ def create_table_row(emp, index, row_number, on_edit, on_delete):
 
 
 # ==================== DIALOG WIDGETS ====================
-def create_add_dialog(on_save, on_close):
+def create_add_dialog(on_save, on_close, show_error_fn):
     """Create add employee dialog with login fields"""
     
     name = ft.TextField(
@@ -363,13 +363,48 @@ def create_add_dialog(on_save, on_close):
     can_login_checkbox.on_change = on_can_login_change
     
     def save(e):
-        if name.value and role.value:
-            on_save(
-                name.value, role.value, phone.value, status.value,
-                can_login_checkbox.value,
-                username_field.value if can_login_checkbox.value else None,
-                password_field.value if can_login_checkbox.value else None
-            )
+        # Reset errors
+        name.error_text = None
+        role.error_text = None
+        phone.error_text = None
+        username_field.error_text = None
+        password_field.error_text = None
+        
+        is_valid = True
+        
+        if not name.value or not name.value.strip():
+            name.error_text = get_text("required_field")
+            is_valid = False
+        if not role.value:
+            role.error_text = get_text("required_field")
+            is_valid = False
+        if not phone.value or not phone.value.strip():
+            phone.error_text = get_text("required_field")
+            is_valid = False
+            
+        if can_login_checkbox.value:
+            if not username_field.value or not username_field.value.strip():
+                username_field.error_text = get_text("username_required")
+                is_valid = False
+            if not password_field.value or not password_field.value.strip():
+                password_field.error_text = get_text("password_required")
+                is_valid = False
+                
+        if not is_valid:
+            name.update()
+            role.update()
+            phone.update()
+            username_field.update()
+            password_field.update()
+            show_error_fn(get_text("fill_all_fields"))
+            return
+            
+        on_save(
+            name.value.strip(), role.value, phone.value.strip(), status.value,
+            can_login_checkbox.value,
+            username_field.value.strip() if can_login_checkbox.value else None,
+            password_field.value.strip() if can_login_checkbox.value else None
+        )
     
     return ft.AlertDialog(
         modal=True,
@@ -436,7 +471,7 @@ def create_add_dialog(on_save, on_close):
         actions_alignment=ft.MainAxisAlignment.END,
     )
 
-def create_edit_dialog(emp, on_save, on_close):
+def create_edit_dialog(emp, on_save, on_close, show_error_fn):
     """Create edit employee dialog - fields always visible, disabled when not allowed"""
     
     # Debug print
@@ -529,7 +564,7 @@ def create_edit_dialog(emp, on_save, on_close):
     # Password field - ALWAYS VISIBLE
     password_field = ft.TextField(
         label=get_text("new_password"),
-        hint_text="ປ່ອຍຫວ່າງໄວ້ຖ້າບໍ່ຕ້ອງການປ່ຽນ",
+        hint_text="<b>ປ່ອຍຫວ່າງໄວ້ຖ້າບໍ່ຕ້ອງການປ່ຽນ</b>",
         password=True,
         can_reveal_password=True,
         border_radius=10,
@@ -553,16 +588,48 @@ def create_edit_dialog(emp, on_save, on_close):
     can_login_checkbox.on_change = on_can_login_change
     
     def save(e):
+        # Reset errors
+        name.error_text = None
+        role.error_text = None
+        phone.error_text = None
+        username_field.error_text = None
+        password_field.error_text = None
+        
+        is_valid = True
+        
+        if not name.value or not name.value.strip():
+            name.error_text = get_text("required_field")
+            is_valid = False
+        if not role.value:
+            role.error_text = get_text("required_field")
+            is_valid = False
+        if not phone.value or not phone.value.strip():
+            phone.error_text = get_text("required_field")
+            is_valid = False
+            
+        if can_login_checkbox.value:
+            if not username_field.value or not username_field.value.strip():
+                username_field.error_text = get_text("username_required")
+                is_valid = False
+                
+        if not is_valid:
+            name.update()
+            role.update()
+            phone.update()
+            username_field.update()
+            password_field.update()
+            show_error_fn(get_text("fill_all_fields"))
+            return
+            
         update_data = {
-            "name": name.value,
+            "name": name.value.strip(),
             "role": role.value,
-            "phone": phone.value,
+            "phone": phone.value.strip(),
             "status": status.value,
             "can_login": can_login_checkbox.value,
         }
         if can_login_checkbox.value:
-            if username_field.value and username_field.value.strip():
-                update_data["username"] = username_field.value.strip()
+            update_data["username"] = username_field.value.strip()
             if password_field.value and password_field.value.strip():
                 update_data["password"] = password_field.value.strip()
         else:

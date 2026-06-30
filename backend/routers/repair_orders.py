@@ -39,7 +39,11 @@ def get_repair_orders(
             LEFT JOIN vehicles v ON jo.vehicle_id = v.id
             LEFT JOIN brands b ON v.brand_id = b.id
             LEFT JOIN Employees e ON ro.mechanic_id = e.id
-            LEFT JOIN quotations q ON jo.id = q.job_order_id AND q.status = 'approved'
+            LEFT JOIN quotations q ON q.id = (
+                SELECT id FROM quotations 
+                WHERE job_order_id = jo.id AND status = 'approved' 
+                ORDER BY id DESC LIMIT 1
+            )
             WHERE 1=1
         """
         params = []

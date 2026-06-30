@@ -319,6 +319,27 @@ class QuotationCreateContent:
         self.promotion_list_container = ft.Column(spacing=8)
         return self.promotion_list_container
     
+    def _get_eligible_subtotal(self, promo):
+        """Calculate the total of items that are eligible for the promotion."""
+        promo_parts = promo.get('parts', {})
+        promo_services = promo.get('services', {})
+        
+        if not promo_parts and not promo_services:
+            # Global promotion - all items are eligible
+            return sum(item.get("total", 0) for item in self.temp_items)
+            
+        eligible_sum = 0
+        for item in self.temp_items:
+            qty = item.get("qty", 0)
+            ref_id = item.get("ref_id")
+            if item.get("item_type") == "part":
+                if ref_id in promo_parts and qty >= promo_parts[ref_id]:
+                    eligible_sum += item.get("total", 0)
+            elif item.get("item_type") == "service":
+                if ref_id in promo_services and qty >= promo_services[ref_id]:
+                    eligible_sum += item.get("total", 0)
+        return eligible_sum
+
     def update_promotion_list(self):
         """Update promotion list based on selected parts/services"""
         self.promotion_list_container.controls.clear()
@@ -346,30 +367,8 @@ class QuotationCreateContent:
         subtotal = sum(item.get("total", 0) for item in self.temp_items)
         
         for promo in self.promotions_list:
-            # Get promotion items (from cache)
-            promo_parts = promo.get('parts', [])
-            promo_services = promo.get('services', [])
-            
-            # Check if promotion applies
-            is_applicable = False
-            if not promo_parts and not promo_services:
-                # Promotion applies to all items
-                is_applicable = True
-            else:
-                # Check if any selected part is in promo parts
-                if selected_part_ids:
-                    for pid in selected_part_ids:
-                        if pid in promo_parts:
-                            is_applicable = True
-                            break
-                # Check if any selected service is in promo services
-                if not is_applicable and selected_service_ids:
-                    for sid in selected_service_ids:
-                        if sid in promo_services:
-                            is_applicable = True
-                            break
-            
-            if not is_applicable:
+            applicable_subtotal = self._get_eligible_subtotal(promo)
+            if applicable_subtotal == 0:
                 continue
             
             # Check min amount
@@ -378,18 +377,6 @@ class QuotationCreateContent:
                 continue
             
             self.available_promotions.append(promo)
-            
-            # Calculate eligible subtotal for display
-            promo_part_ids = set(promo.get('parts', []))
-            promo_service_ids = set(promo.get('services', []))
-            if not promo_part_ids and not promo_service_ids:
-                applicable_subtotal = subtotal
-            else:
-                applicable_subtotal = sum(
-                    item.get("total", 0) for item in self.temp_items
-                    if (item["item_type"] == "part" and item["ref_id"] in promo_part_ids)
-                    or (item["item_type"] == "service" and item["ref_id"] in promo_service_ids)
-                )
             
             # Calculate discount for display
             discount_amount = self._calculate_promotion_discount(promo)
@@ -466,27 +453,15 @@ class QuotationCreateContent:
         self.selected_promotion_id = promo.get('id')
         
         # Load promotion items (from cache)
-        self.promotion_parts = promo.get('parts', [])
-        self.promotion_services = promo.get('services', [])
-        
-        promo_part_ids = set(self.promotion_parts)
-        promo_service_ids = set(self.promotion_services)
+        self.promotion_parts = promo.get('parts', {})
+        self.promotion_services = promo.get('services', {})
         
         # Full subtotal used for min_amount eligibility check
         full_subtotal = sum(item.get("total", 0) for item in self.temp_items)
         min_amount = promo.get('min_amount', 0)
         
         # Eligible subtotal: only the items actually covered by this promotion
-        if not promo_part_ids and not promo_service_ids:
-            # Global promotion — applies to every item
-            applicable_subtotal = full_subtotal
-        else:
-            # Targeted promotion — only matching parts/services
-            applicable_subtotal = sum(
-                item.get("total", 0) for item in self.temp_items
-                if (item["item_type"] == "part" and item["ref_id"] in promo_part_ids)
-                or (item["item_type"] == "service" and item["ref_id"] in promo_service_ids)
-            )
+        applicable_subtotal = self._get_eligible_subtotal(promo)
         
         if full_subtotal < min_amount:
             self.promotion_discount_amount = 0
@@ -550,28 +525,8 @@ class QuotationCreateContent:
         if not self.temp_items:
             return 0
         
-        selected_part_ids = [item.get("ref_id") for item in self.temp_items if item.get("item_type") == "part"]
-        selected_service_ids = [item.get("ref_id") for item in self.temp_items if item.get("item_type") == "service"]
-        
-        promo_parts = promo.get('parts', [])
-        promo_services = promo.get('services', [])
-        
-        is_applicable = False
-        if not promo_parts and not promo_services:
-            is_applicable = True
-        else:
-            if selected_part_ids:
-                for pid in selected_part_ids:
-                    if pid in promo_parts:
-                        is_applicable = True
-                        break
-            if not is_applicable and selected_service_ids:
-                for sid in selected_service_ids:
-                    if sid in promo_services:
-                        is_applicable = True
-                        break
-        
-        if not is_applicable:
+        applicable_subtotal = self._get_eligible_subtotal(promo)
+        if applicable_subtotal == 0:
             return 0
         
         # Check min amount
@@ -579,16 +534,6 @@ class QuotationCreateContent:
         min_amount = promo.get('min_amount', 0)
         if subtotal < min_amount:
             return 0
-        
-        # Calculate eligible subtotal
-        if not promo_parts and not promo_services:
-            applicable_subtotal = subtotal
-        else:
-            applicable_subtotal = sum(
-                item.get("total", 0) for item in self.temp_items
-                if (item["item_type"] == "part" and item["ref_id"] in promo_parts)
-                or (item["item_type"] == "service" and item["ref_id"] in promo_services)
-            )
         
         # Calculate discount
         if promo.get('discount_type') == 'percent':
@@ -760,12 +705,12 @@ class QuotationCreateContent:
                 try:
                     parts = self.client.get_promotion_parts(promo_id) or []
                     services = self.client.get_promotion_services(promo_id) or []
-                    promo['parts'] = [p.get('part_id') for p in parts if p.get('part_id')]
-                    promo['services'] = [s.get('service_id') for s in services if s.get('service_id')]
+                    promo['parts'] = {p.get('part_id'): p.get('qty', 1) for p in parts if p.get('part_id')}
+                    promo['services'] = {s.get('service_id'): s.get('qty', 1) for s in services if s.get('service_id')}
                 except Exception as ex:
                     print(f"Error loading promotion details for ID {promo_id}: {ex}")
-                    promo['parts'] = []
-                    promo['services'] = []
+                    promo['parts'] = {}
+                    promo['services'] = {}
             print(f"Loaded {len(self.promotions_list)} promotions with details")
         except Exception as e:
             print(f"Error loading promotions: {e}")
