@@ -39,7 +39,8 @@ class SidebarManager:
         self._create_main_nav_buttons(nav_column)
         
         # สร้าง Data Management Menu (Dropdown)
-        self._create_data_management_menu(nav_column)
+        if self.parent.user.get("role") == "admin":
+            self._create_data_management_menu(nav_column)
         
         # สร้าง Customer Management (Single Menu)
         self._create_customer_management_menu(nav_column)
@@ -63,7 +64,8 @@ class SidebarManager:
         self._create_receiving_menu(nav_column)
         
         # สร้าง Reports Management (Dropdown)
-        self._create_reports_management_menu(nav_column)
+        if self.parent.user.get("role") == "admin":
+            self._create_reports_management_menu(nav_column)
         
         # อัพเดทสถานะปุ่มที่ถูกเลือก
         self._update_selected_button()
