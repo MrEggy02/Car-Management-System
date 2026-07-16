@@ -1,0 +1,15 @@
+Backend:
+
+fastapi (0.104.1) - Framework ສຳຫລັບສ້າງ API
+uvicorn (0.24.0) - ASGI server ສຳຫລັບ FastAPI
+mysql-connector-python (8.2.0) -  MySQL
+python-multipart (0.0.6) - ສຳຫລັບຈັດການ multipart form data
+python-dotenv (1.0.0) - ຈັດການ environment variables
+pydantic (2.5.0) - Data validation and settings management
+
+Frontend:
+
+flet (0.84.0) - UI framework ສຳຫລັບສ້າງ GUI ແບບ cross-platform
+requests (2.31.0) - HTTP client library
+mysql-connector-python (8.2.0) -  MySQL
+python-dotenv (1.0.0) - ຈັດການ environment variables

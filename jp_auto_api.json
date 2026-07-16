@@ -1,0 +1,653 @@
+{
+  "info": {
+    "name": "Car Repair Shop API",
+    "description": "API Collection for Car Repair Shop Management System",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "car-repair-shop-api"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000",
+      "type": "string"
+    },
+    {
+      "key": "username",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "password",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "username", "value": "{{username}}" },
+                { "key": "password", "value": "{{password}}" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/login",
+              "host": ["{{base_url}}"],
+              "path": ["login"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Employees",
+      "item": [
+        {
+          "name": "Get All Employees",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/employees",
+              "host": ["{{base_url}}"],
+              "path": ["employees"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Employee",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "name", "value": "" },
+                { "key": "phone", "value": "" },
+                { "key": "role", "value": "mechanic" },
+                { "key": "status", "value": "active" },
+                { "key": "can_login", "value": "false" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/employees",
+              "host": ["{{base_url}}"],
+              "path": ["employees"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Mechanics",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/employees/mechanics",
+              "host": ["{{base_url}}"],
+              "path": ["employees", "mechanics"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Customers & Vehicles",
+      "item": [
+        {
+          "name": "Get All Customers",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/customers",
+              "host": ["{{base_url}}"],
+              "path": ["customers"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Customer",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "name", "value": "" },
+                { "key": "phone", "value": "" },
+                { "key": "address", "value": "" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/customers",
+              "host": ["{{base_url}}"],
+              "path": ["customers"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Vehicles",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/vehicles",
+              "host": ["{{base_url}}"],
+              "path": ["vehicles"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Brands",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/brands",
+              "host": ["{{base_url}}"],
+              "path": ["brands"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Services",
+      "item": [
+        {
+          "name": "Get All Services",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/services",
+              "host": ["{{base_url}}"],
+              "path": ["services"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Service",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "name", "value": "" },
+                { "key": "price", "value": "0" },
+                { "key": "description", "value": "" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/services",
+              "host": ["{{base_url}}"],
+              "path": ["services"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Search Services",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/search-services?keyword={{keyword}}",
+              "host": ["{{base_url}}"],
+              "path": ["search-services"],
+              "query": [
+                { "key": "keyword", "value": "{{keyword}}", "disabled": false }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Parts",
+      "item": [
+        {
+          "name": "Get All Parts",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/parts",
+              "host": ["{{base_url}}"],
+              "path": ["parts"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Part",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "name", "value": "" },
+                { "key": "cost_price", "value": "0" },
+                { "key": "sell_price", "value": "0" },
+                { "key": "stock_qty", "value": "0" },
+                { "key": "min_stock", "value": "5" },
+                { "key": "unit", "value": "ຊິ້ນ" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/parts",
+              "host": ["{{base_url}}"],
+              "path": ["parts"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Low Stock Parts",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/parts/low-stock",
+              "host": ["{{base_url}}"],
+              "path": ["parts", "low-stock"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Job Orders",
+      "item": [
+        {
+          "name": "Get All Job Orders",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/job-orders",
+              "host": ["{{base_url}}"],
+              "path": ["job-orders"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Job Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "customer_id", "value": "" },
+                { "key": "vehicle_id", "value": "" },
+                { "key": "problem_description", "value": "" },
+                { "key": "mileage", "value": "0" },
+                { "key": "fuel_level", "value": "" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/job-orders",
+              "host": ["{{base_url}}"],
+              "path": ["job-orders"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Job Order by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/job-orders/{{order_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["job-orders", "{{order_id}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Quotations",
+      "item": [
+        {
+          "name": "Get Quotations",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/quotations",
+              "host": ["{{base_url}}"],
+              "path": ["quotations"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Quotation",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "job_order_id", "value": "" },
+                { "key": "notes", "value": "" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/quotations",
+              "host": ["{{base_url}}"],
+              "path": ["quotations"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Item to Quotation",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "item_type", "value": "part" },
+                { "key": "ref_id", "value": "" },
+                { "key": "qty", "value": "1" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/quotations/{{quotation_id}}/items",
+              "host": ["{{base_url}}"],
+              "path": ["quotations", "{{quotation_id}}", "items"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Repair Orders",
+      "item": [
+        {
+          "name": "Get Repair Orders",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/repair-orders",
+              "host": ["{{base_url}}"],
+              "path": ["repair-orders"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Repair Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "job_order_id", "value": "" },
+                { "key": "mechanic_id", "value": "" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/repair-orders",
+              "host": ["{{base_url}}"],
+              "path": ["repair-orders"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Part Usage",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "part_id", "value": "" },
+                { "key": "qty", "value": "1" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/repair-orders/{{repair_id}}/parts-usage",
+              "host": ["{{base_url}}"],
+              "path": ["repair-orders", "{{repair_id}}", "parts-usage"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Invoices",
+      "item": [
+        {
+          "name": "Get Invoices",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/invoices",
+              "host": ["{{base_url}}"],
+              "path": ["invoices"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Invoice",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "job_order_id", "value": "" },
+                { "key": "total_amount", "value": "0" },
+                { "key": "total_discount", "value": "0" },
+                { "key": "final_total", "value": "0" },
+                { "key": "payment_method", "value": "cash" },
+                { "key": "payment_status", "value": "pending" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/invoices",
+              "host": ["{{base_url}}"],
+              "path": ["invoices"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Record Payment",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "payment_method", "value": "cash" },
+                { "key": "received_amount", "value": "0" },
+                { "key": "change_amount", "value": "0" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/invoices/{{invoice_id}}/payment",
+              "host": ["{{base_url}}"],
+              "path": ["invoices", "{{invoice_id}}", "payment"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Promotions",
+      "item": [
+        {
+          "name": "Get Promotions",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/promotions",
+              "host": ["{{base_url}}"],
+              "path": ["promotions"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Promotion",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "name", "value": "" },
+                { "key": "discount_type", "value": "percentage" },
+                { "key": "value", "value": "0" },
+                { "key": "status", "value": "active" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/promotions",
+              "host": ["{{base_url}}"],
+              "path": ["promotions"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Active Promotions",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/promotions/active",
+              "host": ["{{base_url}}"],
+              "path": ["promotions", "active"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Purchase Orders",
+      "item": [
+        {
+          "name": "Get Purchase Orders",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/purchase-orders",
+              "host": ["{{base_url}}"],
+              "path": ["purchase-orders"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Purchase Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "supplier_id", "value": "" },
+                { "key": "items", "value": "[{\"part_id\":1,\"qty\":10,\"cost_price\":100}]" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/purchase-orders",
+              "host": ["{{base_url}}"],
+              "path": ["purchase-orders"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Reports",
+      "item": [
+        {
+          "name": "Dashboard Summary",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/reports/dashboard-summary",
+              "host": ["{{base_url}}"],
+              "path": ["reports", "dashboard-summary"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Revenue Report",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/reports/revenue?start_date={{start_date}}&end_date={{end_date}}",
+              "host": ["{{base_url}}"],
+              "path": ["reports", "revenue"],
+              "query": [
+                { "key": "start_date", "value": "{{start_date}}", "disabled": false },
+                { "key": "end_date", "value": "{{end_date}}", "disabled": false }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
