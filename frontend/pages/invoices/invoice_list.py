@@ -32,6 +32,7 @@ class InvoiceListContent:
         self.table_rows = None
         self.pagination_container = None
         self.current_dialog = None
+        self._dialog_stack = []  # Track all dialogs we've added to overlay
         
     def build(self):
         header = self._build_header()
@@ -580,6 +581,11 @@ class InvoiceListContent:
 
     def show_post_payment_dialog(self, invoice_id: int):
         """Show options to print delivery note or invoice after successful payment"""
+        def close_and_reload(dlg=None):
+            self._close_dialog()
+            # Reload in background thread so it doesn't block UI close
+            threading.Thread(target=self.load_invoices, daemon=True).start()
+
         dialog = ft.AlertDialog(
             modal=True,
             shape=ft.RoundedRectangleBorder(radius=16),
@@ -601,18 +607,18 @@ class InvoiceListContent:
                     icon=ft.Icons.LOCAL_SHIPPING,
                     bgcolor=self.success_color,
                     color=ft.Colors.WHITE,
-                    on_click=lambda e: (self._close_dialog(dialog), self.print_delivery_note(invoice_id)),
+                    on_click=lambda e: (close_and_reload(dialog), self.print_delivery_note(invoice_id)),
                 ),
                 ft.ElevatedButton(
                     "ພິມໃບຮັບເງິນ",
                     icon=ft.Icons.PRINT,
                     bgcolor=self.primary_color,
                     color=ft.Colors.WHITE,
-                    on_click=lambda e: (self._close_dialog(dialog), self.print_invoice(invoice_id)),
+                    on_click=lambda e: (close_and_reload(dialog), self.print_invoice(invoice_id)),
                 ),
                 ft.TextButton(
                     "ປິດ",
-                    on_click=lambda e: self._close_dialog(dialog),
+                    on_click=lambda e: close_and_reload(dialog),
                     style=ft.ButtonStyle(color="#64748B"),
                 ),
             ],
@@ -774,24 +780,30 @@ class InvoiceListContent:
         self._open_dialog(dialog)
     
     def _open_dialog(self, dialog):
-        try:
-            if self.current_dialog:
-                self.current_dialog.open = False
-                if self.current_dialog in self.page.overlay:
-                    self.page.overlay.remove(self.current_dialog)
-            self.current_dialog = dialog
-            self.page.overlay.append(dialog)
-            dialog.open = True
-            self.page.update()
-        except Exception as e:
-            print(f"DEBUG: Error opening dialog: {e}")
+        """Open a dialog - closes all previous tracked dialogs first"""
+        # Close all previous dialogs we've tracked (just toggle open, don't remove)
+        for d in self._dialog_stack:
+            try:
+                d.open = False
+            except Exception:
+                pass
+        # Add new dialog to overlay and open it
+        self.current_dialog = dialog
+        self._dialog_stack.append(dialog)
+        self.page.overlay.append(dialog)
+        dialog.open = True
+        self.page.update()
     
-    def _close_dialog(self, dialog):
-        try:
-            dialog.open = False
-            self.page.update()
-        except Exception as ex:
-            print(f"DEBUG: Error closing dialog: {ex}")
+    def _close_dialog(self, dialog=None):
+        """Close all tracked dialogs"""
+        for d in self._dialog_stack:
+            try:
+                d.open = False
+            except Exception:
+                pass
+        self._dialog_stack.clear()
+        self.current_dialog = None
+        self.page.update()
     
     def show_snack_bar(self, message: str, is_error: bool = False):
         self.page.snack_bar = ft.SnackBar(
@@ -858,8 +870,8 @@ class InvoiceListContent:
                     received_amount=received,
                     change_amount=change
                 )
+                # Close payment dialog first, then show post-payment dialog
                 self._close_dialog(dialog)
-                self.load_invoices()
                 self.show_post_payment_dialog(invoice_id)
             except Exception as ex:
                 self.show_snack_bar(f"Payment failed: {ex}", is_error=True)
