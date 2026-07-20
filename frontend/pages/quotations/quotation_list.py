@@ -13,7 +13,7 @@ from i18n import get_text, get_current_language
 from pages.quotations.quotation_dialogs import (
     show_quotation_detail_dialog,
     show_delete_quotation_dialog,
-    show_update_status_dialog  # ✅ import กลับมา
+    show_update_status_dialog
 )
 
 import asyncio
@@ -122,18 +122,37 @@ class QuotationListContent:
         # ส่วนแสดงแถวตาราง
         self.table_rows = ft.Column(spacing=0, scroll=ft.ScrollMode.AUTO, expand=True)
         
-        # คอนเทนเนอร์ตาราง
-        table_container = ft.Container(
-            content=ft.Column([
-                table_header,
-                ft.Divider(height=1, color=ft.Colors.GREY_300),
-                self.table_rows,
-            ], spacing=0),
-            margin=ft.Margin(left=20, right=20, top=0, bottom=0),
+        # Table content with header and rows
+        table_content = ft.Column([
+            table_header,
+            ft.Divider(height=1, color=ft.Colors.GREY_300),
+            self.table_rows,
+        ], spacing=0, expand=True)
+
+        # Table scroll container - allows horizontal scroll
+        table_scroll_container = ft.Container(
+            content=table_content,
             bgcolor=ft.Colors.WHITE,
-            border_radius=ft.BorderRadius.only(top_left=12, top_right=12, bottom_left=12, bottom_right=12),
-            border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_200), right=ft.BorderSide(1, ft.Colors.GREY_200), bottom=ft.BorderSide(1, ft.Colors.GREY_200), left=ft.BorderSide(1, ft.Colors.GREY_200)),
+            width=1050,
             expand=True,
+        )
+
+        # Table Container with both horizontal and vertical scroll
+        table_container = ft.Container(
+            content=ft.Row([table_scroll_container], scroll=ft.ScrollMode.AUTO, expand=True),
+            margin=ft.Margin(left=20, right=20, top=0, bottom=0),
+            border_radius=ft.BorderRadius.only(
+                top_left=12, top_right=12, bottom_left=12, bottom_right=12
+            ),
+            border=ft.Border(
+                top=ft.BorderSide(1, ft.Colors.GREY_200),
+                right=ft.BorderSide(1, ft.Colors.GREY_200),
+                bottom=ft.BorderSide(1, ft.Colors.GREY_200),
+                left=ft.BorderSide(1, ft.Colors.GREY_200)
+            ),
+            bgcolor=ft.Colors.WHITE,
+            expand=True,
+            height=600,
         )
         
         # ส่วนแบ่งหน้า
@@ -176,13 +195,13 @@ class QuotationListContent:
             visible=False,
         )
         
-        # ส่วนเนื้อหาหลัก
+        # ส่วนเนื้อหาหลัก - ปรับ padding
         content_area = ft.Container(
             content=ft.Column([
                 self.kpi_container,
                 ft.Container(
                     content=ft.Row([self.search_field, refresh_button], spacing=10),
-                    margin=ft.Margin(left=0, right=0, top=0, bottom=16),
+                    margin=ft.Margin(left=0, right=0, top=0, bottom=12),
                 ),
                 table_container,
                 self.pagination_container,
@@ -190,7 +209,7 @@ class QuotationListContent:
                 self.empty_state,
             ], expand=True),
             expand=True,
-            padding=ft.Padding(left=24, right=24, top=24, bottom=24),
+            padding=ft.Padding(left=20, right=20, top=10, bottom=10),  # ลด padding
             bgcolor="#F5F7FA",
         )
         
@@ -377,7 +396,7 @@ class QuotationListContent:
             "rejected": get_text("rejected")
         }
         
-        # ✅ Clickable badge for draft/rejected, static for approved
+        # Clickable badge for draft/rejected, static for approved
         is_approved = status == "approved"
         
         if is_approved:
@@ -390,7 +409,6 @@ class QuotationListContent:
                 bgcolor=status_colors.get(status, "#607D8B"),
                 border_radius=12,
                 padding=ft.Padding(left=10, right=10, top=4, bottom=4),
-                # ❌ ไม่มี on_click
             )
         else:
             # Draft / Rejected - คลิกเปลี่ยนสถานะได้
@@ -403,7 +421,7 @@ class QuotationListContent:
                 bgcolor=status_colors.get(status, "#607D8B"),
                 border_radius=12,
                 padding=ft.Padding(left=10, right=10, top=4, bottom=4),
-                on_click=lambda e, qid=quote_id, cur_status=status: self.show_update_status_dialog(qid, cur_status),  # ✅ กลับมาแล้ว
+                on_click=lambda e, qid=quote_id, cur_status=status: self.show_update_status_dialog(qid, cur_status),
             )
         
         view_btn = ft.Container(
@@ -651,7 +669,6 @@ class QuotationListContent:
             self.show_snack_bar(f"Error: {str(ex)}", "error")
             self.page.update()
     
-    # ✅ ฟังก์ชัน show_update_status_dialog กลับมาแล้ว
     def show_update_status_dialog(self, quotation_id: int, current_status: str):
         """แสดง dialog สำหรับอัปเดตสถานะใบเสนอราคา"""
         
@@ -666,32 +683,6 @@ class QuotationListContent:
                 self._close_dialog()
                 self.load_quotations()
                 self.show_snack_bar(f"{get_text('status_updated_to')} {get_text(new_status)}", "success")
-                
-                # ถ้าใบเสนอราคาถูกอนุมัติ ให้ถามว่าจะสร้างใบสั่งซ่อมเลยหรือไม่
-                # if new_status == "approved":
-                #     try:
-                #         quotation = self.client.get_quotation(qid)
-                #         if quotation and quotation.get('job_order_id'):
-                #             def go_to_repair(e):
-                #                 dialog.open = False
-                #                 self.navigate("repair_create", job_order_id=quotation.get('job_order_id'))
-                            
-                #             dialog = ft.AlertDialog(
-                #                 modal=True,
-                #                 title=ft.Text(get_text("quotation_approved"), size=16, weight=ft.FontWeight.BOLD),
-                #                 content=ft.Text(get_text("create_repair_order_now")),
-                #                 actions=[
-                #                     ft.TextButton(get_text("later"), on_click=lambda e: setattr(dialog, 'open', False)),
-                #                     ft.ElevatedButton(get_text("go_to_repair"), color=ft.Colors.WHITE, on_click=go_to_repair, style=ft.ButtonStyle(bgcolor=self.primary_color)),
-                #                 ],
-                #                 actions_alignment=ft.MainAxisAlignment.END,
-                #             )
-                #             self.page.overlay.append(dialog)
-                #             dialog.open = True
-                #             self.page.update()
-                #     except:
-                #         pass
-                        
             except Exception as ex:
                 print(f"DEBUG: Error in update: {ex}")
                 self.show_snack_bar(f"Error: {str(ex)}", "error")

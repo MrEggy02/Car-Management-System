@@ -1,4 +1,4 @@
-# Management/parts/stock_history_page.py (เวอร์ชันที่แก้ไขสมบูรณ์)
+# Management/parts/stock_history_page.py
 import flet as ft
 import sys
 import os
@@ -20,7 +20,12 @@ class StockHistoryPage:
         self.primary_dark = "#0D47A1"
         self.movements = []
         self.is_loading = False
-        self.count_text = None  # เก็บ reference ของ Text ที่แสดงจำนวน
+        self.count_text = None
+        # Add pagination
+        self.current_page = 1
+        self.items_per_page = 25
+        self.total_pages = 1
+        self.pagination_container = ft.Container()
 
     def build(self):
         # สร้าง Text สำหรับแสดงจำนวน
@@ -49,7 +54,7 @@ class StockHistoryPage:
                                 weight=ft.FontWeight.BOLD,
                                 color=ft.Colors.WHITE,
                             ),
-                            self.count_text,  # ใช้ reference ที่เก็บไว้
+                            self.count_text,
                         ],
                         spacing=2,
                     ),
@@ -84,23 +89,41 @@ class StockHistoryPage:
         # Table rows container
         self.table_rows = ft.Column(spacing=0, scroll=ft.ScrollMode.AUTO, expand=True)
 
-        # Table Container
-        table_container = ft.Container(
-            content=ft.Column([
-                table_header,
-                ft.Divider(height=1, color=ft.Colors.GREY_300),
-                self.table_rows,
-            ], spacing=0),
-            margin=ft.Margin(left=20, right=20, top=20, bottom=20),
+        # Table Container with horizontal scroll
+        table_content = ft.Column([
+            table_header,
+            ft.Divider(height=1, color=ft.Colors.GREY_300),
+            self.table_rows,
+        ], spacing=0, expand=True)
+
+        table_scroll_container = ft.Container(
+            content=table_content,
             bgcolor=ft.Colors.WHITE,
-            border_radius=12,
+            width=1100,
+            expand=True,
+        )
+
+        table_container = ft.Container(
+            content=ft.Row([table_scroll_container], scroll=ft.ScrollMode.AUTO, expand=True),
+            margin=ft.Margin(left=20, right=20, top=20, bottom=0),
+            border_radius=ft.BorderRadius.only(
+                top_left=12, top_right=12, bottom_left=12, bottom_right=12
+            ),
             border=ft.Border(
                 top=ft.BorderSide(1, ft.Colors.GREY_200),
                 right=ft.BorderSide(1, ft.Colors.GREY_200),
                 bottom=ft.BorderSide(1, ft.Colors.GREY_200),
                 left=ft.BorderSide(1, ft.Colors.GREY_200),
             ),
+            bgcolor=ft.Colors.WHITE,
             expand=True,
+            height=550,
+        )
+
+        # Pagination container
+        self.pagination_container = ft.Container(
+            padding=ft.Padding(left=20, right=20, top=12, bottom=12),
+            bgcolor="#F5F7FA",
         )
 
         # Loading overlay
@@ -121,6 +144,7 @@ class StockHistoryPage:
                 ft.Column([
                     header,
                     table_container,
+                    self.pagination_container,
                 ], expand=True, spacing=0),
                 self.loading_overlay,
             ], expand=True),
@@ -136,12 +160,12 @@ class StockHistoryPage:
     def _create_table_header(self):
         return ft.Container(
             content=ft.Row([
-                ft.Container(content=ft.Text("#", size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=40, alignment=ft.Alignment(0, 0)),
-                ft.Container(content=ft.Text("ອາໄຫຼ່", size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=150, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=8, right=0, top=0, bottom=0)),
-                ft.Container(content=ft.Text("ປະເພດ", size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=60, alignment=ft.Alignment(0, 0)),
-                ft.Container(content=ft.Text("ຈຳນວນ", size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=70, alignment=ft.Alignment(0, 0)),
-                ft.Container(content=ft.Text("ອ້າງອີງ", size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=100, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=8, right=0, top=0, bottom=0)),
-                ft.Container(content=ft.Text("ວັນທີ", size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=160, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=8, right=0, top=0, bottom=0)),
+                ft.Container(content=ft.Text("ລຳດັບ", size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=60, alignment=ft.Alignment(0, 0)),
+                ft.Container(content=ft.Text("ອາໄຫຼ່", size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=180, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=8, right=0, top=0, bottom=0)),
+                ft.Container(content=ft.Text("ປະເພດ", size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=80, alignment=ft.Alignment(0, 0)),
+                ft.Container(content=ft.Text("ຈຳນວນ", size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=80, alignment=ft.Alignment(0, 0)),
+                ft.Container(content=ft.Text("ອ້າງອີງ", size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=120, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=8, right=0, top=0, bottom=0)),
+                ft.Container(content=ft.Text("ວັນທີ", size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=180, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=8, right=0, top=0, bottom=0)),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
             padding=ft.Padding(left=8, right=8, top=12, bottom=12),
             bgcolor=ft.Colors.GREY_100,
@@ -150,7 +174,6 @@ class StockHistoryPage:
 
     def _create_table_row(self, mov, index):
         row_bg = ft.Colors.GREY_50 if index % 2 == 0 else ft.Colors.WHITE
-        mov_id = mov.get('id')
         part_name = mov.get('part_name', '-')
         mov_type = mov.get('type', '')
         qty = mov.get('qty', 0)
@@ -173,19 +196,19 @@ class StockHistoryPage:
 
         row = ft.Container(
             content=ft.Row([
-                ft.Container(content=ft.Text(str(mov_id), size=12, color="#64748B"), width=40, alignment=ft.Alignment(0, 0)),
-                ft.Container(content=ft.Text(part_name, size=13, weight=ft.FontWeight.W_500, color="#1E293B", max_lines=1), width=150, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=8, right=0, top=0, bottom=0)),
+                ft.Container(content=ft.Text(str(index + 1), size=12, weight=ft.FontWeight.W_500, color=self.primary_color), width=60, alignment=ft.Alignment(0, 0)),
+                ft.Container(content=ft.Text(part_name, size=13, weight=ft.FontWeight.W_500, color="#1E293B", max_lines=1), width=180, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=8, right=0, top=0, bottom=0)),
                 ft.Container(
                     content=ft.Row([
                         ft.Icon(type_icon, size=14, color=type_color),
                         ft.Text(mov_type, size=12, color=type_color, weight=ft.FontWeight.W_600),
                     ], spacing=4),
-                    width=60,
+                    width=80,
                     alignment=ft.Alignment(0, 0),
                 ),
-                ft.Container(content=ft.Text(str(qty), size=12, color="#1E293B"), width=70, alignment=ft.Alignment(0, 0)),
-                ft.Container(content=ft.Text(ref_display, size=12, color="#64748B"), width=100, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=8, right=0, top=0, bottom=0)),
-                ft.Container(content=ft.Text(date_str, size=12, color="#64748B"), width=160, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=8, right=0, top=0, bottom=0)),
+                ft.Container(content=ft.Text(str(qty), size=12, color="#1E293B"), width=80, alignment=ft.Alignment(0, 0)),
+                ft.Container(content=ft.Text(ref_display, size=12, color="#64748B"), width=120, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=8, right=0, top=0, bottom=0)),
+                ft.Container(content=ft.Text(date_str, size=12, color="#64748B"), width=180, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=8, right=0, top=0, bottom=0)),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
             padding=ft.Padding(left=8, right=8, top=10, bottom=10),
             bgcolor=row_bg,
@@ -210,26 +233,94 @@ class StockHistoryPage:
         
         if not self.movements:
             self.table_rows.controls.append(self._create_empty_state())
+            self.total_pages = 1
+            self.current_page = 1
         else:
-            for i, mov in enumerate(self.movements):
-                row = self._create_table_row(mov, i)
+            total_items = len(self.movements)
+            self.total_pages = max(1, (total_items + self.items_per_page - 1) // self.items_per_page)
+            
+            if self.current_page > self.total_pages:
+                self.current_page = self.total_pages
+            if self.current_page < 1:
+                self.current_page = 1
+            
+            start_idx = (self.current_page - 1) * self.items_per_page
+            end_idx = min(start_idx + self.items_per_page, total_items)
+            page_items = self.movements[start_idx:end_idx]
+            
+            for i, mov in enumerate(page_items):
+                row = self._create_table_row(mov, start_idx + i)
                 self.table_rows.controls.append(row)
         
         # อัปเดตจำนวนใน header
         self.count_text.value = f"{get_text('records') or 'ລາຍການ'} {len(self.movements)}"
+        self.update_pagination_controls()
         self.page.update()
+
+    def update_pagination_controls(self):
+        prev_disabled = self.current_page <= 1
+        next_disabled = self.current_page >= self.total_pages
+        
+        self.pagination_container.content = ft.Row(
+            [
+                ft.Text(
+                    f"{get_text('showing')} {len(self.movements)} {get_text('of')} {len(self.movements)} {get_text('results')}",
+                    size=12,
+                    color="#64748B",
+                ),
+                ft.Container(expand=True),
+                ft.Container(
+                    content=ft.Row([
+                        ft.IconButton(
+                            icon=ft.Icons.CHEVRON_LEFT,
+                            icon_size=20,
+                            on_click=self.prev_page,
+                            disabled=prev_disabled,
+                            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
+                        ),
+                        ft.Container(
+                            content=ft.Text(f"{self.current_page}/{self.total_pages}", size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
+                            padding=ft.Padding(left=15, right=15, top=0, bottom=0),
+                        ),
+                        ft.IconButton(
+                            icon=ft.Icons.CHEVRON_RIGHT,
+                            icon_size=20,
+                            on_click=self.next_page,
+                            disabled=next_disabled,
+                            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
+                        ),
+                    ]),
+                    bgcolor=ft.Colors.WHITE,
+                    border_radius=10,
+                    padding=ft.Padding(left=8, right=8, top=4, bottom=4),
+                ),
+            ],
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        )
+        self.page.update()
+
+    def prev_page(self, e=None):
+        if self.current_page > 1:
+            self.current_page -= 1
+            self.display_movements()
+
+    def next_page(self, e=None):
+        if self.current_page < self.total_pages:
+            self.current_page += 1
+            self.display_movements()
 
     async def _load_data(self):
         self.loading_overlay.visible = True
         self.page.update()
         try:
-            self.movements = await asyncio.to_thread(self.client.get_stock_movements, limit=200)
+            self.movements = await asyncio.to_thread(self.client.get_stock_movements, limit=1000)
             print(f"DEBUG: Loaded {len(self.movements)} movements")
         except Exception as e:
             print(f"DEBUG: Error loading stock history: {e}")
             self.movements = []
         finally:
             self.loading_overlay.visible = False
+            self.current_page = 1
             self.display_movements()
 
     def refresh_data(self, e=None):

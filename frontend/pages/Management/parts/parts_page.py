@@ -64,7 +64,7 @@ class PartsContent:
                         spacing=2,
                     ),
                     ft.Container(expand=True),
-                    # Stock History Button - เปลี่ยนเป็นเปิดหน้าใหม่
+                    # Stock History Button
                     ft.IconButton(
                         icon=ft.Icons.HISTORY,
                         icon_size=22,
@@ -133,28 +133,35 @@ class PartsContent:
         # Table Header
         table_header = self._create_table_header()
 
-        # Table scroll container
+        # Table body - contains rows
+        self.table_rows = ft.Column(spacing=0, scroll=ft.ScrollMode.AUTO, expand=True)
+
+        # Table content with header and rows
+        table_content = ft.Column([
+            table_header,
+            ft.Divider(height=1, color=ft.Colors.GREY_300),
+            self.table_rows,
+        ], spacing=0, expand=True)
+
+        # Table scroll container - allows horizontal scroll
         table_scroll_container = ft.Container(
-            content=self.table_rows,
-            expand=True,
-            border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_200)),
+            content=table_content,
             bgcolor=ft.Colors.WHITE,
+            width=1100,  # Fixed width to enable horizontal scroll
+            expand=True,
         )
 
-        # Table Container
+        # Table Container with both horizontal and vertical scroll
         table_container = ft.Container(
-            content=ft.Column([
-                table_header,
-                ft.Divider(height=1, color=ft.Colors.GREY_300),
-                table_scroll_container,
-            ], spacing=0),
+            content=ft.Row([table_scroll_container], scroll=ft.ScrollMode.AUTO, expand=True),
             margin=ft.Margin(left=20, right=20, top=0, bottom=0),
-            bgcolor=ft.Colors.WHITE,
             border_radius=ft.BorderRadius.only(
                 top_left=12, top_right=12, bottom_left=12, bottom_right=12
             ),
             border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_200), right=ft.BorderSide(1, ft.Colors.GREY_200), bottom=ft.BorderSide(1, ft.Colors.GREY_200), left=ft.BorderSide(1, ft.Colors.GREY_200)),
+            bgcolor=ft.Colors.WHITE,
             expand=True,
+            height=500,  # Fixed height to enable vertical scroll
         )
 
         # Pagination container

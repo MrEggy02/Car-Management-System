@@ -885,10 +885,9 @@ class PartsDialogs:
     
     def _open_dialog(self, dialog):
         try:
+            # Close existing dialog if any
             if self.current_dialog:
-                self.current_dialog.open = False
-                if self.current_dialog in self.parent.page.overlay:
-                    self.parent.page.overlay.remove(self.current_dialog)
+                self._close_dialog()
             self.current_dialog = dialog
             self.parent.page.overlay.append(dialog)
             dialog.open = True
@@ -897,12 +896,20 @@ class PartsDialogs:
             print(f"DEBUG: Error opening dialog: {e}")
     
     def _close_dialog(self, e=None):
+        """Close the current dialog - simplified version like promotions page"""
         try:
             if self.current_dialog:
+                # Just close it, let Flet handle the overlay removal
                 self.current_dialog.open = False
-                if self.current_dialog in self.parent.page.overlay:
-                    self.parent.page.overlay.remove(self.current_dialog)
                 self.current_dialog = None
                 self.parent.page.update()
         except Exception as ex:
             print(f"DEBUG: Error closing dialog: {ex}")
+            # If error occurs, try to force close
+            try:
+                if self.current_dialog:
+                    self.current_dialog.open = False
+                    self.current_dialog = None
+                    self.parent.page.update()
+            except:
+                pass
