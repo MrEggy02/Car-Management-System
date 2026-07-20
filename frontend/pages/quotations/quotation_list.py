@@ -668,29 +668,29 @@ class QuotationListContent:
                 self.show_snack_bar(f"{get_text('status_updated_to')} {get_text(new_status)}", "success")
                 
                 # ถ้าใบเสนอราคาถูกอนุมัติ ให้ถามว่าจะสร้างใบสั่งซ่อมเลยหรือไม่
-                if new_status == "approved":
-                    try:
-                        quotation = self.client.get_quotation(qid)
-                        if quotation and quotation.get('job_order_id'):
-                            def go_to_repair(e):
-                                dialog.open = False
-                                self.navigate("repair_create", job_order_id=quotation.get('job_order_id'))
+                # if new_status == "approved":
+                #     try:
+                #         quotation = self.client.get_quotation(qid)
+                #         if quotation and quotation.get('job_order_id'):
+                #             def go_to_repair(e):
+                #                 dialog.open = False
+                #                 self.navigate("repair_create", job_order_id=quotation.get('job_order_id'))
                             
-                            dialog = ft.AlertDialog(
-                                modal=True,
-                                title=ft.Text(get_text("quotation_approved"), size=16, weight=ft.FontWeight.BOLD),
-                                content=ft.Text(get_text("create_repair_order_now")),
-                                actions=[
-                                    ft.TextButton(get_text("later"), on_click=lambda e: setattr(dialog, 'open', False)),
-                                    ft.ElevatedButton(get_text("go_to_repair"), color=ft.Colors.WHITE, on_click=go_to_repair, style=ft.ButtonStyle(bgcolor=self.primary_color)),
-                                ],
-                                actions_alignment=ft.MainAxisAlignment.END,
-                            )
-                            self.page.overlay.append(dialog)
-                            dialog.open = True
-                            self.page.update()
-                    except:
-                        pass
+                #             dialog = ft.AlertDialog(
+                #                 modal=True,
+                #                 title=ft.Text(get_text("quotation_approved"), size=16, weight=ft.FontWeight.BOLD),
+                #                 content=ft.Text(get_text("create_repair_order_now")),
+                #                 actions=[
+                #                     ft.TextButton(get_text("later"), on_click=lambda e: setattr(dialog, 'open', False)),
+                #                     ft.ElevatedButton(get_text("go_to_repair"), color=ft.Colors.WHITE, on_click=go_to_repair, style=ft.ButtonStyle(bgcolor=self.primary_color)),
+                #                 ],
+                #                 actions_alignment=ft.MainAxisAlignment.END,
+                #             )
+                #             self.page.overlay.append(dialog)
+                #             dialog.open = True
+                #             self.page.update()
+                #     except:
+                #         pass
                         
             except Exception as ex:
                 print(f"DEBUG: Error in update: {ex}")
