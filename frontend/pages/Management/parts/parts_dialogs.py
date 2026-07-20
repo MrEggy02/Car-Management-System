@@ -900,6 +900,9 @@ class PartsDialogs:
         try:
             if self.current_dialog:
                 self.current_dialog.open = False
+                if self.current_dialog in self.parent.page.overlay:
+                    self.parent.page.overlay.remove(self.current_dialog)
+                self.current_dialog = None
                 self.parent.page.update()
         except Exception as ex:
             print(f"DEBUG: Error closing dialog: {ex}")

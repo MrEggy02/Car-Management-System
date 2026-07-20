@@ -1282,10 +1282,19 @@ LO: Dict[str, str] = {
   "percent": "ເປີເຊັນ",
   "change":"ເງິນທອນ",
   "click_to_start": "ກົດເພື່ອໄປຫນ້າ",
+  "stock_history": "ປະຫວັດການເຄື່ອນໄຫວ",
+  "records": "ລາຍການ",
+  "no_jobs_ready_for_invoice": "ບໍ່ມີໃບຮັບລົດທີ່ພ້ອມສ້າງໃບຮັບເງິນ",
+  "complete_repair_first": "ຕ້ອງສ້ອມແປງສຳເລັດກ່ອນ",
+  
 }
 
 
 EN: Dict[str, str] = {
+    "no_jobs_ready_for_invoice": "No job ready for invoice",
+  "complete_repair_first": "Complete repair first",
+    "stock_history": "Stock history",
+  "records": "lists",
      "click_to_start": "click to start",
     "change":"Change",
     "receiving": "Receiving",

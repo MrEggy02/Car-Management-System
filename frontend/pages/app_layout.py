@@ -12,7 +12,7 @@ FLET_APP_DIR = os.path.dirname(PARENT_DIR)
 for path in [CURRENT_DIR, PARENT_DIR, FLET_APP_DIR]:
     if path not in sys.path:
         sys.path.insert(0, path)
-
+from Management.parts.stock_history_page import StockHistoryPage
 from Management.employees.employees_page import EmployeesContent
 from api_client import APIClient
 from i18n import get_text, set_language, get_current_language, LANGUAGES
@@ -512,6 +512,7 @@ class AppLayout:
             "receiving_management": 36,
             "receiving_po_list": 37,
             "delivery_note_list": 38,
+            "stock_history": 39,
         }
 
         # Store IDs for pages

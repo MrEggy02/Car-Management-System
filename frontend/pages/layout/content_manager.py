@@ -96,6 +96,8 @@ class ContentManager:
             content = self._get_receiving_po_list_content()
         elif index == 38:
             content = self._get_delivery_note_list_content()
+        elif index == 39: 
+            content = self._get_stock_history_content()
         else:
             content = self._get_placeholder(f"📄 {get_text('under_development')}")
         
@@ -153,7 +155,19 @@ class ContentManager:
             navigate, 
             invoice_id=invoice_id
         ).build()
+    def _get_stock_history_content(self):
+        """Get stock history page"""
+        from Management.parts.stock_history_page import StockHistoryPage
     
+        def navigate(page_name, *args, **kwargs):
+            self.parent.navigate_to(page_name, **kwargs)
+    
+        return StockHistoryPage(
+               self.parent.page,
+               self.parent.client,
+               self.parent.user,
+               navigate
+    ).build()
     def _get_services_content(self):
         from Management.service.services_page import ServicesContent
         def navigate(page_name, *args, **kwargs):
