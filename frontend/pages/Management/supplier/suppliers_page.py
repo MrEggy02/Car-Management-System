@@ -545,7 +545,7 @@ class SuppliersContent:
         
         phone = ft.TextField(
             label=get_text("suppliers_phone"),
-            hint_text="0200000000",
+            hint_text="020xxxxxxxx",
             border_radius=8,
             bgcolor=ft.Colors.WHITE,
             filled=True,
@@ -1171,7 +1171,7 @@ class SuppliersContent:
         
         # Auto dismiss after 3 seconds using asyncio
         async def dismiss_after_delay():
-            await asyncio.sleep(3.0)
+            await asyncio.sleep(2.0)
             if snackbar in self.page.overlay:
                 snackbar.opacity = 0
                 self.page.update()

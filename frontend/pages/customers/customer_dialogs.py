@@ -69,7 +69,7 @@ def show_add_dialog(primary_color, brands_list, on_save, on_close):
     
     customer_phone = ft.TextField(
         label=get_text("customer_phone"),
-        hint_text="0200000000",
+        hint_text="020xxxxxxxx",
         border_radius=8,
         bgcolor=ft.Colors.WHITE,
         filled=True,

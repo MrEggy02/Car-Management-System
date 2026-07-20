@@ -12,10 +12,8 @@ from datetime import datetime
 from i18n import get_text, get_current_language
 from pages.quotations.quotation_dialogs import (
     show_quotation_detail_dialog,
-    show_update_status_dialog,
     show_delete_quotation_dialog
 )
-
 
 import asyncio
 
@@ -378,34 +376,16 @@ class QuotationListContent:
             "rejected": get_text("rejected")
         }
         
-        # Check if status is approved - no dropdown icon, not clickable
-        is_approved = status == "approved"
-        
-        if is_approved:
-            # Simple badge without dropdown arrow (not clickable)
-            status_badge = ft.Container(
-                content=ft.Row([
-                    ft.Icon(ft.Icons.CIRCLE, size=8, color=ft.Colors.WHITE),
-                    ft.Text(status_texts.get(status, status), size=11, color=ft.Colors.WHITE),
-                ], spacing=4),
-                bgcolor=status_colors.get(status, "#607D8B"),
-                border_radius=12,
-                padding=ft.Padding(left=10, right=10, top=4, bottom=4),
-                # No on_click for approved status
-            )
-        else:
-            # Clickable badge with dropdown arrow for draft/rejected
-            status_badge = ft.Container(
-                content=ft.Row([
-                    ft.Icon(ft.Icons.CIRCLE, size=8, color=ft.Colors.WHITE),
-                    ft.Text(status_texts.get(status, status), size=11, color=ft.Colors.WHITE),
-                    ft.Icon(ft.Icons.ARROW_DROP_DOWN, size=16, color=ft.Colors.WHITE),
-                ], spacing=4),
-                bgcolor=status_colors.get(status, "#607D8B"),
-                border_radius=12,
-                padding=ft.Padding(left=10, right=10, top=4, bottom=4),
-                on_click=lambda e, qid=quote_id, cur_status=status: self.show_update_status_dialog(qid, cur_status),
-            )
+        # Static status badge - no click handler, just display
+        status_badge = ft.Container(
+            content=ft.Row([
+                ft.Icon(ft.Icons.CIRCLE, size=8, color=ft.Colors.WHITE),
+                ft.Text(status_texts.get(status, status), size=11, color=ft.Colors.WHITE),
+            ], spacing=4),
+            bgcolor=status_colors.get(status, "#607D8B"),
+            border_radius=12,
+            padding=ft.Padding(left=10, right=10, top=4, bottom=4),
+        )
         
         view_btn = ft.Container(
             content=ft.Row([
@@ -428,7 +408,7 @@ class QuotationListContent:
         )
         
         # Delete button - disabled for approved status
-        if is_approved:
+        if status == "approved":
             delete_btn = ft.Container(
                 content=ft.Row([
                     ft.Icon(ft.Icons.DELETE_OUTLINE, size=16, color=ft.Colors.GREY_400),
@@ -652,62 +632,6 @@ class QuotationListContent:
             self.show_snack_bar(f"Error: {str(ex)}", "error")
             self.page.update()
     
-    def show_update_status_dialog(self, quotation_id: int, current_status: str):
-        """แสดง dialog สำหรับอัปเดตสถานะใบเสนอราคา"""
-        
-        # ไม่อนุญาตให้เปลี่ยนสถานะถ้าอนุมัติแล้ว
-        if current_status == "approved":
-            self.show_snack_bar(get_text("cannot_change_approved_quotation"), "error")
-            return
-        
-        def on_update(qid, new_status):
-            try:
-                # อัปเดตสถานะใบเสนอราคาเท่านั้น
-                # Backend จะอัปเดตสถานะ Job Order เป็น 'approved' ให้อัตโนมัติ
-                self.client.update_quotation_status(qid, new_status)
-                
-                self._close_dialog()
-                self.load_quotations()
-                self.show_snack_bar(f"{get_text('status_updated_to')} {get_text(new_status)}", "success")
-                
-                # ถ้าใบเสนอราคาถูกอนุมัติ ให้ถามว่าจะสร้างใบสั่งซ่อมเลยหรือไม่
-                if new_status == "approved":
-                    try:
-                        quotation = self.client.get_quotation(qid)
-                        if quotation and quotation.get('job_order_id'):
-                            def go_to_repair(e):
-                                dialog.open = False
-                                self.navigate("repair_create", job_order_id=quotation.get('job_order_id'))
-                            
-                            dialog = ft.AlertDialog(
-                                modal=True,
-                                title=ft.Text(get_text("quotation_approved"), size=16, weight=ft.FontWeight.BOLD),
-                                content=ft.Text(get_text("create_repair_order_now")),
-                                actions=[
-                                    ft.TextButton(get_text("later"), on_click=lambda e: setattr(dialog, 'open', False)),
-                                    ft.ElevatedButton(get_text("go_to_repair"),color=ft.Colors.WHITE, on_click=go_to_repair, style=ft.ButtonStyle(bgcolor=self.primary_color)),
-                                ],
-                                actions_alignment=ft.MainAxisAlignment.END,
-                            )
-                            self.page.overlay.append(dialog)
-                            dialog.open = True
-                            self.page.update()
-                    except:
-                        pass
-                        
-            except Exception as ex:
-                print(f"DEBUG: Error in update: {ex}")
-                self.show_snack_bar(f"Error: {str(ex)}", "error")
-        
-        dialog = show_update_status_dialog(
-            quotation_id,
-            current_status,
-            self.primary_color,
-            on_update,
-            self._close_dialog
-        )
-        self._open_dialog(dialog)
-    
     def delete_quotation(self, quotation_id: int):
         """ลบใบเสนอราคาพร้อมยืนยัน"""
         quote = next((q for q in self.quotations if q.get("id") == quotation_id), None)
@@ -847,7 +771,7 @@ class QuotationListContent:
         
         # Auto dismiss after 3 seconds using asyncio
         async def dismiss_after_delay():
-            await asyncio.sleep(3.0)
+            await asyncio.sleep(2.0)
             if snackbar in self.page.overlay:
                 snackbar.opacity = 0
                 self.page.update()

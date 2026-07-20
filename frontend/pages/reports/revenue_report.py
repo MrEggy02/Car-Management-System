@@ -9,7 +9,7 @@ import tempfile
 import os
 import threading
 import time
-import asyncio  # เพิ่ม import asyncio
+import asyncio
 
 from i18n import get_text
 
@@ -53,8 +53,15 @@ class RevenueReportContent:
             expand=True,
         )
         
+        # Wrap content_area in a Container with proper padding
+        content_container = ft.Container(
+            content=self.content_area,
+            padding=ft.Padding(left=10, right=10, top=0, bottom=0),
+            expand=True,
+        )
+        
         main_content = ft.Container(
-            content=ft.Column([header, self.content_area]),
+            content=ft.Column([header, content_container]),
             expand=True,
             bgcolor="#F5F7FA",
         )
@@ -189,7 +196,7 @@ class RevenueReportContent:
             padding=ft.Padding(left=20, right=20, top=20, bottom=20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
-            margin=ft.Margin(left=24, right=24, top=10, bottom=10),
+            margin=ft.Margin(left=10, right=10, top=10, bottom=10),
             shadow=ft.BoxShadow(
                 blur_radius=10,
                 color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
@@ -323,71 +330,87 @@ class RevenueReportContent:
     def _build_summary_cards(self):
         summary = self.report_data.get('summary', {})
         
-        cards = ft.Row([
-            self._build_stat_card(
-                title=get_text("total_revenue"),
-                value=self._format_currency(summary.get('total_revenue', 0)),
-                icon=ft.Icons.MONEY,
-                color="#10B981",
-                subtitle=f"{summary.get('invoice_count', 0)} {get_text('invoices')}",
-            ),
-            self._build_stat_card(
-                title=get_text("total_discount"),
-                value=self._format_currency(summary.get('total_discount', 0)),
-                icon=ft.Icons.LOCAL_OFFER,
-                color="#F59E0B",
-                subtitle=f"{get_text('given')}",
-            ),
-            self._build_stat_card(
-                title=get_text("total_received"),
-                value=self._format_currency(summary.get('total_received', 0)),
-                icon=ft.Icons.PAYMENT,
-                color="#3B82F6",
-                subtitle=f"{get_text('collected')}",
-            ),
-            self._build_stat_card(
-                title=get_text("net_profit"),
-                value=self._format_currency(summary.get('net_profit', 0)),
-                icon=ft.Icons.TRENDING_UP,
-                color="#8B5CF6",
-                subtitle=f"{get_text('profit')}",
-            ),
-        ], spacing=20, expand=True)
+        # Main 4 cards - ใช้ Row ที่มี expand=True และ spacing ที่เหมาะสม
+        cards = ft.Row(
+            [
+                self._build_stat_card(
+                    title=get_text("total_revenue"),
+                    value=self._format_currency(summary.get('total_revenue', 0)),
+                    icon=ft.Icons.MONEY,
+                    color="#10B981",
+                    subtitle=f"{summary.get('invoice_count', 0)} {get_text('invoices')}",
+                ),
+                self._build_stat_card(
+                    title=get_text("total_discount"),
+                    value=self._format_currency(summary.get('total_discount', 0)),
+                    icon=ft.Icons.LOCAL_OFFER,
+                    color="#F59E0B",
+                    subtitle=f"{get_text('given')}",
+                ),
+                self._build_stat_card(
+                    title=get_text("total_received"),
+                    value=self._format_currency(summary.get('total_received', 0)),
+                    icon=ft.Icons.PAYMENT,
+                    color="#3B82F6",
+                    subtitle=f"{get_text('collected')}",
+                ),
+                self._build_stat_card(
+                    title=get_text("net_profit"),
+                    value=self._format_currency(summary.get('net_profit', 0)),
+                    icon=ft.Icons.TRENDING_UP,
+                    color="#8B5CF6",
+                    subtitle=f"{get_text('profit')}",
+                ),
+            ],
+            spacing=16,
+            expand=True,
+        )
         
-        cost_row = ft.Row([
-            self._build_stat_card(
-                title=get_text("parts_cost"),
-                value=self._format_currency(summary.get('total_parts_cost', 0)),
-                icon=ft.Icons.INVENTORY,
-                color="#EF4444",
-                subtitle=f"{get_text('parts_used')}",
-                small=True,
-            ),
-            self._build_stat_card(
-                title=get_text("purchase_cost"),
-                value=self._format_currency(summary.get('total_purchase_cost', 0)),
-                icon=ft.Icons.LOCAL_SHIPPING,
-                color="#EC4899",
-                subtitle=f"{get_text('purchases')}",
-                small=True,
-            ),
-        ], spacing=20, expand=True)
+        # Cost row - 2 cards
+        cost_row = ft.Row(
+            [
+                self._build_stat_card(
+                    title=get_text("parts_cost"),
+                    value=self._format_currency(summary.get('total_parts_cost', 0)),
+                    icon=ft.Icons.INVENTORY,
+                    color="#EF4444",
+                    subtitle=f"{get_text('parts_used')}",
+                    small=True,
+                ),
+                self._build_stat_card(
+                    title=get_text("purchase_cost"),
+                    value=self._format_currency(summary.get('total_purchase_cost', 0)),
+                    icon=ft.Icons.LOCAL_SHIPPING,
+                    color="#EC4899",
+                    subtitle=f"{get_text('purchases')}",
+                    small=True,
+                ),
+            ],
+            spacing=16,
+            expand=True,
+        )
         
-        return ft.Column([
-            cards,
-            ft.Container(height=16),
-            cost_row,
-        ])
+        # Wrap with Container that has proper padding
+        return ft.Container(
+            content=ft.Column([
+                cards,
+                ft.Container(height=16),
+                cost_row,
+            ]),
+            padding=ft.Padding(left=10, right=10, top=0, bottom=0),
+        )
     
     def _build_stat_card(self, title, value, icon, color, subtitle="", small=False):
-        padding_value = 16 if not small else 12
-        padding = ft.padding.all(padding_value)
+        padding_value = 16 if not small else 14
+        icon_size = 20 if not small else 18
+        value_size = 18 if not small else 15
+        title_size = 13 if not small else 12
         
         return ft.Container(
             content=ft.Column([
                 ft.Row([
                     ft.Container(
-                        content=ft.Icon(icon, size=20 if small else 24, color=ft.Colors.WHITE),
+                        content=ft.Icon(icon, size=icon_size, color=ft.Colors.WHITE),
                         bgcolor=color,
                         border_radius=10,
                         padding=ft.Padding(left=8, right=8, top=8, bottom=8),
@@ -395,21 +418,26 @@ class RevenueReportContent:
                     ft.Container(expand=True),
                     ft.Text(
                         value,
-                        size=14 if small else 18,
+                        size=value_size,
                         weight=ft.FontWeight.BOLD,
                         color="#1E293B",
                         text_align=ft.TextAlign.RIGHT,
                     ),
                 ], spacing=12),
                 ft.Container(height=4),
-                ft.Text(title, size=12 if small else 13, color="#64748B"),
+                ft.Text(title, size=title_size, color="#64748B"),
                 ft.Text(subtitle, size=10, color="#94A3B8") if subtitle else ft.Container(),
             ], spacing=0),
-            padding=padding,
+            padding=ft.Padding(left=padding_value, right=padding_value, top=padding_value, bottom=padding_value),
             bgcolor=ft.Colors.WHITE,
             border_radius=12,
-            border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_100), right=ft.BorderSide(1, ft.Colors.GREY_100), bottom=ft.BorderSide(1, ft.Colors.GREY_100), left=ft.BorderSide(1, ft.Colors.GREY_100)),
+            border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_200), right=ft.BorderSide(1, ft.Colors.GREY_200), bottom=ft.BorderSide(1, ft.Colors.GREY_200), left=ft.BorderSide(1, ft.Colors.GREY_200)),
             expand=True,
+            shadow=ft.BoxShadow(
+                blur_radius=4,
+                color=ft.Colors.with_opacity(0.06, ft.Colors.BLACK),
+                offset=ft.Offset(0, 1),
+            ),
         )
     
     def _build_revenue_chart(self):
@@ -421,6 +449,7 @@ class RevenueReportContent:
                 padding=ft.Padding(left=40, right=40, top=40, bottom=40),
                 bgcolor=ft.Colors.WHITE,
                 border_radius=16,
+                margin=ft.Margin(left=10, right=10, top=0, bottom=0),
                 alignment=ft.Alignment(0, 0),
             )
         
@@ -440,7 +469,7 @@ class RevenueReportContent:
                 ft.Container(
                     content=ft.Column([
                         ft.Container(
-                            height=height_percentage,
+                            height=max(height_percentage, 4),
                             width=40,
                             bgcolor=bar_color,
                             border_radius=ft.BorderRadius.only(top_left=8, top_right=8),
@@ -472,7 +501,7 @@ class RevenueReportContent:
             padding=ft.Padding(left=20, right=20, top=20, bottom=20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
-            margin=ft.Margin(left=24, right=24, top=0, bottom=0),
+            margin=ft.Margin(left=10, right=10, top=0, bottom=0),
             shadow=ft.BoxShadow(
                 blur_radius=10,
                 color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
@@ -523,7 +552,7 @@ class RevenueReportContent:
             padding=ft.Padding(left=20, right=20, top=20, bottom=20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
-            margin=ft.Margin(left=24, right=24, top=0, bottom=0),
+            margin=ft.Margin(left=10, right=10, top=0, bottom=0),
             shadow=ft.BoxShadow(
                 blur_radius=10,
                 color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
@@ -575,7 +604,7 @@ class RevenueReportContent:
             padding=ft.Padding(left=20, right=20, top=20, bottom=20),
             bgcolor=ft.Colors.WHITE,
             border_radius=16,
-            margin=ft.Margin(left=24, right=24, top=0, bottom=0),
+            margin=ft.Margin(left=10, right=10, top=0, bottom=0),
             shadow=ft.BoxShadow(
                 blur_radius=10,
                 color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
@@ -605,7 +634,6 @@ class RevenueReportContent:
         try:
             self._show_snack_bar(get_text("preparing_print"), "info")
             
-            # Fetch PDF bytes from backend
             pdf_bytes = self.client.get_revenue_report_pdf(
                 start_date=self.start_date,
                 end_date=self.end_date
@@ -615,7 +643,6 @@ class RevenueReportContent:
                 self._show_snack_bar(get_text("pdf_export_failed"), "error")
                 return
             
-            # Ensure output directory exists in project root
             output_dir = "output"
             if not os.path.exists(output_dir):
                 os.makedirs(output_dir)
@@ -623,11 +650,9 @@ class RevenueReportContent:
             file_name = f"revenue_report_{self.start_date}_to_{self.end_date}.pdf"
             file_path = os.path.join(output_dir, file_name)
             
-            # Write PDF bytes
             with open(file_path, "wb") as f:
                 f.write(pdf_bytes)
                 
-            # Open PDF
             os.startfile(file_path)
             self._show_snack_bar(get_text("pdf_export_success"), "success")
             
@@ -638,7 +663,6 @@ class RevenueReportContent:
     def _show_snack_bar(self, message, type="success"):
         """Show snackbar notification - Bottom center with auto width"""
         
-        # Remove existing snackbar if any
         if self.current_snackbar:
             try:
                 self.page.overlay.remove(self.current_snackbar)
@@ -656,7 +680,6 @@ class RevenueReportContent:
             bgcolor = ft.Colors.GREY_800
             icon = ft.Icons.INFO
         
-        # Create snackbar content with auto width
         snack_content = ft.Container(
             content=ft.Row(
                 [
@@ -677,26 +700,22 @@ class RevenueReportContent:
             ),
         )
         
-        # Create overlay container - positioned at bottom center
         snackbar = ft.Container(
             content=snack_content,
             margin=ft.Margin(left=30, right=30, top=0, bottom=20),
-            alignment=ft.Alignment(0, 1),  # Bottom Center
+            alignment=ft.Alignment(0, 1),
             animate_opacity=ft.Animation(300, ft.AnimationCurve.EASE_IN),
             opacity=0,
         )
         
-        # Add to overlay
         self.page.overlay.append(snackbar)
         self.current_snackbar = snackbar
         
-        # Animate in
         snackbar.opacity = 1
         self.page.update()
         
-        # Auto dismiss after 3 seconds using asyncio
         async def dismiss_after_delay():
-            await asyncio.sleep(3.0)
+            await asyncio.sleep(2.0)
             if snackbar in self.page.overlay:
                 snackbar.opacity = 0
                 self.page.update()
@@ -707,5 +726,4 @@ class RevenueReportContent:
                         self.current_snackbar = None
                     self.page.update()
         
-        # Run the dismiss task
         self.page.run_task(dismiss_after_delay)

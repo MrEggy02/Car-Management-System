@@ -3,7 +3,6 @@ import flet as ft
 import asyncio
 import traceback
 import os
-import tempfile
 from i18n import get_text
 
 
@@ -16,7 +15,7 @@ class ShopContent:
         self.is_loading = False
         self.primary_color = "#1565C0"
         self.primary_dark = "#0D47A1"
-        self.selected_image_path = None
+        self.current_snackbar = None
 
     def build(self):
         """Build shop management content with wide image at top"""
@@ -33,7 +32,6 @@ class ShopContent:
                                 weight=ft.FontWeight.BOLD, 
                                 color=ft.Colors.WHITE
                             ),
-                            
                         ],
                         spacing=2,
                     ),
@@ -64,7 +62,7 @@ class ShopContent:
             border_radius=ft.BorderRadius.only(bottom_left=20, bottom_right=20),
         )
         
-        # Shop image - wide banner style (full width of card)
+        # Shop image - wide banner style (ใช้รูปจาก assets)
         self.shop_image = ft.Image(
             src="assets/shop_banner.png" if os.path.exists("assets/shop_banner.png") else "assets/car_logo.png",
             width=float('inf'),
@@ -214,18 +212,6 @@ class ShopContent:
                 self.shop_name.value = shop.get('name', '')
                 self.address.value = shop.get('address', '')
                 self.phone.value = shop.get('phone', '')
-                
-                # Try to load logo
-                try:
-                    logo = self.client.get_shop_logo()
-                    if logo:
-                        # Save to temp file and display
-                        with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as tmp:
-                            tmp.write(logo)
-                            self.shop_image.src = tmp.name
-                except:
-                    pass
-                
                 self.page.update()
                 print("DEBUG: Shop data loaded successfully")
             
@@ -241,7 +227,7 @@ class ShopContent:
     def save_shop(self, e):
         """Save shop information"""
         if not self.shop_name.value:
-            self.show_snackbar(get_text("shop_name_required"))
+            self.show_snackbar(get_text("shop_name_required"), "error")
             return
         
         btn = e.control
@@ -256,25 +242,89 @@ class ShopContent:
                 phone=self.phone.value
             )
             
-            self.show_snackbar(f"{get_text('save_success')}")
+            self.show_snackbar(f"{get_text('save_success')}", "success")
             self.load_data()
             
         except Exception as err:
             print(f"Error saving shop: {err}")
             traceback.print_exc()
-            self.show_snackbar(f"{get_text('error')}: {str(err)}")
+            self.show_snackbar(f"{get_text('error')}: {str(err)}", "error")
         finally:
             btn.content.controls[0].name = ft.Icons.SAVE
             btn.disabled = False
             self.page.update()
 
-    def show_snackbar(self, message):
-        """Show snackbar message"""
-        snack = ft.SnackBar(
-            content=ft.Text(message),
-            bgcolor=ft.Colors.GREY_800,
-            duration=3000,
+    def show_snackbar(self, message, type="success"):
+        """Show snackbar notification - Bottom center with auto width (เหมือนหน้าอื่นๆ)"""
+        
+        # Remove existing snackbar if any
+        if self.current_snackbar:
+            try:
+                self.page.overlay.remove(self.current_snackbar)
+            except:
+                pass
+            self.current_snackbar = None
+        
+        if type == "success":
+            bgcolor = ft.Colors.GREEN_600
+            icon = ft.Icons.CHECK_CIRCLE
+        elif type == "error":
+            bgcolor = ft.Colors.RED_600
+            icon = ft.Icons.ERROR
+        else:
+            bgcolor = ft.Colors.GREY_800
+            icon = ft.Icons.INFO
+        
+        # Create snackbar content with auto width
+        snack_content = ft.Container(
+            content=ft.Row(
+                [
+                    ft.Icon(icon, color=ft.Colors.WHITE, size=16),
+                    ft.Text(message, color=ft.Colors.WHITE, size=13, weight=ft.FontWeight.W_500),
+                ],
+                spacing=8,
+                alignment=ft.MainAxisAlignment.START,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            ),
+            padding=ft.Padding(left=14, right=14, top=8, bottom=8),
+            bgcolor=bgcolor,
+            border_radius=8,
+            shadow=ft.BoxShadow(
+                spread_radius=1,
+                blur_radius=8,
+                color=ft.Colors.with_opacity(0.2, ft.Colors.BLACK),
+            ),
         )
-        self.page.snack_bar = snack
-        self.page.snack_bar.open = True
+        
+        # Create overlay container - positioned at bottom center
+        snackbar = ft.Container(
+            content=snack_content,
+            margin=ft.Margin(left=30, right=30, top=0, bottom=20),
+            alignment=ft.Alignment(0, 1),  # Bottom Center
+            animate_opacity=ft.Animation(300, ft.AnimationCurve.EASE_IN),
+            opacity=0,
+        )
+        
+        # Add to overlay
+        self.page.overlay.append(snackbar)
+        self.current_snackbar = snackbar
+        
+        # Animate in
+        snackbar.opacity = 1
         self.page.update()
+        
+        # Auto dismiss after 3 seconds using asyncio
+        async def dismiss_after_delay():
+            await asyncio.sleep(2.0)
+            if snackbar in self.page.overlay:
+                snackbar.opacity = 0
+                self.page.update()
+                await asyncio.sleep(0.3)
+                if snackbar in self.page.overlay:
+                    self.page.overlay.remove(snackbar)
+                    if self.current_snackbar == snackbar:
+                        self.current_snackbar = None
+                    self.page.update()
+        
+        # Run the dismiss task
+        self.page.run_task(dismiss_after_delay)

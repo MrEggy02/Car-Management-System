@@ -317,7 +317,7 @@ def create_add_dialog(on_save, on_close, show_snackbar):
     
     phone = ft.TextField(
         label=get_text("employees_phone"),
-        hint_text="0200000000",
+        hint_text="020xxxxxxxx",
         border_radius=8,
         bgcolor=ft.Colors.WHITE,
         filled=True,

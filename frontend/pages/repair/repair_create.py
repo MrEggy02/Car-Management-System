@@ -869,13 +869,22 @@ class RepairCreateContent:
         
         self.page.update()
     
+    # ==================== FIXED SUCCESS POPUP ====================
     def show_success_popup(self, repair_id):
         def go_to_detail(e):
+            # Close and remove popup before navigating
             popup.open = False
+            self.page.update()
+            if popup in self.page.overlay:
+                self.page.overlay.remove(popup)
             self.navigate("repair_detail", repair_id=repair_id)
         
         def go_to_list(e):
+            # Close and remove popup before navigating
             popup.open = False
+            self.page.update()
+            if popup in self.page.overlay:
+                self.page.overlay.remove(popup)
             self.navigate("repair_list")
         
         popup = ft.AlertDialog(
@@ -929,7 +938,6 @@ class RepairCreateContent:
                         bgcolor=ft.Colors.with_opacity(0.1, self.primary_color),
                         border_radius=10,
                     ),
-                   
                 ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=8),
                 padding=ft.Padding(left=24, right=24, top=24, bottom=24),
                 width=360,
@@ -1027,7 +1035,7 @@ class RepairCreateContent:
         
         # Auto dismiss after 3 seconds using asyncio
         async def dismiss_after_delay():
-            await asyncio.sleep(3.0)
+            await asyncio.sleep(2.0)
             if snackbar in self.page.overlay:
                 snackbar.opacity = 0
                 self.page.update()

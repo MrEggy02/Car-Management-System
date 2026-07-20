@@ -543,7 +543,7 @@ class ReceivingPoListContent:
         
         # Auto dismiss after 3 seconds using asyncio
         async def dismiss_after_delay():
-            await asyncio.sleep(3.0)
+            await asyncio.sleep(2.0)
             if snackbar in self.page.overlay:
                 snackbar.opacity = 0
                 self.page.update()

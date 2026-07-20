@@ -34,6 +34,7 @@ class RepairListContent:
         self._mechanics_cache = None
         self.current_dialog = None
         self.payment_dialog = None
+        self.table_container = None
 
     def build(self):
         header = self._build_header()
@@ -372,12 +373,14 @@ class RepairListContent:
                     _header_cell(get_text("repair_no"), 100),
                     _header_cell(get_text("job_number"), 100),
                     _header_cell(get_text("customer_name"), 140),
-                    _header_cell(get_text("plate_number"), 80),
+                    _header_cell(get_text("plate_number"), 100),
                     _header_cell(get_text("vehicle"), 120),
-                    _header_cell(get_text("mechanic"), 140),
+                    _header_cell(get_text("mechanic"), 130),
+                    # NEW: Parts Withdrawn Status Column
+                    _header_cell("ອາໄຫຼ່", 80, 0),
                     _header_cell(get_text("status"), 110, 0),
                     _header_cell(get_text("days_open"), 100, 0),
-                    _header_cell(get_text("actions"), 180, 0),
+                    _header_cell(get_text("actions"), 200, 0),
                 ],
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
@@ -398,14 +401,17 @@ class RepairListContent:
             border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_200), right=ft.BorderSide(1, ft.Colors.GREY_200), bottom=ft.BorderSide(1, ft.Colors.GREY_200), left=ft.BorderSide(1, ft.Colors.GREY_200)),
             border_radius=12,
             bgcolor=ft.Colors.WHITE,
-            width=1170,
+            width=1250,  # เพิ่มความกว้างให้พอดีกับคอลัมน์ใหม่
         )
 
-        return ft.Container(
+        # Wrap table in scrollable row
+        self.table_container = ft.Container(
             content=ft.Row([table_scroll], scroll=ft.ScrollMode.AUTO, expand=True),
             margin=ft.Margin(left=20, right=20, top=0, bottom=0),
             expand=True,
         )
+        
+        return self.table_container
 
     # ─────────────────────────── DATA LOADING ───────────────────────────
     def load_repair_orders(self):
@@ -598,6 +604,29 @@ class RepairListContent:
         duration_badge = self._build_duration_badge(start_date_str, end_date_str, status)
         mechanic_cell  = self._build_mechanic_cell(mechanic_name, repair_id)
 
+        # ─── NEW: Parts Withdrawn Status Badge ───
+        if parts_usage_count > 0:
+            parts_badge = ft.Container(
+                content=ft.Row([
+                    ft.Icon(ft.Icons.CHECK_CIRCLE, size=12, color="#10B981"),
+                    ft.Text("ເບີກແລ້ວ", size=10, color="#10B981", weight=ft.FontWeight.W_500),
+                ], spacing=4),
+                bgcolor=ft.Colors.with_opacity(0.1, "#10B981"),
+                border_radius=10,
+                padding=ft.Padding(left=8, right=8, top=4, bottom=4),
+                tooltip=f"ເບີກອາໄຫຼ່ທັງໝົດ {parts_usage_count} ລາຍການ",
+            )
+        else:
+            parts_badge = ft.Container(
+                content=ft.Row([
+                    ft.Icon(ft.Icons.REMOVE_CIRCLE_OUTLINE, size=12, color="#94A3B8"),
+                    ft.Text("ຍັງບໍ່ເບີກ", size=10, color="#94A3B8"),
+                ], spacing=4),
+                bgcolor=ft.Colors.GREY_100,
+                border_radius=10,
+                padding=ft.Padding(left=8, right=8, top=4, bottom=4),
+            )
+
         view_btn = ft.IconButton(
             icon=ft.Icons.VISIBILITY_OUTLINED,
             icon_size=20,
@@ -648,26 +677,19 @@ class RepairListContent:
                 padding=ft.Padding(left=10, right=0, top=0, bottom=0) if (left_pad and align == -1) else None,
             )
 
-        if parts_usage_count > 0:
-            job_no_cell = ft.Row([
-                ft.Text(job_no, size=13, color="#1E293B"),
-                ft.Icon(ft.Icons.BUILD_CIRCLE, size=14, color="#10B981", tooltip="ມີການເບິກອາໄຫຼ່ແລ້ວ")
-            ], spacing=4)
-        else:
-            job_no_cell = ft.Text(job_no, size=13, color="#1E293B")
-
         row = ft.Container(
             content=ft.Row(
                 [
                     _cell(ft.Text(repair_no, size=13, weight=ft.FontWeight.W_500, color="#1E293B"), 100),
-                    _cell(job_no_cell, 100),
+                    _cell(ft.Text(job_no, size=13, color="#1E293B"), 100),
                     _cell(ft.Container(content=ft.Text(customer_name, size=13, color="#1E293B", max_lines=1), tooltip=customer_name), 140),
-                    _cell(ft.Text(plate_number, size=12, color="#64748B", max_lines=1), 80),
+                    _cell(ft.Text(plate_number, size=12, color="#64748B", max_lines=1), 100),
                     _cell(ft.Container(content=ft.Text(vehicle_text, size=12, color="#64748B", max_lines=1), tooltip=vehicle_text), 120),
-                    _cell(mechanic_cell, 140),
+                    _cell(mechanic_cell, 130),
+                    _cell(parts_badge, 80, 0, False),
                     _cell(status_badge, 110, 0, False),
                     _cell(duration_badge, 100, 0, False),
-                    _cell(ft.Row([add_part_btn, view_btn, print_btn, delete_btn], spacing=0), 180, 0, False),
+                    _cell(ft.Row([add_part_btn, view_btn, print_btn, delete_btn], spacing=0), 200, 0, False),
                 ],
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
@@ -1214,7 +1236,7 @@ class RepairListContent:
         self.page.update()
         
         async def dismiss_after_delay():
-            await asyncio.sleep(3.0)
+            await asyncio.sleep(2.0)
             if snackbar in self.page.overlay:
                 snackbar.opacity = 0
                 self.page.update()

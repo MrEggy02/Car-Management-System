@@ -1,3 +1,4 @@
+# frontend/pages/dashboard_content.py
 import flet as ft
 from i18n import get_text
 from datetime import datetime
@@ -24,7 +25,7 @@ class DashboardContent:
         # Load data
         self.load_all_data()
         
-        # Header with gradient (same as other pages)
+        # Header with gradient
         header = ft.Container(
             content=ft.Row(
                 [
@@ -71,7 +72,7 @@ class DashboardContent:
            
         )
         
-        # Quick Actions Row
+        # Quick Actions Row - IMPROVED
         quick_actions_row = self._build_quick_actions()
         
         # Stats Row with Icons
@@ -372,33 +373,94 @@ class DashboardContent:
             return int((completed / total) * 100)
         return 0
     
+    # ======================= IMPROVED QUICK ACTIONS =======================
     def _build_quick_actions(self):
-        def create_btn(icon, text, route, color):
-            return ft.ElevatedButton(
-                content=ft.Row([ft.Icon(icon, size=18, color=color), ft.Text(text, size=14, weight=ft.FontWeight.W_500, color=color)], spacing=8),
-                style=ft.ButtonStyle(
-                    bgcolor=ft.Colors.WHITE,
-                    shape=ft.RoundedRectangleBorder(radius=10),
-                    padding=ft.Padding(left=16, right=16, top=12, bottom=12),
-                    elevation=2,
+        """Build quick action buttons with modern card style"""
+        def create_action_card(icon, text, route, color, bg_color):
+            return ft.Container(
+                content=ft.Row(
+                    [
+                        ft.Container(
+                            content=ft.Icon(icon, size=24, color=ft.Colors.WHITE),
+                            bgcolor=color,
+                            border_radius=12,
+                            padding=ft.Padding(left=12, right=12, top=12, bottom=12),
+                        ),
+                        ft.Column(
+                            [
+                                ft.Text(
+                                    text,
+                                    size=14,
+                                    weight=ft.FontWeight.W_600,
+                                    color="#1E293B",
+                                ),
+                                ft.Text(
+                                    get_text("click_to_start"),
+                                    size=10,
+                                    color="#94A3B8",
+                                ),
+                            ],
+                            spacing=2,
+                            expand=True,
+                        ),
+                        ft.Icon(
+                            ft.Icons.CHEVRON_RIGHT,
+                            size=16,
+                            color="#94A3B8",
+                        ),
+                    ],
+                    spacing=12,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                ),
+                padding=ft.Padding(left=16, right=12, top=12, bottom=12),
+                bgcolor=bg_color,
+                border_radius=12,
+                border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_200), right=ft.BorderSide(1, ft.Colors.GREY_200), bottom=ft.BorderSide(1, ft.Colors.GREY_200), left=ft.BorderSide(1, ft.Colors.GREY_200)),
+                shadow=ft.BoxShadow(
+                    blur_radius=4,
+                    color=ft.Colors.with_opacity(0.06, ft.Colors.BLACK),
+                    offset=ft.Offset(0, 2),
                 ),
                 on_click=lambda e: self.navigate(route),
-                expand=True
+                ink=True,
+                expand=True,
             )
         
+        # Buttons with different colors
         return ft.Container(
             content=ft.Row(
                 [
-                    create_btn(ft.Icons.ADD_BOX, get_text("new_job_order"), "job_order_create", self.primary_color),
-                    create_btn(ft.Icons.DESCRIPTION, get_text("new_quotation"), "quotation_create", "#F59E0B"),
-                    create_btn(ft.Icons.PAYMENT, get_text("receive_payment"), "invoice_list", "#10B981"),
+                    create_action_card(
+                        ft.Icons.ADD_BOX,
+                        get_text("new_job_order"),
+                        "job_order_create",
+                        self.primary_color,
+                        ft.Colors.WHITE,
+                    ),
+                    create_action_card(
+                        ft.Icons.DESCRIPTION,
+                        get_text("new_quotation"),
+                        "quotation_create",
+                        "#F59E0B",
+                        ft.Colors.WHITE,
+                    ),
+                    create_action_card(
+                        ft.Icons.PAYMENT,
+                        get_text("receive_payment"),
+                        "invoice_list",
+                        "#10B981",
+                        ft.Colors.WHITE,
+                    ),
                 ],
-                spacing=20,
+                spacing=16,
+                expand=True,
             ),
-            padding=ft.Padding(left=12, right=12, top=0, bottom=0),
-            margin=ft.Margin(left=0, right=0, top=12, bottom=0),
+            margin=ft.Margin(left=0, right=0, top=0, bottom=12),
+            padding=ft.Padding(left=4, right=4, top=0, bottom=0),
         )
 
+    # ======================= END IMPROVED QUICK ACTIONS =======================
+    
     def _build_stats_card(self, title, value, subtitle, icon, color, progress=None):
         """Build stats card with progress ring"""
         content_items = [

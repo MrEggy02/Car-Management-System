@@ -43,7 +43,7 @@ else:
 
 
 class NumberedCanvas(canvas.Canvas):
-    """Canvas subclass to handle bottom header lines and two-pass page numbering (Page X of Y)."""
+    """Canvas subclass to handle bottom header lines and two-pass page numbering."""
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._saved_page_states = []
@@ -65,26 +65,21 @@ class NumberedCanvas(canvas.Canvas):
         self.setFont(FONT_NAME, 8)
         self.setFillColor(colors.HexColor('#64748B'))
         
-        # Draw a thin horizontal divider line just above the page footer
         self.setStrokeColor(colors.HexColor('#CBD5E1'))
         self.setLineWidth(0.5)
         self.line(36, 35, 559, 35)
         
-        # Right aligned page number in Lao
         page_text = f"ໜ້າ {self._pageNumber} / {page_count}"
         self.drawRightString(559, 22, page_text)
         
-        # Left aligned document info in Lao
-        self.drawString(36, 22, "J&P Auto Maxing — ໃບສັ່ງງານຊ່ອມແປງ (Repair Work Order)")
+        self.drawString(36, 22, "J&P Auto Maxing — ໃບສັ່ງງານຊ່ອມແປງ")
         self.restoreState()
 
 
 def generate_repair_work_order_pdf(repair_id: int) -> bytes:
-    """Queries repair order information and generates an A4 PDF work order for mechanics."""
     db = get_db()
     cursor = db.cursor(dictionary=True)
     try:
-        # 1. Fetch repair order details and associated job order, customer, vehicle, brand, and mechanic
         cursor.execute("""
             SELECT ro.*, 
                    jo.job_no, jo.problem_description, jo.mileage, jo.fuel_level,
@@ -100,11 +95,9 @@ def generate_repair_work_order_pdf(repair_id: int) -> bytes:
             WHERE ro.id = %s
         """, (repair_id,))
         repair = cursor.fetchone()
-        
         if not repair:
             raise HTTPException(status_code=404, detail=f"Repair order ID {repair_id} not found")
 
-        # 2. Fetch shop information
         cursor.execute("SELECT name, address, phone FROM Shop LIMIT 1")
         shop = cursor.fetchone()
         if not shop:
@@ -114,7 +107,6 @@ def generate_repair_work_order_pdf(repair_id: int) -> bytes:
                 "phone": "020 22224444"
             }
 
-        # 3. Fetch approved quotation for this job order
         cursor.execute("""
             SELECT id FROM quotations 
             WHERE job_order_id = %s AND status = 'approved' 
@@ -142,7 +134,6 @@ def generate_repair_work_order_pdf(repair_id: int) -> bytes:
             """, (quotation["id"],))
             quotation_items = cursor.fetchall()
 
-        # 4. Fetch actual parts withdrawn (parts_usage)
         cursor.execute("""
             SELECT pu.*, p.name as part_name, u.name as unit_name
             FROM parts_usage pu
@@ -160,7 +151,6 @@ def generate_repair_work_order_pdf(repair_id: int) -> bytes:
         cursor.close()
         db.close()
 
-    # 5. Build ReportLab PDF flowables
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
         buffer,
@@ -168,13 +158,10 @@ def generate_repair_work_order_pdf(repair_id: int) -> bytes:
         rightMargin=36,
         leftMargin=36,
         topMargin=36,
-        bottomMargin=54 # extra space at bottom for footer canvas
+        bottomMargin=54
     )
 
-    # Styles
     styles = getSampleStyleSheet()
-    
-    # Modify default style to support Phetsarath font
     normal_style = styles['Normal']
     normal_style.fontName = FONT_NAME
     normal_style.fontSize = 10
@@ -186,18 +173,8 @@ def generate_repair_work_order_pdf(repair_id: int) -> bytes:
         fontName=FONT_NAME,
         fontSize=18,
         leading=22,
-        alignment=2, # Right aligned
+        alignment=2,
         textColor=colors.HexColor('#0D47A1')
-    )
-
-    subtitle_style = ParagraphStyle(
-        'DocSubtitle',
-        parent=normal_style,
-        fontName=FONT_NAME,
-        fontSize=9,
-        leading=11,
-        alignment=2, # Right aligned
-        textColor=colors.HexColor('#64748B')
     )
 
     section_header_style = ParagraphStyle(
@@ -237,7 +214,7 @@ def generate_repair_work_order_pdf(repair_id: int) -> bytes:
         fontSize=9,
         leading=12,
         textColor=colors.white,
-        alignment=1 # Center
+        alignment=1
     )
 
     table_cell_style = ParagraphStyle(
@@ -256,12 +233,11 @@ def generate_repair_work_order_pdf(repair_id: int) -> bytes:
         fontSize=9,
         leading=12,
         textColor=colors.HexColor('#334155'),
-        alignment=1 # Center
+        alignment=1
     )
 
     story = []
 
-    # A. PDF Header Table (Company info on left, document metadata on right)
     shop_name = shop.get('name', 'J&P Auto Maxing')
     shop_address = shop.get('address', '')
     shop_phone = shop.get('phone', '')
@@ -280,19 +256,11 @@ def generate_repair_work_order_pdf(repair_id: int) -> bytes:
     else:
         created_date = '-'
     job_no = repair.get('job_no', '-')
-    status = repair.get('status', 'waiting')
-    
-    status_translations = {
-        "working": "ກຳລັງສ້ອມແປງ (Working)",
-        "completed": "ສຳເລັດແລ້ວ (Completed)"
-    }
-    status_text = status_translations.get(status, status)
 
     meta_box_data = [
-        [Paragraph("<b>ເລກທີໃບສັ່ງຊ່ອມ / RO No:</b>", meta_label_style), Paragraph(f"<b>{ro_no}</b>", meta_value_style)],
-        [Paragraph("<b>ວັນທີ / Date:</b>", meta_label_style), Paragraph(created_date, meta_value_style)],
-        [Paragraph("<b>ເລກທີໃບຮັບລົດ / Job No:</b>", meta_label_style), Paragraph(job_no, meta_value_style)],
-        [Paragraph("<b>ສະຖານະ / Status:</b>", meta_label_style), Paragraph(status_text, meta_value_style)]
+        [Paragraph("<b>ເລກທີໃບສັ່ງຊ່ອມ:</b>", meta_label_style), Paragraph(f"<b>{ro_no}</b>", meta_value_style)],
+        [Paragraph("<b>ວັນທີ:</b>", meta_label_style), Paragraph(created_date, meta_value_style)],
+        [Paragraph("<b>ເລກທີໃບຮັບລົດ:</b>", meta_label_style), Paragraph(job_no, meta_value_style)],
     ]
     meta_table = Table(meta_box_data, colWidths=[110, 100])
     meta_table.setStyle(TableStyle([
@@ -307,13 +275,12 @@ def generate_repair_work_order_pdf(repair_id: int) -> bytes:
     header_left = Paragraph(
         f"<font size=16 color='#0D47A1'><b>{shop_name}</b></font><br/>"
         f"<font size=9 color='#475569'>{shop_address}<br/>"
-        f"ເບີໂທລະສັບ / Phone: {shop_phone}</font>",
+        f"ເບີໂທລະສັບ: {shop_phone}</font>",
         normal_style
     )
 
     header_right = [
         Paragraph("<b>ໃບສັ່ງງານຊ່ອມແປງ</b>", title_style),
-        Paragraph("REPAIR WORK ORDER", subtitle_style),
         Spacer(1, 6),
         meta_table
     ]
@@ -327,7 +294,6 @@ def generate_repair_work_order_pdf(repair_id: int) -> bytes:
     ]))
     story.append(header_table)
 
-    # B. Divider line
     divider = Table([[""]], colWidths=[520])
     divider.setStyle(TableStyle([
         ('LINEABOVE', (0, 0), (-1, -1), 1.5, colors.HexColor('#0D47A1')),
@@ -338,7 +304,6 @@ def generate_repair_work_order_pdf(repair_id: int) -> bytes:
     ]))
     story.append(divider)
 
-    # C. Section 1: Customer & Vehicle Info
     customer_name = repair.get('customer_name', '-')
     customer_phone = repair.get('customer_phone', '-')
     plate_number = repair.get('plate_number', '-')
@@ -346,7 +311,7 @@ def generate_repair_work_order_pdf(repair_id: int) -> bytes:
     model = repair.get('model', '-')
     year = repair.get('year', '')
     color = repair.get('color', '-')
-    mechanic_name = repair.get('mechanic_name', 'ຍັງບໍ່ໄດ້ມອບໝາຍ (Unassigned)')
+    mechanic_name = repair.get('mechanic_name', 'ຍັງບໍ່ໄດ້ມອບໝາຍ')
     
     mileage = repair.get('mileage', '-')
     if mileage is not None and mileage != '-':
@@ -363,20 +328,20 @@ def generate_repair_work_order_pdf(repair_id: int) -> bytes:
 
     info_data = [
         [
-            Paragraph("<b>ຊື່ລູກຄ້າ / Customer:</b>", meta_label_style), Paragraph(customer_name, meta_value_style),
-            Paragraph("<b>ທະບຽນລົດ / Plate No:</b>", meta_label_style), Paragraph(f"<b>{plate_number}</b>", meta_value_style)
+            Paragraph("<b>ຊື່ລູກຄ້າ:</b>", meta_label_style), Paragraph(customer_name, meta_value_style),
+            Paragraph("<b>ທະບຽນລົດ:</b>", meta_label_style), Paragraph(f"<b>{plate_number}</b>", meta_value_style)
         ],
         [
-            Paragraph("<b>ເບີໂທ / Phone No:</b>", meta_label_style), Paragraph(customer_phone, meta_value_style),
-            Paragraph("<b>ຍີ່ຫໍ້ & ລຸ້ນ / Brand & Model:</b>", meta_label_style), Paragraph(f"{brand} {model} {f'({year})' if year else ''}", meta_value_style)
+            Paragraph("<b>ເບີໂທລະສັບ:</b>", meta_label_style), Paragraph(customer_phone, meta_value_style),
+            Paragraph("<b>ຍີ່ຫໍ້ ແລະ ລຸ້ນ:</b>", meta_label_style), Paragraph(f"{brand} {model} {f'({year})' if year else ''}", meta_value_style)
         ],
         [
-            Paragraph("<b>ຊ່າງຮັບຜິດຊອບ / Mechanic:</b>", meta_label_style), Paragraph(f"<b>{mechanic_name}</b>", meta_value_style),
-            Paragraph("<b>ສີລົດ / Color:</b>", meta_label_style), Paragraph(color, meta_value_style)
+            Paragraph("<b>ຊ່າງຮັບຜິດຊອບ:</b>", meta_label_style), Paragraph(f"<b>{mechanic_name}</b>", meta_value_style),
+            Paragraph("<b>ສີລົດ:</b>", meta_label_style), Paragraph(color, meta_value_style)
         ],
         [
-            Paragraph("<b>ໄລຍະທາງ / Mileage:</b>", meta_label_style), Paragraph(mileage_text, meta_value_style),
-            Paragraph("<b>ລະດັບນໍ້າມັນ / Fuel Level:</b>", meta_label_style), Paragraph(fuel_level, meta_value_style)
+            Paragraph("<b>ໄລຍະທາງ:</b>", meta_label_style), Paragraph(mileage_text, meta_value_style),
+            Paragraph("<b>ລະດັບນໍ້າມັນ:</b>", meta_label_style), Paragraph(fuel_level, meta_value_style)
         ]
     ]
     info_table = Table(info_data, colWidths=[110, 150, 110, 150])
@@ -388,17 +353,16 @@ def generate_repair_work_order_pdf(repair_id: int) -> bytes:
         ('LINEBELOW', (0, 0), (-1, -1), 0.5, colors.HexColor('#F1F5F9')),
     ]))
     
-    story.append(Paragraph("<b>ຂໍ້ມູນລູກຄ້າ ແລະ ພາຫະນະ / Customer & Vehicle Info</b>", section_header_style))
+    story.append(Paragraph("<b>ຂໍ້ມູນລູກຄ້າ ແລະ ພາຫະນະ</b>", section_header_style))
     story.append(info_table)
     story.append(Spacer(1, 8))
 
-    # D. Section 2: Problem Description
     problem = repair.get('problem_description', '-')
     if problem:
         problem = problem.replace('\n', '<br/>')
     problem_box_data = [
-        [Paragraph("<b>ອາການເສຍ ແລະ ບັນຫາທີ່ແຈ້ງຊ່ອມ / Symptoms & Problems Reported:</b>", meta_label_style)],
-        [Paragraph(problem if problem else 'ບໍ່ມີຂໍ້ມູນ (No description)', meta_value_style)]
+        [Paragraph("<b>ອາການເສຍ ແລະ ບັນຫາທີ່ແຈ້ງຊ່ອມ:</b>", meta_label_style)],
+        [Paragraph(problem if problem else 'ບໍ່ມີຂໍ້ມູນ', meta_value_style)]
     ]
     problem_table = Table(problem_box_data, colWidths=[520])
     problem_table.setStyle(TableStyle([
@@ -413,13 +377,12 @@ def generate_repair_work_order_pdf(repair_id: int) -> bytes:
     story.append(problem_table)
     story.append(Spacer(1, 8))
 
-    # E. Section 3: Repair Tasks / Services Table
     services_data = [
         [
             Paragraph("<b>ລຳດັບ<br/>No.</b>", table_header_style),
-            Paragraph("<b>ລາຍການບໍລິການ ແລະ ໜ້າວຽກຊ່ອມແປງ<br/>Task / Service Description</b>", table_header_style),
-            Paragraph("<b>ສະຖານະໜ້າວຽກ<br/>Work Status Checklist</b>", table_header_style),
-            Paragraph("<b>ບັນທຶກຂອງຊ່າງ / ໝາຍເຫດ<br/>Mechanic Remarks</b>", table_header_style)
+            Paragraph("<b>ລາຍການບໍລິການ ແລະ ໜ້າວຽກຊ່ອມແປງ</b>", table_header_style),
+            Paragraph("<b>ສະຖານະໜ້າວຽກ</b>", table_header_style),
+            Paragraph("<b>ບັນທຶກຂອງຊ່າງ / ໝາຍເຫດ</b>", table_header_style)
         ]
     ]
 
@@ -430,7 +393,7 @@ def generate_repair_work_order_pdf(repair_id: int) -> bytes:
             services_data.append([
                 Paragraph(str(service_index), table_cell_center_style),
                 Paragraph(task_name, table_cell_style),
-                Paragraph("[  ] ລໍຖ້າ (Pending)  [  ] ກຳລັງເຮັດ (Active)  [  ] ສຳເລັດ (Done)", table_cell_style),
+                Paragraph("[  ] ລໍຖ້າ  [  ] ກຳລັງເຮັດ  [  ] ສຳເລັດ", table_cell_style),
                 Paragraph("", table_cell_style)
             ])
             service_index += 1
@@ -438,7 +401,7 @@ def generate_repair_work_order_pdf(repair_id: int) -> bytes:
     if service_index == 1:
         services_data.append([
             Paragraph("-", table_cell_center_style),
-            Paragraph("ບໍ່ມີລາຍການບໍລິການ/ໜ້າວຽກ (No service tasks assigned)", table_cell_style),
+            Paragraph("ບໍ່ມີລາຍການບໍລິການ/ໜ້າວຽກ", table_cell_style),
             Paragraph("-", table_cell_center_style),
             Paragraph("-", table_cell_center_style)
         ])
@@ -453,11 +416,10 @@ def generate_repair_work_order_pdf(repair_id: int) -> bytes:
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F8FAFC')]),
     ]))
 
-    story.append(Paragraph("<b>ລາຍການໜ້າວຽກບໍລິການ / Service Tasks to Perform</b>", section_header_style))
+    story.append(Paragraph("<b>ລາຍການໜ້າວຽກບໍລິການ</b>", section_header_style))
     story.append(services_table)
     story.append(Spacer(1, 8))
 
-    # F. Section 4: Spare Parts Table (Merged planned and actual withdrawn)
     parts_merged = {}
     for item in quotation_items:
         if item.get('item_type') == 'part':
@@ -475,7 +437,6 @@ def generate_repair_work_order_pdf(repair_id: int) -> bytes:
         if part_id in parts_merged:
             parts_merged[part_id]['withdrawn_qty'] += qty
         else:
-            # Unplanned part withdrawn!
             parts_merged[part_id] = {
                 'name': usage.get('part_name', '-'),
                 'approved_qty': 0,
@@ -486,11 +447,11 @@ def generate_repair_work_order_pdf(repair_id: int) -> bytes:
     parts_data = [
         [
             Paragraph("<b>ລຳດັບ<br/>No.</b>", table_header_style),
-            Paragraph("<b>ຊື່ອາໄຫຼ່ ແລະ ອຸປະກອນ<br/>Spare Part Name & Description</b>", table_header_style),
-            Paragraph("<b>ອະນຸມັດ<br/>Appr Qty</b>", table_header_style),
-            Paragraph("<b>ເບີກຕົວຈິງ<br/>Withd Qty</b>", table_header_style),
-            Paragraph("<b>ຫົວໜ່ວຍ<br/>Unit</b>", table_header_style),
-            Paragraph("<b>ສະຖານະ / ໝາຍເຫດ<br/>Withdrawal Status</b>", table_header_style)
+            Paragraph("<b>ຊື່ອາໄຫຼ່ ແລະ ອຸປະກອນ</b>", table_header_style),
+            Paragraph("<b>ອະນຸມັດ</b>", table_header_style),
+            Paragraph("<b>ເບີກຕົວຈິງ</b>", table_header_style),
+            Paragraph("<b>ຫົວໜ່ວຍ</b>", table_header_style),
+            Paragraph("<b>ສະຖານະ / ໝາຍເຫດ</b>", table_header_style)
         ]
     ]
 
@@ -501,15 +462,15 @@ def generate_repair_work_order_pdf(repair_id: int) -> bytes:
         unit = p_info['unit']
 
         if approved_qty > 0 and withdrawn_qty == 0:
-            status_note = "ລໍຖ້າເບີກ (Pending)"
+            status_note = "ລໍຖ້າເບີກ"
         elif approved_qty == withdrawn_qty and approved_qty > 0:
-            status_note = "ເບີກຄົບຖ້ວນ (Issued)"
+            status_note = "ເບີກຄົບຖ້ວນ"
         elif approved_qty > withdrawn_qty and withdrawn_qty > 0:
             status_note = f"ເບີກບາງສ່ວນ ({int(withdrawn_qty)}/{int(approved_qty)})"
         elif withdrawn_qty > approved_qty and approved_qty > 0:
             status_note = f"ເບີກເກີນ (+{int(withdrawn_qty - approved_qty)})"
         else:
-            status_note = "ເບີກເພີ່ມ (Extra)"
+            status_note = "ເບີກເພີ່ມ"
 
         parts_data.append([
             Paragraph(str(part_index), table_cell_center_style),
@@ -524,7 +485,7 @@ def generate_repair_work_order_pdf(repair_id: int) -> bytes:
     if part_index == 1:
         parts_data.append([
             Paragraph("-", table_cell_center_style),
-            Paragraph("ບໍ່ມີລາຍການອາໄຫຼ່ທີ່ຕ້ອງໃຊ້ (No spare parts required)", table_cell_style),
+            Paragraph("ບໍ່ມີລາຍການອາໄຫຼ່ທີ່ຕ້ອງໃຊ້", table_cell_style),
             Paragraph("-", table_cell_center_style),
             Paragraph("-", table_cell_center_style),
             Paragraph("-", table_cell_center_style),
@@ -541,14 +502,13 @@ def generate_repair_work_order_pdf(repair_id: int) -> bytes:
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F8FAFC')]),
     ]))
 
-    story.append(Paragraph("<b>ລາຍການອາໄຫຼ່ ແລະ ອຸປະກອນ / Spare Parts Required</b>", section_header_style))
+    story.append(Paragraph("<b>ລາຍການອາໄຫຼ່ ແລະ ອຸປະກອນ</b>", section_header_style))
     story.append(parts_table)
 
-    # G. Keep Signatures Block together on the same page
     sig_data = [
         [
-            Paragraph("<b>ຊ່າງຜູ້ຮັບຜິດຊອບສ້ອມແປງ / Assigned Mechanic</b>", meta_label_style),
-            Paragraph("<b>ຫົວໜ້າຊ່າງ ຫຼື ຜູ້ກວດສອບ / Supervisor / Inspector</b>", meta_label_style)
+            Paragraph("<b>ຊ່າງຜູ້ຮັບຜິດຊອບສ້ອມແປງ</b>", meta_label_style),
+            Paragraph("<b>ຫົວໜ້າຊ່າງ ຫຼື ຜູ້ກວດສອບ</b>", meta_label_style)
         ],
         [
             Spacer(1, 35),
@@ -563,8 +523,8 @@ def generate_repair_work_order_pdf(repair_id: int) -> bytes:
             Paragraph("(....................................................................)", meta_value_style)
         ],
         [
-            Paragraph("ວັນທີ / Date: ...... / ...... / ............", meta_label_style),
-            Paragraph("ວັນທີ / Date: ...... / ...... / ............", meta_label_style)
+            Paragraph("ວັນທີ: ...... / ...... / ............", meta_label_style),
+            Paragraph("ວັນທີ: ...... / ...... / ............", meta_label_style)
         ]
     ]
     sig_table = Table(sig_data, colWidths=[260, 260])
@@ -577,13 +537,12 @@ def generate_repair_work_order_pdf(repair_id: int) -> bytes:
 
     sig_section = KeepTogether([
         Spacer(1, 15),
-        Paragraph("<b>ການຢືນຢັນການສ້ອມແປງ / Repair Work Sign-off</b>", section_header_style),
+        Paragraph("<b>ການຢືນຢັນການສ້ອມແປງ</b>", section_header_style),
         Spacer(1, 2),
         sig_table
     ])
     story.append(sig_section)
 
-    # Build the document
     doc.build(story, canvasmaker=NumberedCanvas)
     pdf_content = buffer.getvalue()
     buffer.close()
@@ -591,11 +550,9 @@ def generate_repair_work_order_pdf(repair_id: int) -> bytes:
 
 
 def generate_job_order_pdf(order_id: int) -> bytes:
-    """Queries job order information and generates an A4 PDF receipt."""
     db = get_db()
     cursor = db.cursor(dictionary=True)
     try:
-        # Fetch job order details and associated customer and vehicle
         cursor.execute("""
             SELECT jo.*, 
                    c.name as customer_name, c.phone as customer_phone, c.address as customer_address,
@@ -609,11 +566,9 @@ def generate_job_order_pdf(order_id: int) -> bytes:
             WHERE jo.id = %s
         """, (order_id,))
         order = cursor.fetchone()
-        
         if not order:
             raise HTTPException(status_code=404, detail=f"Job order ID {order_id} not found")
 
-        # Fetch shop information
         cursor.execute("SELECT name, address, phone FROM Shop LIMIT 1")
         shop = cursor.fetchone()
         if not shop:
@@ -630,7 +585,6 @@ def generate_job_order_pdf(order_id: int) -> bytes:
         cursor.close()
         db.close()
 
-    # Build ReportLab PDF flowables
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
         buffer,
@@ -638,13 +592,10 @@ def generate_job_order_pdf(order_id: int) -> bytes:
         rightMargin=36,
         leftMargin=36,
         topMargin=36,
-        bottomMargin=54 # extra space at bottom for footer canvas
+        bottomMargin=54
     )
 
-    # Styles
     styles = getSampleStyleSheet()
-    
-    # Modify default style to support Phetsarath font
     normal_style = styles['Normal']
     normal_style.fontName = FONT_NAME
     normal_style.fontSize = 10
@@ -656,18 +607,8 @@ def generate_job_order_pdf(order_id: int) -> bytes:
         fontName=FONT_NAME,
         fontSize=18,
         leading=22,
-        alignment=2, # Right aligned
+        alignment=2,
         textColor=colors.HexColor('#0D47A1')
-    )
-
-    subtitle_style = ParagraphStyle(
-        'DocSubtitle',
-        parent=normal_style,
-        fontName=FONT_NAME,
-        fontSize=9,
-        leading=11,
-        alignment=2, # Right aligned
-        textColor=colors.HexColor('#64748B')
     )
 
     section_header_style = ParagraphStyle(
@@ -702,7 +643,6 @@ def generate_job_order_pdf(order_id: int) -> bytes:
 
     story = []
 
-    # A. PDF Header Table (Company info on left, document metadata on right)
     shop_name = shop.get('name', 'J&P Auto Maxing')
     shop_address = shop.get('address', '')
     shop_phone = shop.get('phone', '')
@@ -720,21 +660,10 @@ def generate_job_order_pdf(order_id: int) -> bytes:
                 receive_date_str = str(receive_date)
     else:
         receive_date_str = '-'
-        
-    status = order.get('status', 'pending')
-    status_translations = {
-        "pending": "ລໍຖ້າກວດເຊັກ (Pending)",
-        "diagnosed": "ກວດເຊັກແລ້ວ (Diagnosed)",
-        "repairing": "ກຳລັງສ້ອມແປງ (Repairing)",
-        "finished": "ສຳເລັດແລ້ວ (Finished)",
-        "closed": "ປິດວຽກແລ້ວ (Closed)"
-    }
-    status_text = status_translations.get(status, status)
 
     meta_box_data = [
-        [Paragraph("<b>ເລກທີໃບຮັບລົດ / Job No:</b>", meta_label_style), Paragraph(f"<b>{job_no}</b>", meta_value_style)],
-        [Paragraph("<b>ວັນທີ / Date:</b>", meta_label_style), Paragraph(receive_date_str, meta_value_style)],
-        [Paragraph("<b>ສະຖານະ / Status:</b>", meta_label_style), Paragraph(status_text, meta_value_style)]
+        [Paragraph("<b>ເລກທີໃບຮັບລົດ:</b>", meta_label_style), Paragraph(f"<b>{job_no}</b>", meta_value_style)],
+        [Paragraph("<b>ວັນທີ:</b>", meta_label_style), Paragraph(receive_date_str, meta_value_style)],
     ]
     meta_table = Table(meta_box_data, colWidths=[110, 100])
     meta_table.setStyle(TableStyle([
@@ -749,13 +678,12 @@ def generate_job_order_pdf(order_id: int) -> bytes:
     header_left = Paragraph(
         f"<font size=16 color='#0D47A1'><b>{shop_name}</b></font><br/>"
         f"<font size=9 color='#475569'>{shop_address}<br/>"
-        f"ເບີໂທລະສັບ / Phone: {shop_phone}</font>",
+        f"ເບີໂທລະສັບ: {shop_phone}</font>",
         normal_style
     )
 
     header_right = [
         Paragraph("<b>ໃບຮັບລົດ</b>", title_style),
-        Paragraph("JOB ORDER RECEIPT", subtitle_style),
         Spacer(1, 6),
         meta_table
     ]
@@ -769,7 +697,6 @@ def generate_job_order_pdf(order_id: int) -> bytes:
     ]))
     story.append(header_table)
 
-    # B. Divider line
     divider = Table([[""]], colWidths=[520])
     divider.setStyle(TableStyle([
         ('LINEABOVE', (0, 0), (-1, -1), 1.5, colors.HexColor('#0D47A1')),
@@ -780,7 +707,6 @@ def generate_job_order_pdf(order_id: int) -> bytes:
     ]))
     story.append(divider)
 
-    # C. Customer & Vehicle Info Section
     customer_name = order.get('customer_name', '-')
     customer_phone = order.get('customer_phone', '-')
     customer_address = order.get('customer_address', '-')
@@ -796,10 +722,10 @@ def generate_job_order_pdf(order_id: int) -> bytes:
     created_by_name = order.get('created_by_name', '-')
 
     left_info = [
-        [Paragraph("<b>ຂໍ້ມູນລູກຄ້າ / Customer Info</b>", section_header_style), ""],
-        [Paragraph("<b>ຊື່ລູກຄ້າ / Name:</b>", meta_label_style), Paragraph(customer_name, meta_value_style)],
-        [Paragraph("<b>ເບີໂທລະສັບ / Phone:</b>", meta_label_style), Paragraph(customer_phone, meta_value_style)],
-        [Paragraph("<b>ທີ່ຢູ່ / Address:</b>", meta_label_style), Paragraph(customer_address, meta_value_style)]
+        [Paragraph("<b>ຂໍ້ມູນລູກຄ້າ</b>", section_header_style), ""],
+        [Paragraph("<b>ຊື່:</b>", meta_label_style), Paragraph(customer_name, meta_value_style)],
+        [Paragraph("<b>ເບີໂທລະສັບ:</b>", meta_label_style), Paragraph(customer_phone, meta_value_style)],
+        [Paragraph("<b>ທີ່ຢູ່:</b>", meta_label_style), Paragraph(customer_address, meta_value_style)]
     ]
     left_table = Table(left_info, colWidths=[100, 150])
     left_table.setStyle(TableStyle([
@@ -810,16 +736,12 @@ def generate_job_order_pdf(order_id: int) -> bytes:
     ]))
 
     right_info = [
-        [Paragraph("<b>...</b>", meta_label_style)]  # Placeholder to prevent empty column layout warning
-    ]
-    
-    right_info = [
-        [Paragraph("<b>ຂໍ້ມູນລົດ / Vehicle Info</b>", section_header_style), ""],
-        [Paragraph("<b>ທະບຽນລົດ / Plate No:</b>", meta_label_style), Paragraph(plate_number, meta_value_style)],
-        [Paragraph("<b>ຍີ່ຫໍ້ ແລະ ລຸ້ນ / Model:</b>", meta_label_style), Paragraph(f"{brand} {model} {f'({year})' if year else ''}", meta_value_style)],
-        [Paragraph("<b>ສີລົດ / Color:</b>", meta_label_style), Paragraph(color, meta_value_style)],
-        [Paragraph("<b>ເລກກິໂລ / Mileage:</b>", meta_label_style), Paragraph(f"{mileage:,} km" if mileage else "-", meta_value_style)],
-        [Paragraph("<b>ລະດັບນ້ຳມັນ / Fuel Level:</b>", meta_label_style), Paragraph(fuel_level, meta_value_style)]
+        [Paragraph("<b>ຂໍ້ມູນລົດ</b>", section_header_style), ""],
+        [Paragraph("<b>ທະບຽນລົດ:</b>", meta_label_style), Paragraph(plate_number, meta_value_style)],
+        [Paragraph("<b>ຍີ່ຫໍ້ ແລະ ລຸ້ນ:</b>", meta_label_style), Paragraph(f"{brand} {model} {f'({year})' if year else ''}", meta_value_style)],
+        [Paragraph("<b>ສີ:</b>", meta_label_style), Paragraph(color, meta_value_style)],
+        [Paragraph("<b>ເລກກິໂລ:</b>", meta_label_style), Paragraph(f"{mileage:,} km" if mileage else "-", meta_value_style)],
+        [Paragraph("<b>ລະດັບນ້ຳມັນ:</b>", meta_label_style), Paragraph(fuel_level, meta_value_style)]
     ]
     right_table = Table(right_info, colWidths=[110, 140])
     right_table.setStyle(TableStyle([
@@ -838,7 +760,6 @@ def generate_job_order_pdf(order_id: int) -> bytes:
     story.append(info_layout_table)
     story.append(Spacer(1, 10))
 
-    # D. Problem Description Section
     problem = order.get('problem_description', '-')
     car_defects = order.get('car_defects', '-')
     if not car_defects:
@@ -854,9 +775,9 @@ def generate_job_order_pdf(order_id: int) -> bytes:
     )
     
     problem_data = [
-        [Paragraph("<b>ອາການລົດ ຫຼື ບັນຫາທີ່ແຈ້ງຊ່ອມ / Problem & Symptoms Reported:</b>", section_header_style)],
+        [Paragraph("<b>ອາການລົດ ຫຼື ບັນຫາທີ່ແຈ້ງຊ່ອມ:</b>", section_header_style)],
         [Paragraph(problem, problem_style)],
-        [Paragraph("<b>ຕຳນິເດີມຂອງລົດ / Car Defects:</b>", section_header_style)],
+        [Paragraph("<b>ຕຳນິເດີມຂອງລົດ:</b>", section_header_style)],
         [Paragraph(car_defects, problem_style)]
     ]
     problem_table = Table(problem_data, colWidths=[520])
@@ -872,11 +793,10 @@ def generate_job_order_pdf(order_id: int) -> bytes:
     story.append(problem_table)
     story.append(Spacer(1, 20))
 
-    # E. Signatures Block
     sig_data = [
         [
-            Paragraph("<b>ລູກຄ້າຜູ້ແຈ້ງຊ່ອມ / Customer Signature</b>", meta_label_style),
-            Paragraph("<b>ພະນັກງານຕ້ອນຮັບ / Service Advisor</b>", meta_label_style)
+            Paragraph("<b>ລູກຄ້າຜູ້ແຈ້ງຊ່ອມ</b>", meta_label_style),
+            Paragraph("<b>ພະນັກງານຕ້ອນຮັບ</b>", meta_label_style)
         ],
         [
             Spacer(1, 40),
@@ -891,8 +811,8 @@ def generate_job_order_pdf(order_id: int) -> bytes:
             Paragraph(f"({created_by_name})", meta_value_style)
         ],
         [
-            Paragraph("ວັນທີ / Date: ...... / ...... / ............", meta_label_style),
-            Paragraph("ວັນທີ / Date: ...... / ...... / ............", meta_label_style)
+            Paragraph("ວັນທີ: ...... / ...... / ............", meta_label_style),
+            Paragraph("ວັນທີ: ...... / ...... / ............", meta_label_style)
         ]
     ]
     sig_table = Table(sig_data, colWidths=[260, 260])
@@ -904,14 +824,13 @@ def generate_job_order_pdf(order_id: int) -> bytes:
     ]))
 
     sig_section = KeepTogether([
-        Paragraph("<b>ການຢືນຢັນ ແລະ ມອບຮັບລົດ / Authorization & Sign-off</b>", section_header_style),
+        Paragraph("<b>ການຢືນຢັນ ແລະ ມອບຮັບລົດ</b>", section_header_style),
         Spacer(1, 6),
         sig_table
     ])
     story.append(sig_section)
 
-    # Build the document
-    doc.build(story, canvasmaker=create_canvas_class("ໃบຮັບລົດ (Job Order Receipt)"))
+    doc.build(story, canvasmaker=create_canvas_class("ໃບຮັບລົດ"))
     pdf_content = buffer.getvalue()
     buffer.close()
     return pdf_content
@@ -922,7 +841,6 @@ def generate_quotation_pdf(quotation_id: int) -> bytes:
     db = get_db()
     cursor = db.cursor(dictionary=True)
     try:
-        # Fetch quotation details and associated job order, customer, vehicle, brand, etc.
         cursor.execute("""
             SELECT q.*, 
                    jo.job_no, jo.problem_description, jo.mileage, jo.fuel_level,
@@ -939,11 +857,9 @@ def generate_quotation_pdf(quotation_id: int) -> bytes:
             WHERE q.id = %s
         """, (quotation_id,))
         quotation = cursor.fetchone()
-        
         if not quotation:
             raise HTTPException(status_code=404, detail=f"Quotation ID {quotation_id} not found")
 
-        # Fetch shop information
         cursor.execute("SELECT name, address, phone FROM Shop LIMIT 1")
         shop = cursor.fetchone()
         if not shop:
@@ -953,7 +869,7 @@ def generate_quotation_pdf(quotation_id: int) -> bytes:
                 "phone": "020 22224444"
             }
 
-        # Fetch items
+        # ════════ MODIFIED: fetch items WITH stock quantity ════════
         cursor.execute("""
             SELECT qi.id, qi.quotation_id, qi.part_id, qi.service_id, qi.qty, qi.unit_price, qi.discount_amount, qi.total,
                    CASE
@@ -962,7 +878,8 @@ def generate_quotation_pdf(quotation_id: int) -> bytes:
                        ELSE 'custom'
                    END AS item_type,
                    COALESCE(p.name, s.name, qi.custom_name) AS name,
-                   u.name as unit_name
+                   u.name as unit_name,
+                   p.stock_qty  -- <-- ADDED: fetch current stock quantity for parts
             FROM quotation_items qi
             LEFT JOIN parts p ON qi.part_id = p.id
             LEFT JOIN units u ON p.unit_id = u.id
@@ -979,7 +896,6 @@ def generate_quotation_pdf(quotation_id: int) -> bytes:
         cursor.close()
         db.close()
 
-    # Build ReportLab PDF flowables
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
         buffer,
@@ -987,10 +903,9 @@ def generate_quotation_pdf(quotation_id: int) -> bytes:
         rightMargin=36,
         leftMargin=36,
         topMargin=36,
-        bottomMargin=54 # extra space at bottom for footer canvas
+        bottomMargin=54
     )
 
-    # Styles
     styles = getSampleStyleSheet()
     normal_style = styles['Normal']
     normal_style.fontName = FONT_NAME
@@ -1003,18 +918,8 @@ def generate_quotation_pdf(quotation_id: int) -> bytes:
         fontName=FONT_NAME,
         fontSize=18,
         leading=22,
-        alignment=2, # Right aligned
+        alignment=2,
         textColor=colors.HexColor('#0D47A1')
-    )
-
-    subtitle_style = ParagraphStyle(
-        'DocSubtitle',
-        parent=normal_style,
-        fontName=FONT_NAME,
-        fontSize=9,
-        leading=11,
-        alignment=2, # Right aligned
-        textColor=colors.HexColor('#64748B')
     )
 
     section_header_style = ParagraphStyle(
@@ -1054,7 +959,7 @@ def generate_quotation_pdf(quotation_id: int) -> bytes:
         fontSize=9,
         leading=11,
         textColor=colors.white,
-        alignment=1 # Center aligned
+        alignment=1
     )
 
     table_cell_style = ParagraphStyle(
@@ -1069,18 +974,17 @@ def generate_quotation_pdf(quotation_id: int) -> bytes:
     table_cell_right_style = ParagraphStyle(
         'TableCellRight',
         parent=table_cell_style,
-        alignment=2 # Right aligned
+        alignment=2
     )
 
     table_cell_center_style = ParagraphStyle(
         'TableCellCenter',
         parent=table_cell_style,
-        alignment=1 # Center aligned
+        alignment=1
     )
 
     story = []
 
-    # A. PDF Header Table
     shop_name = shop.get('name', 'J&P Auto Maxing')
     shop_address = shop.get('address', '')
     shop_phone = shop.get('phone', '')
@@ -1104,19 +1008,10 @@ def generate_quotation_pdf(quotation_id: int) -> bytes:
                 created_at_str = str(created_at)
     else:
         created_at_str = '-'
-        
-    status = quotation.get('status', 'draft')
-    status_translations = {
-        "draft": "ສະເໜີລາຄາ (Draft)",
-        "approved": "ອະນຸມັດແລ້ວ (Approved)",
-        "rejected": "ປະຕິເສດ (Rejected)"
-    }
-    status_text = status_translations.get(status, status)
 
     meta_box_data = [
-        [Paragraph("<b>ເລກທີໃບສະເໜີ / Quotation No:</b>", meta_label_style), Paragraph(f"<b>{quotation_no}</b>", meta_value_style)],
-        [Paragraph("<b>ວັນທີ / Date:</b>", meta_label_style), Paragraph(created_at_str, meta_value_style)],
-        [Paragraph("<b>ສະຖານະ / Status:</b>", meta_label_style), Paragraph(status_text, meta_value_style)]
+        [Paragraph("<b>ເລກທີໃບສະເໜີ:</b>", meta_label_style), Paragraph(f"<b>{quotation_no}</b>", meta_value_style)],
+        [Paragraph("<b>ວັນທີ:</b>", meta_label_style), Paragraph(created_at_str, meta_value_style)],
     ]
     meta_table = Table(meta_box_data, colWidths=[130, 90])
     meta_table.setStyle(TableStyle([
@@ -1131,13 +1026,12 @@ def generate_quotation_pdf(quotation_id: int) -> bytes:
     header_left = Paragraph(
         f"<font size=16 color='#0D47A1'><b>{shop_name}</b></font><br/>"
         f"<font size=9 color='#475569'>{shop_address}<br/>"
-        f"ເບີໂທລະສັບ / Phone: {shop_phone}</font>",
+        f"ເບີໂທລະສັບ: {shop_phone}</font>",
         normal_style
     )
 
     header_right = [
         Paragraph("<b>ໃບສະເໜີລາຄາ</b>", title_style),
-        Paragraph("QUOTATION", subtitle_style),
         Spacer(1, 6),
         meta_table
     ]
@@ -1151,7 +1045,6 @@ def generate_quotation_pdf(quotation_id: int) -> bytes:
     ]))
     story.append(header_table)
 
-    # B. Divider line
     divider = Table([[""]], colWidths=[520])
     divider.setStyle(TableStyle([
         ('LINEABOVE', (0, 0), (-1, -1), 1.5, colors.HexColor('#0D47A1')),
@@ -1162,7 +1055,6 @@ def generate_quotation_pdf(quotation_id: int) -> bytes:
     ]))
     story.append(divider)
 
-    # C. Customer & Vehicle Info Section
     customer_name = quotation.get('customer_name', '-')
     customer_phone = quotation.get('customer_phone', '-')
     customer_address = quotation.get('customer_address', '-')
@@ -1176,10 +1068,10 @@ def generate_quotation_pdf(quotation_id: int) -> bytes:
     job_no = quotation.get('job_no', '-')
 
     left_info = [
-        [Paragraph("<b>ຂໍ້ມູນລູກຄ້າ / Customer Info</b>", section_header_style), ""],
-        [Paragraph("<b>ຊື່ລູກຄ້າ / Name:</b>", meta_label_style), Paragraph(customer_name, meta_value_style)],
-        [Paragraph("<b>ເບີໂທລະສັບ / Phone:</b>", meta_label_style), Paragraph(customer_phone, meta_value_style)],
-        [Paragraph("<b>ທີ່ຢູ່ / Address:</b>", meta_label_style), Paragraph(customer_address, meta_value_style)]
+        [Paragraph("<b>ຂໍ້ມູນລູກຄ້າ</b>", section_header_style), ""],
+        [Paragraph("<b>ຊື່:</b>", meta_label_style), Paragraph(customer_name, meta_value_style)],
+        [Paragraph("<b>ເບີໂທລະສັບ:</b>", meta_label_style), Paragraph(customer_phone, meta_value_style)],
+        [Paragraph("<b>ທີ່ຢູ່:</b>", meta_label_style), Paragraph(customer_address, meta_value_style)]
     ]
     left_table = Table(left_info, colWidths=[100, 150])
     left_table.setStyle(TableStyle([
@@ -1190,11 +1082,11 @@ def generate_quotation_pdf(quotation_id: int) -> bytes:
     ]))
 
     right_info = [
-        [Paragraph("<b>ຂໍ້ມູນລົດ / Vehicle Info</b>", section_header_style), ""],
-        [Paragraph("<b>ທະບຽນລົດ / Plate No:</b>", meta_label_style), Paragraph(plate_number, meta_value_style)],
-        [Paragraph("<b>ຍີ່ຫໍ້ ແລະ ລຸ້ນ / Model:</b>", meta_label_style), Paragraph(f"{brand} {model} {f'({year})' if year else ''}", meta_value_style)],
-        [Paragraph("<b>ເລກກິໂລ / Mileage:</b>", meta_label_style), Paragraph(f"{mileage:,} km" if mileage else "-", meta_value_style)],
-        [Paragraph("<b>ເລກໃບຮັບລົດ / Job No:</b>", meta_label_style), Paragraph(job_no, meta_value_style)]
+        [Paragraph("<b>ຂໍ້ມູນລົດ</b>", section_header_style), ""],
+        [Paragraph("<b>ທະບຽນລົດ:</b>", meta_label_style), Paragraph(plate_number, meta_value_style)],
+        [Paragraph("<b>ຍີ່ຫໍ້ ແລະ ລຸ້ນ:</b>", meta_label_style), Paragraph(f"{brand} {model} {f'({year})' if year else ''}", meta_value_style)],
+        [Paragraph("<b>ເລກກິໂລ:</b>", meta_label_style), Paragraph(f"{mileage:,} km" if mileage else "-", meta_value_style)],
+        [Paragraph("<b>ເລກໃບຮັບລົດ:</b>", meta_label_style), Paragraph(job_no, meta_value_style)]
     ]
     right_table = Table(right_info, colWidths=[110, 140])
     right_table.setStyle(TableStyle([
@@ -1213,25 +1105,24 @@ def generate_quotation_pdf(quotation_id: int) -> bytes:
     story.append(info_layout_table)
     story.append(Spacer(1, 10))
 
-    # D. Quotation Items Table
-    story.append(Paragraph("<b>ລາຍການສະເໜີລາຄາ / Quotation Items:</b>", section_header_style))
+    story.append(Paragraph("<b>ລາຍການສະເໜີລາຄາ:</b>", section_header_style))
     story.append(Spacer(1, 4))
 
+    # ─── Build table data and track stock warnings ───
     table_data = [
         [
             Paragraph("<b>ລຳດັບ<br/>No.</b>", table_header_style),
-            Paragraph("<b>...<br/>Description</b>", table_header_style), # Placeholder replaced by Lao text below
-            Paragraph("<b>ຈຳນວນ<br/>Qty</b>", table_header_style),
-            Paragraph("<b>ລາຄາ/หน่วย<br/>Unit Price (KIP)</b>", table_header_style),
-            Paragraph("<b>ສ່ວນຫຼຸດ<br/>Discount (KIP)</b>", table_header_style),
-            Paragraph("<b>ລວມ<br/>Total (KIP)</b>", table_header_style)
+            Paragraph("<b>ລາຍການ</b>", table_header_style),
+            Paragraph("<b>ຈຳນວນ</b>", table_header_style),
+            Paragraph("<b>ລາຄາ/ໜ່ວຍ</b>", table_header_style),
+            Paragraph("<b>ສ່ວນຫຼຸດ</b>", table_header_style),
+            Paragraph("<b>ລວມ</b>", table_header_style)
         ]
     ]
-    # Set the headers properly
-    table_data[0][1] = Paragraph("<b>ລາຍການ<br/>Description</b>", table_header_style)
 
     subtotal = 0.0
     total_discount = 0.0
+    stock_warnings = []  # will store True/False for each data row (index 0 = first data row)
 
     for idx, item in enumerate(items, 1):
         name = item.get('name', '-')
@@ -1239,10 +1130,16 @@ def generate_quotation_pdf(quotation_id: int) -> bytes:
         unit_price = float(item.get('unit_price', 0) or 0)
         discount_amount = float(item.get('discount_amount', 0) or 0)
         total = float(item.get('total', 0) or 0)
+        stock_qty = item.get('stock_qty')  # may be None for non-part items
+        item_type = item.get('item_type')
 
-        subtotal += (qty * unit_price)
-        total_discount += discount_amount
+        # Determine if stock warning should be shown (only for parts)
+        is_warning = False
+        if item_type == 'part' and stock_qty is not None:
+            if stock_qty < qty:
+                is_warning = True
 
+        # Add the row with stock warning flag
         table_data.append([
             Paragraph(str(idx), table_cell_center_style),
             Paragraph(name, table_cell_style),
@@ -1251,6 +1148,10 @@ def generate_quotation_pdf(quotation_id: int) -> bytes:
             Paragraph(f"{int(discount_amount):,}", table_cell_right_style),
             Paragraph(f"{int(total):,}", table_cell_right_style)
         ])
+        stock_warnings.append(is_warning)
+
+        subtotal += (qty * unit_price)
+        total_discount += discount_amount
 
     net_total = subtotal - total_discount
     if net_total < 0:
@@ -1258,7 +1159,7 @@ def generate_quotation_pdf(quotation_id: int) -> bytes:
 
     items_table = Table(table_data, colWidths=[30, 210, 50, 70, 70, 90])
     
-    # Grid styles
+    # ─── Build TableStyle with alternating backgrounds and stock warnings ───
     t_style = [
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0D47A1')),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
@@ -1268,20 +1169,25 @@ def generate_quotation_pdf(quotation_id: int) -> bytes:
         ('TOPPADDING', (0, 1), (-1, -1), 4),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E2E8F0')),
     ]
-    # Alternating backgrounds for data rows
+
     for r in range(1, len(table_data)):
+        # Alternating background
         if r % 2 == 0:
             t_style.append(('BACKGROUND', (0, r), (-1, r), colors.HexColor('#F8FAFC')))
-    
+        # Stock warning highlight (whole row)
+        if stock_warnings[r-1]:
+            t_style.append(('BACKGROUND', (0, r), (-1, r), colors.HexColor('#FEF3C7')))  # light yellow
+            t_style.append(('LINEBELOW', (0, r), (-1, r), 2, colors.HexColor('#F59E0B')))  # orange underline
+
     items_table.setStyle(TableStyle(t_style))
     story.append(items_table)
     story.append(Spacer(1, 10))
 
-    # E. Totals Summary Table
+    # ─── Totals table (unchanged) ───
     totals_data = [
-        ["", Paragraph("<b>ລວມຍ່ອຍ / Subtotal:</b>", table_cell_right_style), Paragraph(f"{int(subtotal):,} KIP", table_cell_right_style)],
-        ["", Paragraph("<b>ສ່ວນຫຼຸດ / Discount:</b>", table_cell_right_style), Paragraph(f"{int(total_discount):,} KIP", table_cell_right_style)],
-        ["", Paragraph("<font size=11 color='#0D47A1'><b>ລວມທັງໝົດ / Net Total:</b></font>", table_cell_right_style), Paragraph(f"<font size=11 color='#0D47A1'><b>{int(net_total):,} KIP</b></font>", table_cell_right_style)]
+        ["", Paragraph("<b>ລວມຍ່ອຍ:</b>", table_cell_right_style), Paragraph(f"{int(subtotal):,} KIP", table_cell_right_style)],
+        ["", Paragraph("<b>ສ່ວນຫຼຸດ:</b>", table_cell_right_style), Paragraph(f"{int(total_discount):,} KIP", table_cell_right_style)],
+        ["", Paragraph("<font size=11 color='#0D47A1'><b>ລວມທັງໝົດ:</b></font>", table_cell_right_style), Paragraph(f"<font size=11 color='#0D47A1'><b>{int(net_total):,} KIP</b></font>", table_cell_right_style)]
     ]
     totals_table = Table(totals_data, colWidths=[290, 140, 90])
     totals_table.setStyle(TableStyle([
@@ -1294,14 +1200,13 @@ def generate_quotation_pdf(quotation_id: int) -> bytes:
     story.append(totals_table)
     story.append(Spacer(1, 20))
 
-    # F. Signatures Block
     created_by_name = quotation.get('created_by_name', '-')
     approved_by_name = quotation.get('approved_by_name', '-')
     
     sig_data = [
         [
-            Paragraph("<b>ລາຍເຊັນລູກຄ້າ / Customer Signature</b>", meta_label_style),
-            Paragraph("<b>ລາຍເຊັນຮ້ານ / Shop Signature</b>", meta_label_style)
+            Paragraph("<b>ລາຍເຊັນລູກຄ້າ</b>", meta_label_style),
+            Paragraph("<b>ລາຍເຊັນຮ້ານ</b>", meta_label_style)
         ],
         [
             Spacer(1, 40),
@@ -1316,8 +1221,8 @@ def generate_quotation_pdf(quotation_id: int) -> bytes:
             Paragraph(f"({approved_by_name if approved_by_name and approved_by_name != '-' else (created_by_name if created_by_name else '-')})", meta_value_style)
         ],
         [
-            Paragraph("ວັນທີ / Date: ...... / ...... / ............", meta_label_style),
-            Paragraph("ວັນທີ / Date: ...... / ...... / ............", meta_label_style)
+            Paragraph("ວັນທີ: ...... / ...... / ............", meta_label_style),
+            Paragraph("ວັນທີ: ...... / ...... / ............", meta_label_style)
         ]
     ]
     sig_table = Table(sig_data, colWidths=[260, 260])
@@ -1333,19 +1238,16 @@ def generate_quotation_pdf(quotation_id: int) -> bytes:
     ])
     story.append(sig_section)
 
-    # Build the document
-    doc.build(story, canvasmaker=create_canvas_class("ໃບສະເໜີລາຄາ (Quotation)"))
+    doc.build(story, canvasmaker=create_canvas_class("ໃບສະເໜີລາຄາ"))
     pdf_content = buffer.getvalue()
     buffer.close()
     return pdf_content
 
 
 def generate_invoice_pdf(invoice_id: int) -> bytes:
-    """Queries invoice information and generates a formal A4 PDF invoice/receipt."""
     db = get_db()
     cursor = db.cursor(dictionary=True)
     try:
-        # Fetch invoice details and associated job order, customer, vehicle, brand, etc.
         cursor.execute("""
             SELECT i.*, 
                    jo.id as job_order_id, jo.job_no, jo.problem_description, jo.mileage, jo.fuel_level,
@@ -1361,11 +1263,9 @@ def generate_invoice_pdf(invoice_id: int) -> bytes:
             WHERE i.id = %s
         """, (invoice_id,))
         invoice = cursor.fetchone()
-        
         if not invoice:
             raise HTTPException(status_code=404, detail=f"Invoice ID {invoice_id} not found")
 
-        # Fetch shop information
         cursor.execute("SELECT name, address, phone FROM Shop LIMIT 1")
         shop = cursor.fetchone()
         if not shop:
@@ -1375,7 +1275,6 @@ def generate_invoice_pdf(invoice_id: int) -> bytes:
                 "phone": "020 22224444"
             }
 
-        # Fetch approved quotation items of this job order to get the detail breakdown
         cursor.execute("""
             SELECT id FROM quotations 
             WHERE job_order_id = %s AND status = 'approved' 
@@ -1410,7 +1309,6 @@ def generate_invoice_pdf(invoice_id: int) -> bytes:
         cursor.close()
         db.close()
 
-    # Build ReportLab PDF flowables
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
         buffer,
@@ -1418,10 +1316,9 @@ def generate_invoice_pdf(invoice_id: int) -> bytes:
         rightMargin=36,
         leftMargin=36,
         topMargin=36,
-        bottomMargin=54 # extra space at bottom for footer canvas
+        bottomMargin=54
     )
 
-    # Styles
     styles = getSampleStyleSheet()
     normal_style = styles['Normal']
     normal_style.fontName = FONT_NAME
@@ -1434,18 +1331,8 @@ def generate_invoice_pdf(invoice_id: int) -> bytes:
         fontName=FONT_NAME,
         fontSize=18,
         leading=22,
-        alignment=2, # Right aligned
+        alignment=2,
         textColor=colors.HexColor('#0D47A1')
-    )
-
-    subtitle_style = ParagraphStyle(
-        'DocSubtitle',
-        parent=normal_style,
-        fontName=FONT_NAME,
-        fontSize=9,
-        leading=11,
-        alignment=2, # Right aligned
-        textColor=colors.HexColor('#64748B')
     )
 
     section_header_style = ParagraphStyle(
@@ -1485,7 +1372,7 @@ def generate_invoice_pdf(invoice_id: int) -> bytes:
         fontSize=9,
         leading=11,
         textColor=colors.white,
-        alignment=1 # Center aligned
+        alignment=1
     )
 
     table_cell_style = ParagraphStyle(
@@ -1500,18 +1387,17 @@ def generate_invoice_pdf(invoice_id: int) -> bytes:
     table_cell_right_style = ParagraphStyle(
         'TableCellRight',
         parent=table_cell_style,
-        alignment=2 # Right aligned
+        alignment=2
     )
 
     table_cell_center_style = ParagraphStyle(
         'TableCellCenter',
         parent=table_cell_style,
-        alignment=1 # Center aligned
+        alignment=1
     )
 
     story = []
 
-    # A. PDF Header Table
     shop_name = shop.get('name', 'J&P Auto Maxing')
     shop_address = shop.get('address', '')
     shop_phone = shop.get('phone', '')
@@ -1535,26 +1421,18 @@ def generate_invoice_pdf(invoice_id: int) -> bytes:
                 paid_date_str = str(paid_date)
     else:
         paid_date_str = '-'
-        
-    status = invoice.get('payment_status', 'pending')
-    status_translations = {
-        "pending": "ລໍຖ້າຊຳລະ (Pending)",
-        "paid": "ຊຳລະແລ້ວ (Paid)"
-    }
-    status_text = status_translations.get(status, status)
 
     payment_method = invoice.get('payment_method', 'cash')
     method_translations = {
-        "cash": "ເງິນສົດ (Cash)",
-        "transfer": "ໂອນເງິນ (Transfer)"
+        "cash": "ເງິນສົດ",
+        "transfer": "ໂອນເງິນ"
     }
     method_text = method_translations.get(payment_method, payment_method)
 
     meta_box_data = [
-        [Paragraph("<b>ເລກທີໃບຮັບເງິນ / Invoice No:</b>", meta_label_style), Paragraph(f"<b>{invoice_no}</b>", meta_value_style)],
-        [Paragraph("<b>ວັນທີ / Date:</b>", meta_label_style), Paragraph(paid_date_str, meta_value_style)],
-        [Paragraph("<b>ວິທີຊຳລະ / Method:</b>", meta_label_style), Paragraph(method_text, meta_value_style)],
-        [Paragraph("<b>ສະຖານະ / Status:</b>", meta_label_style), Paragraph(status_text, meta_value_style)]
+        [Paragraph("<b>ເລກທີໃບຮັບເງິນ:</b>", meta_label_style), Paragraph(f"<b>{invoice_no}</b>", meta_value_style)],
+        [Paragraph("<b>ວັນທີ:</b>", meta_label_style), Paragraph(paid_date_str, meta_value_style)],
+        [Paragraph("<b>ວິທີຊຳລະ:</b>", meta_label_style), Paragraph(method_text, meta_value_style)],
     ]
     meta_table = Table(meta_box_data, colWidths=[130, 90])
     meta_table.setStyle(TableStyle([
@@ -1569,13 +1447,12 @@ def generate_invoice_pdf(invoice_id: int) -> bytes:
     header_left = Paragraph(
         f"<font size=16 color='#0D47A1'><b>{shop_name}</b></font><br/>"
         f"<font size=9 color='#475569'>{shop_address}<br/>"
-        f"ເບີໂທລະສັບ / Phone: {shop_phone}</font>",
+        f"ເບີໂທລະສັບ: {shop_phone}</font>",
         normal_style
     )
 
     header_right = [
         Paragraph("<b>ໃບຮັບເງິນ</b>", title_style),
-        Paragraph("INVOICE / RECEIPT", subtitle_style),
         Spacer(1, 4),
         meta_table
     ]
@@ -1589,7 +1466,6 @@ def generate_invoice_pdf(invoice_id: int) -> bytes:
     ]))
     story.append(header_table)
 
-    # B. Divider line
     divider = Table([[""]], colWidths=[520])
     divider.setStyle(TableStyle([
         ('LINEABOVE', (0, 0), (-1, -1), 1.5, colors.HexColor('#0D47A1')),
@@ -1600,7 +1476,6 @@ def generate_invoice_pdf(invoice_id: int) -> bytes:
     ]))
     story.append(divider)
 
-    # C. Customer & Vehicle Info Section
     customer_name = invoice.get('customer_name', '-')
     customer_phone = invoice.get('customer_phone', '-')
     customer_address = invoice.get('customer_address', '-')
@@ -1614,10 +1489,10 @@ def generate_invoice_pdf(invoice_id: int) -> bytes:
     job_no = invoice.get('job_no', '-')
 
     left_info = [
-        [Paragraph("<b>ຂໍ້ມູນລູກຄ້າ / Customer Info</b>", section_header_style), ""],
-        [Paragraph("<b>ຊື່ລູກຄ້າ / Name:</b>", meta_label_style), Paragraph(customer_name, meta_value_style)],
-        [Paragraph("<b>ເບີໂທລະສັບ / Phone:</b>", meta_label_style), Paragraph(customer_phone, meta_value_style)],
-        [Paragraph("<b>ທີ່ຢູ່ / Address:</b>", meta_label_style), Paragraph(customer_address, meta_value_style)]
+        [Paragraph("<b>ຂໍ້ມູນລູກຄ້າ</b>", section_header_style), ""],
+        [Paragraph("<b>ຊື່:</b>", meta_label_style), Paragraph(customer_name, meta_value_style)],
+        [Paragraph("<b>ເບີໂທລະສັບ:</b>", meta_label_style), Paragraph(customer_phone, meta_value_style)],
+        [Paragraph("<b>ທີ່ຢູ່:</b>", meta_label_style), Paragraph(customer_address, meta_value_style)]
     ]
     left_table = Table(left_info, colWidths=[100, 150])
     left_table.setStyle(TableStyle([
@@ -1628,15 +1503,11 @@ def generate_invoice_pdf(invoice_id: int) -> bytes:
     ]))
 
     right_info = [
-        [Paragraph("<b>...</b>", meta_label_style)]  # Placeholder to prevent empty column layout warning
-    ]
-    
-    right_info = [
-        [Paragraph("<b>ข้อมูลรถ / Vehicle Info</b>", section_header_style), ""],
-        [Paragraph("<b>ທະບຽນລົດ / Plate No:</b>", meta_label_style), Paragraph(plate_number, meta_value_style)],
-        [Paragraph("<b>ຍີ່ຫໍ້ ແລະ ລຸ້ນ / Model:</b>", meta_label_style), Paragraph(f"{brand} {model} {f'({year})' if year else ''}", meta_value_style)],
-        [Paragraph("<b>ເລກກິໂລ / Mileage:</b>", meta_label_style), Paragraph(f"{mileage:,} km" if mileage else "-", meta_value_style)],
-        [Paragraph("<b>ເລກໃບຮັບລົດ / Job No:</b>", meta_label_style), Paragraph(job_no, meta_value_style)]
+        [Paragraph("<b>ຂໍ້ມູນລົດ</b>", section_header_style), ""],
+        [Paragraph("<b>ທະບຽນລົດ:</b>", meta_label_style), Paragraph(plate_number, meta_value_style)],
+        [Paragraph("<b>ຍີ່ຫໍ້ ແລະ ລຸ້ນ:</b>", meta_label_style), Paragraph(f"{brand} {model} {f'({year})' if year else ''}", meta_value_style)],
+        [Paragraph("<b>ເລກກິໂລ:</b>", meta_label_style), Paragraph(f"{mileage:,} km" if mileage else "-", meta_value_style)],
+        [Paragraph("<b>ເລກໃບຮັບລົດ:</b>", meta_label_style), Paragraph(job_no, meta_value_style)]
     ]
     right_table = Table(right_info, colWidths=[110, 140])
     right_table.setStyle(TableStyle([
@@ -1655,18 +1526,17 @@ def generate_invoice_pdf(invoice_id: int) -> bytes:
     story.append(info_layout_table)
     story.append(Spacer(1, 10))
 
-    # D. Invoice Items Table
-    story.append(Paragraph("<b>ລາຍການຄ່າບໍລິການ ແລະ ອາໄຫຼ່ / Service & Parts Breakdown:</b>", section_header_style))
+    story.append(Paragraph("<b>ລາຍການຄ່າບໍລິການ ແລະ ອາໄຫຼ່:</b>", section_header_style))
     story.append(Spacer(1, 4))
 
     table_data = [
         [
             Paragraph("<b>ລຳດັບ<br/>No.</b>", table_header_style),
-            Paragraph("<b>ລາຍການ<br/>Description</b>", table_header_style),
-            Paragraph("<b>ຈຳນວນ<br/>Qty</b>", table_header_style),
-            Paragraph("<b>ລາຄາ/หน่วย<br/>Unit Price (KIP)</b>", table_header_style),
-            Paragraph("<b>ສ່ວນຫຼຸດ<br/>Discount (KIP)</b>", table_header_style),
-            Paragraph("<b>ລວມ<br/>Total (KIP)</b>", table_header_style)
+            Paragraph("<b>ລາຍການ</b>", table_header_style),
+            Paragraph("<b>ຈຳນວນ</b>", table_header_style),
+            Paragraph("<b>ລາຄາ/ໜ່ວຍ</b>", table_header_style),
+            Paragraph("<b>ສ່ວນຫຼຸດ</b>", table_header_style),
+            Paragraph("<b>ລວມ</b>", table_header_style)
         ]
     ]
 
@@ -1693,10 +1563,9 @@ def generate_invoice_pdf(invoice_id: int) -> bytes:
                 Paragraph(f"{int(total):,}", table_cell_right_style)
             ])
     else:
-        # Fallback if no quotation items exist
         table_data.append([
             Paragraph("1", table_cell_center_style),
-            Paragraph("ຄ່າບໍລິການ ແລະ ອາໄຫຼ່ທັງໝົດ (Total Repair & Service Items)", table_cell_style),
+            Paragraph("ຄ່າບໍລິການ ແລະ ອາໄຫຼ່ທັງໝົດ", table_cell_style),
             Paragraph("1", table_cell_center_style),
             Paragraph(f"{int(subtotal):,}", table_cell_right_style),
             Paragraph(f"{int(total_discount):,}", table_cell_right_style),
@@ -1705,7 +1574,6 @@ def generate_invoice_pdf(invoice_id: int) -> bytes:
 
     items_table = Table(table_data, colWidths=[30, 210, 50, 70, 70, 90])
     
-    # Grid styles
     t_style = [
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0D47A1')),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
@@ -1715,7 +1583,6 @@ def generate_invoice_pdf(invoice_id: int) -> bytes:
         ('TOPPADDING', (0, 1), (-1, -1), 4),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E2E8F0')),
     ]
-    # Alternating backgrounds for data rows
     for r in range(1, len(table_data)):
         if r % 2 == 0:
             t_style.append(('BACKGROUND', (0, r), (-1, r), colors.HexColor('#F8FAFC')))
@@ -1724,13 +1591,12 @@ def generate_invoice_pdf(invoice_id: int) -> bytes:
     story.append(items_table)
     story.append(Spacer(1, 10))
 
-    # E. Totals Summary Table
     totals_data = [
-        ["", Paragraph("<b>ລວມຍ່ອຍ / Subtotal:</b>", table_cell_right_style), Paragraph(f"{int(subtotal):,} KIP", table_cell_right_style)],
-        ["", Paragraph("<b>ສ່ວນຫຼຸດ / Discount:</b>", table_cell_right_style), Paragraph(f"{int(total_discount):,} KIP", table_cell_right_style)],
-        ["", Paragraph("<font size=11 color='#0D47A1'><b>ລວມທັງໝົດ / Net Total:</b></font>", table_cell_right_style), Paragraph(f"<font size=11 color='#0D47A1'><b>{int(final_total):,} KIP</b></font>", table_cell_right_style)],
-        ["", Paragraph("<b>ຮັບເງິນ / Received:</b>", table_cell_right_style), Paragraph(f"{int(received_amount):,} KIP", table_cell_right_style)],
-        ["", Paragraph("<b>ເງິນທອນ / Change:</b>", table_cell_right_style), Paragraph(f"{int(change_amount):,} KIP", table_cell_right_style)]
+        ["", Paragraph("<b>ລວມຍ່ອຍ:</b>", table_cell_right_style), Paragraph(f"{int(subtotal):,} KIP", table_cell_right_style)],
+        ["", Paragraph("<b>ສ່ວນຫຼຸດ:</b>", table_cell_right_style), Paragraph(f"{int(total_discount):,} KIP", table_cell_right_style)],
+        ["", Paragraph("<font size=11 color='#0D47A1'><b>ລວມທັງໝົດ:</b></font>", table_cell_right_style), Paragraph(f"<font size=11 color='#0D47A1'><b>{int(final_total):,} KIP</b></font>", table_cell_right_style)],
+        ["", Paragraph("<b>ຮັບເງິນ:</b>", table_cell_right_style), Paragraph(f"{int(received_amount):,} KIP", table_cell_right_style)],
+        ["", Paragraph("<b>ເງິນທອນ:</b>", table_cell_right_style), Paragraph(f"{int(change_amount):,} KIP", table_cell_right_style)]
     ]
     totals_table = Table(totals_data, colWidths=[290, 140, 90])
     totals_table.setStyle(TableStyle([
@@ -1743,13 +1609,12 @@ def generate_invoice_pdf(invoice_id: int) -> bytes:
     story.append(totals_table)
     story.append(Spacer(1, 20))
 
-    # F. Signatures Block
     created_by_name = invoice.get('created_by_name', '-')
     
     sig_data = [
         [
-            Paragraph("<b>ລາຍເຊັນລູກຄ້າ / Customer Signature</b>", meta_label_style),
-            Paragraph("<b>ຜູ້ຮັບເງິນ / Received By (Cashier)</b>", meta_label_style)
+            Paragraph("<b>ລາຍເຊັນລູກຄ້າ</b>", meta_label_style),
+            Paragraph("<b>ຜູ້ຮັບເງິນ</b>", meta_label_style)
         ],
         [
             Spacer(1, 40),
@@ -1764,8 +1629,8 @@ def generate_invoice_pdf(invoice_id: int) -> bytes:
             Paragraph(f"({created_by_name})", meta_value_style)
         ],
         [
-            Paragraph("ວັນທີ / Date: ...... / ...... / ............", meta_label_style),
-            Paragraph("ວັນທີ / Date: ...... / ...... / ............", meta_label_style)
+            Paragraph("ວັນທີ: ...... / ...... / ............", meta_label_style),
+            Paragraph("ວັນທີ: ...... / ...... / ............", meta_label_style)
         ]
     ]
     sig_table = Table(sig_data, colWidths=[260, 260])
@@ -1781,19 +1646,16 @@ def generate_invoice_pdf(invoice_id: int) -> bytes:
     ])
     story.append(sig_section)
 
-    # Build the document
-    doc.build(story, canvasmaker=create_canvas_class("ໃບຮັບເງິນ (Invoice)"))
+    doc.build(story, canvasmaker=create_canvas_class("ໃບຮັບເງິນ"))
     pdf_content = buffer.getvalue()
     buffer.close()
     return pdf_content
 
 
 def generate_delivery_note_pdf(invoice_id: int) -> bytes:
-    """Queries invoice/job order information and generates a formal A4 PDF Car Delivery Note."""
     db = get_db()
     cursor = db.cursor(dictionary=True)
     try:
-        # Fetch invoice details and associated job order, customer, vehicle, brand, etc.
         cursor.execute("""
             SELECT i.*, 
                    jo.id as job_order_id, jo.job_no, jo.problem_description, jo.mileage, jo.fuel_level, jo.closed_at,
@@ -1810,11 +1672,9 @@ def generate_delivery_note_pdf(invoice_id: int) -> bytes:
             WHERE i.id = %s
         """, (invoice_id,))
         invoice = cursor.fetchone()
-        
         if not invoice:
             raise HTTPException(status_code=404, detail=f"Invoice ID {invoice_id} not found")
 
-        # Fetch shop information
         cursor.execute("SELECT name, address, phone FROM Shop LIMIT 1")
         shop = cursor.fetchone()
         if not shop:
@@ -1824,7 +1684,6 @@ def generate_delivery_note_pdf(invoice_id: int) -> bytes:
                 "phone": "020 22224444"
             }
 
-        # Fetch approved quotation items of this job order to get the detail breakdown
         cursor.execute("""
             SELECT id FROM quotations 
             WHERE job_order_id = %s AND status = 'approved' 
@@ -1859,7 +1718,6 @@ def generate_delivery_note_pdf(invoice_id: int) -> bytes:
         cursor.close()
         db.close()
 
-    # Build ReportLab PDF flowables
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
         buffer,
@@ -1867,10 +1725,9 @@ def generate_delivery_note_pdf(invoice_id: int) -> bytes:
         rightMargin=36,
         leftMargin=36,
         topMargin=36,
-        bottomMargin=54 # extra space at bottom for footer canvas
+        bottomMargin=54
     )
 
-    # Styles
     styles = getSampleStyleSheet()
     normal_style = styles['Normal']
     normal_style.fontName = FONT_NAME
@@ -1883,18 +1740,8 @@ def generate_delivery_note_pdf(invoice_id: int) -> bytes:
         fontName=FONT_NAME,
         fontSize=18,
         leading=22,
-        alignment=2, # Right aligned
+        alignment=2,
         textColor=colors.HexColor('#0D47A1')
-    )
-
-    subtitle_style = ParagraphStyle(
-        'DocSubtitle',
-        parent=normal_style,
-        fontName=FONT_NAME,
-        fontSize=9,
-        leading=11,
-        alignment=2, # Right aligned
-        textColor=colors.HexColor('#64748B')
     )
 
     section_header_style = ParagraphStyle(
@@ -1934,7 +1781,7 @@ def generate_delivery_note_pdf(invoice_id: int) -> bytes:
         fontSize=9,
         leading=11,
         textColor=colors.white,
-        alignment=1 # Center aligned
+        alignment=1
     )
 
     table_cell_style = ParagraphStyle(
@@ -1949,12 +1796,11 @@ def generate_delivery_note_pdf(invoice_id: int) -> bytes:
     table_cell_center_style = ParagraphStyle(
         'TableCellCenter',
         parent=table_cell_style,
-        alignment=1 # Center aligned
+        alignment=1
     )
 
     story = []
 
-    # A. PDF Header Table
     shop_name = shop.get('name', 'J&P Auto Maxing')
     shop_address = shop.get('address', '')
     shop_phone = shop.get('phone', '')
@@ -1983,10 +1829,10 @@ def generate_delivery_note_pdf(invoice_id: int) -> bytes:
     closed_by_name = invoice.get('closed_by_name') or invoice.get('created_by_name') or '-'
 
     meta_box_data = [
-        [Paragraph("<b>ເລກທີໃບສົ່ງມອບ / Delivery Note No:</b>", meta_label_style), Paragraph(f"<b>{delivery_no}</b>", meta_value_style)],
-        [Paragraph("<b>ເລກທີໃບບິນ / Invoice No:</b>", meta_label_style), Paragraph(invoice_no, meta_value_style)],
-        [Paragraph("<b>ວັນທີສົ່ງມອບ / Delivery Date:</b>", meta_label_style), Paragraph(closed_at_str, meta_value_style)],
-        [Paragraph("<b>ຜູ້ສົ່ງມອບ / Delivered By:</b>", meta_label_style), Paragraph(closed_by_name, meta_value_style)]
+        [Paragraph("<b>ເລກທີໃບສົ່ງມອບ:</b>", meta_label_style), Paragraph(f"<b>{delivery_no}</b>", meta_value_style)],
+        [Paragraph("<b>ເລກທີໃບບິນ:</b>", meta_label_style), Paragraph(invoice_no, meta_value_style)],
+        [Paragraph("<b>ວັນທີສົ່ງມອບ:</b>", meta_label_style), Paragraph(closed_at_str, meta_value_style)],
+        [Paragraph("<b>ຜູ້ສົ່ງມອບ:</b>", meta_label_style), Paragraph(closed_by_name, meta_value_style)]
     ]
     meta_table = Table(meta_box_data, colWidths=[130, 90])
     meta_table.setStyle(TableStyle([
@@ -2001,13 +1847,12 @@ def generate_delivery_note_pdf(invoice_id: int) -> bytes:
     header_left = Paragraph(
         f"<font size=16 color='#0D47A1'><b>{shop_name}</b></font><br/>"
         f"<font size=9 color='#475569'>{shop_address}<br/>"
-        f"ເບີໂທລະສັບ / Phone: {shop_phone}</font>",
+        f"ເບີໂທລະສັບ: {shop_phone}</font>",
         normal_style
     )
 
     header_right = [
         Paragraph("<b>ໃບສົ່ງມອບລົດ</b>", title_style),
-        Paragraph("VEHICLE DELIVERY NOTE", subtitle_style),
         Spacer(1, 4),
         meta_table
     ]
@@ -2021,7 +1866,6 @@ def generate_delivery_note_pdf(invoice_id: int) -> bytes:
     ]))
     story.append(header_table)
 
-    # B. Divider line
     divider = Table([[""]], colWidths=[520])
     divider.setStyle(TableStyle([
         ('LINEABOVE', (0, 0), (-1, -1), 1.5, colors.HexColor('#0D47A1')),
@@ -2032,7 +1876,6 @@ def generate_delivery_note_pdf(invoice_id: int) -> bytes:
     ]))
     story.append(divider)
 
-    # C. Customer & Vehicle Info Section
     customer_name = invoice.get('customer_name', '-')
     customer_phone = invoice.get('customer_phone', '-')
     customer_address = invoice.get('customer_address', '-')
@@ -2045,10 +1888,10 @@ def generate_delivery_note_pdf(invoice_id: int) -> bytes:
     mileage = invoice.get('mileage', 0)
 
     left_info = [
-        [Paragraph("<b>ຂໍ້ມູນລູກຄ້າ / Customer Info</b>", section_header_style), ""],
-        [Paragraph("<b>ຊື່ລູກຄ້າ / Name:</b>", meta_label_style), Paragraph(customer_name, meta_value_style)],
-        [Paragraph("<b>ເບີໂທລະສັບ / Phone:</b>", meta_label_style), Paragraph(customer_phone, meta_value_style)],
-        [Paragraph("<b>ທີ່ຢູ່ / Address:</b>", meta_label_style), Paragraph(customer_address, meta_value_style)]
+        [Paragraph("<b>ຂໍ້ມູນລູກຄ້າ</b>", section_header_style), ""],
+        [Paragraph("<b>ຊື່:</b>", meta_label_style), Paragraph(customer_name, meta_value_style)],
+        [Paragraph("<b>ເບີໂທລະສັບ:</b>", meta_label_style), Paragraph(customer_phone, meta_value_style)],
+        [Paragraph("<b>ທີ່ຢູ່:</b>", meta_label_style), Paragraph(customer_address, meta_value_style)]
     ]
     left_table = Table(left_info, colWidths=[100, 150])
     left_table.setStyle(TableStyle([
@@ -2059,11 +1902,11 @@ def generate_delivery_note_pdf(invoice_id: int) -> bytes:
     ]))
 
     right_info = [
-        [Paragraph("<b>ຂໍ້ມູນລົດ / Vehicle Info</b>", section_header_style), ""],
-        [Paragraph("<b>ທະບຽນລົດ / Plate No:</b>", meta_label_style), Paragraph(plate_number, meta_value_style)],
-        [Paragraph("<b>ຍີ່ຫໍ້ ແລະ ລຸ້ນ / Model:</b>", meta_label_style), Paragraph(f"{brand} {model} {f'({year})' if year else ''}", meta_value_style)],
-        [Paragraph("<b>ສີລົດ / Color:</b>", meta_label_style), Paragraph(color, meta_value_style)],
-        [Paragraph("<b>ເລກກິໂລ / Mileage:</b>", meta_label_style), Paragraph(f"{mileage:,} km" if mileage else "-", meta_value_style)]
+        [Paragraph("<b>ຂໍ້ມູນລົດ</b>", section_header_style), ""],
+        [Paragraph("<b>ທະບຽນລົດ:</b>", meta_label_style), Paragraph(plate_number, meta_value_style)],
+        [Paragraph("<b>ຍີ່ຫໍ້ ແລະ ລຸ້ນ:</b>", meta_label_style), Paragraph(f"{brand} {model} {f'({year})' if year else ''}", meta_value_style)],
+        [Paragraph("<b>ສີ:</b>", meta_label_style), Paragraph(color, meta_value_style)],
+        [Paragraph("<b>ເລກກິໂລ:</b>", meta_label_style), Paragraph(f"{mileage:,} km" if mileage else "-", meta_value_style)]
     ]
     right_table = Table(right_info, colWidths=[110, 140])
     right_table.setStyle(TableStyle([
@@ -2082,16 +1925,15 @@ def generate_delivery_note_pdf(invoice_id: int) -> bytes:
     story.append(info_layout_table)
     story.append(Spacer(1, 10))
 
-    # D. Work Completed Table (No pricing columns)
-    story.append(Paragraph("<b>ລາຍການບໍລິການ ແລະ ອາໄຫຼ່ທີ່ຕິດຕັ້ງ / Services & Parts Installed:</b>", section_header_style))
+    story.append(Paragraph("<b>ລາຍການບໍລິການ ແລະ ອາໄຫຼ່ທີ່ຕິດຕັ້ງ:</b>", section_header_style))
     story.append(Spacer(1, 4))
 
     table_data = [
         [
             Paragraph("<b>ລຳດັບ<br/>No.</b>", table_header_style),
-            Paragraph("<b>ລາຍການບໍລິການ ແລະ ອາໄຫຼ່ / Service & Parts Description</b>", table_header_style),
-            Paragraph("<b>ຈຳນວນ<br/>Qty</b>", table_header_style),
-            Paragraph("<b>ຫົວໜ່ວຍ<br/>Unit</b>", table_header_style)
+            Paragraph("<b>ລາຍການບໍລິການ ແລະ ອາໄຫຼ່</b>", table_header_style),
+            Paragraph("<b>ຈຳນວນ</b>", table_header_style),
+            Paragraph("<b>ຫົວໜ່ວຍ</b>", table_header_style)
         ]
     ]
 
@@ -2110,14 +1952,13 @@ def generate_delivery_note_pdf(invoice_id: int) -> bytes:
     else:
         table_data.append([
             Paragraph("1", table_cell_center_style),
-            Paragraph("ລາຍການບໍລິການ ແລະ ອາໄຫຼ່ທັງໝົດ (All Service & Parts Items)", table_cell_style),
+            Paragraph("ລາຍການບໍລິການ ແລະ ອາໄຫຼ່ທັງໝົດ", table_cell_style),
             Paragraph("1", table_cell_center_style),
-            Paragraph("ຊຸດ / Set", table_cell_center_style)
+            Paragraph("ຊຸດ", table_cell_center_style)
         ])
 
     items_table = Table(table_data, colWidths=[40, 360, 60, 60])
     
-    # Grid styles
     t_style = [
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0D47A1')),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
@@ -2127,7 +1968,6 @@ def generate_delivery_note_pdf(invoice_id: int) -> bytes:
         ('TOPPADDING', (0, 1), (-1, -1), 4),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E2E8F0')),
     ]
-    # Alternating backgrounds for data rows
     for r in range(1, len(table_data)):
         if r % 2 == 0:
             t_style.append(('BACKGROUND', (0, r), (-1, r), colors.HexColor('#F8FAFC')))
@@ -2136,11 +1976,10 @@ def generate_delivery_note_pdf(invoice_id: int) -> bytes:
     story.append(items_table)
     story.append(Spacer(1, 40))
 
-    # F. Signatures Block
     sig_data = [
         [
-            Paragraph("<b>ລາຍເຊັນລູກຄ້າ (ຜູ້ຮັບມອບ) / Customer Signature</b>", meta_label_style),
-            Paragraph("<b>ຜູ້ສົ່ງມອບ (ຮ້ານ) / Delivered By</b>", meta_label_style)
+            Paragraph("<b>ລາຍເຊັນລູກຄ້າ (ຜູ້ຮັບມອບ)</b>", meta_label_style),
+            Paragraph("<b>ຜູ້ສົ່ງມອບ (ຮ້ານ)</b>", meta_label_style)
         ],
         [
             Spacer(1, 40),
@@ -2155,8 +1994,8 @@ def generate_delivery_note_pdf(invoice_id: int) -> bytes:
             Paragraph(f"({closed_by_name})", meta_value_style)
         ],
         [
-            Paragraph("ວັນທີ / Date: ...... / ...... / ............", meta_label_style),
-            Paragraph("ວັນທີ / Date: ...... / ...... / ............", meta_label_style)
+            Paragraph("ວັນທີ: ...... / ...... / ............", meta_label_style),
+            Paragraph("ວັນທີ: ...... / ...... / ............", meta_label_style)
         ]
     ]
     sig_table = Table(sig_data, colWidths=[260, 260])
@@ -2172,49 +2011,39 @@ def generate_delivery_note_pdf(invoice_id: int) -> bytes:
     ])
     story.append(sig_section)
 
-    # Build the document
-    doc.build(story, canvasmaker=create_canvas_class("ໃບສົ່ງມອບລົດ (Delivery Note)"))
+    doc.build(story, canvasmaker=create_canvas_class("ໃບສົ່ງມອບລົດ"))
     pdf_content = buffer.getvalue()
     buffer.close()
     return pdf_content
 
 
 # =========================================================================
-# ========== 5 SPECIALIZED REPORTS PDF GENERATORS WITH LAO SUPPORT ========
+# ========== 5 SPECIALIZED REPORTS PDF GENERATORS (NO SIGNATURES) ========
 # =========================================================================
 
 from datetime import datetime, timedelta
 
 def create_canvas_class(title_text):
-    """Dynamically creates a NumberedCanvas subclass with custom document footer title."""
     class CustomNumberedCanvas(NumberedCanvas):
         def draw_page_decorations(self, page_count):
             self.saveState()
             self.setFont(FONT_NAME, 8)
             self.setFillColor(colors.HexColor('#64748B'))
-            
-            # Draw thin horizontal divider line just above the page footer
             self.setStrokeColor(colors.HexColor('#CBD5E1'))
             self.setLineWidth(0.5)
             self.line(36, 35, 559, 35)
-            
-            # Right aligned page number in Lao
             page_text = f"ໜ້າ {self._pageNumber} / {page_count}"
             self.drawRightString(559, 22, page_text)
-            
-            # Left aligned document info in Lao
             self.drawString(36, 22, f"J&P Auto Maxing — {title_text}")
             self.restoreState()
     return CustomNumberedCanvas
 
 
-def build_report_header(story, title_lao, title_eng, start_date, end_date, shop_info):
-    """Builds a consistent and formal A4 report header block with company metadata."""
+def build_report_header(story, title_lao, start_date, end_date, shop_info):
     shop_name = shop_info.get('name', 'J&P Auto Maxing')
     shop_address = shop_info.get('address', '')
     shop_phone = shop_info.get('phone', '')
     
-    # Base normal style to resolve Phetsarath font
     normal_style = ParagraphStyle(
         'HeaderNormal',
         fontName=FONT_NAME,
@@ -2227,17 +2056,8 @@ def build_report_header(story, title_lao, title_eng, start_date, end_date, shop_
         parent=normal_style,
         fontSize=18,
         leading=22,
-        alignment=2, # Right aligned
+        alignment=2,
         textColor=colors.HexColor('#0D47A1')
-    )
-
-    subtitle_style = ParagraphStyle(
-        'DocSubtitle',
-        parent=normal_style,
-        fontSize=9,
-        leading=11,
-        alignment=2, # Right aligned
-        textColor=colors.HexColor('#64748B')
     )
 
     meta_label_style = ParagraphStyle(
@@ -2257,9 +2077,9 @@ def build_report_header(story, title_lao, title_eng, start_date, end_date, shop_
     )
 
     meta_box_data = [
-        [Paragraph("<b>ວັນທີເລີ່ມ / Start Date:</b>", meta_label_style), Paragraph(start_date or "-", meta_value_style)],
-        [Paragraph("<b>ວັນທີສິ້ນສຸດ / End Date:</b>", meta_label_style), Paragraph(end_date or "-", meta_value_style)],
-        [Paragraph("<b>ພິມວັນທີ / Export Date:</b>", meta_label_style), Paragraph(datetime.now().strftime("%Y-%m-%d"), meta_value_style)]
+        [Paragraph("<b>ວັນທີເລີ່ມ:</b>", meta_label_style), Paragraph(start_date or "-", meta_value_style)],
+        [Paragraph("<b>ວັນທີສິ້ນສຸດ:</b>", meta_label_style), Paragraph(end_date or "-", meta_value_style)],
+        [Paragraph("<b>ພິມວັນທີ:</b>", meta_label_style), Paragraph(datetime.now().strftime("%Y-%m-%d"), meta_value_style)]
     ]
     meta_table = Table(meta_box_data, colWidths=[110, 100])
     meta_table.setStyle(TableStyle([
@@ -2274,13 +2094,12 @@ def build_report_header(story, title_lao, title_eng, start_date, end_date, shop_
     header_left = Paragraph(
         f"<font size=16 color='#0D47A1'><b>{shop_name}</b></font><br/>"
         f"<font size=9 color='#475569'>{shop_address}<br/>"
-        f"ເບີໂທລະສັບ / Phone: {shop_phone}</font>",
+        f"ເບີໂທລະສັບ: {shop_phone}</font>",
         normal_style
     )
 
     header_right = [
         Paragraph(f"<b>{title_lao}</b>", title_style),
-        Paragraph(title_eng, subtitle_style),
         Spacer(1, 6),
         meta_table
     ]
@@ -2294,7 +2113,6 @@ def build_report_header(story, title_lao, title_eng, start_date, end_date, shop_
     ]))
     story.append(header_table)
 
-    # Divider line
     divider = Table([[""]], colWidths=[520])
     divider.setStyle(TableStyle([
         ('LINEABOVE', (0, 0), (-1, -1), 1.5, colors.HexColor('#0D47A1')),
@@ -2306,61 +2124,7 @@ def build_report_header(story, title_lao, title_eng, start_date, end_date, shop_
     story.append(divider)
 
 
-def build_report_signatures(story):
-    """Builds prepared/approved signatures block at the end of the report."""
-    normal_style = ParagraphStyle(
-        'SigNormal',
-        fontName=FONT_NAME,
-        fontSize=10,
-        leading=14
-    )
-    
-    meta_label_style = ParagraphStyle(
-        'MetaLabelSig',
-        parent=normal_style,
-        fontSize=9,
-        leading=13,
-        textColor=colors.HexColor('#475569')
-    )
-    
-    sig_data = [
-        [
-            Paragraph("<b>ຜູ້ຈັດເຮັດລາຍງານ / Prepared By</b>", meta_label_style),
-            Paragraph("<b>ຜູ້ອະນຸມັດ / Approved By</b>", meta_label_style)
-        ],
-        [
-            Spacer(1, 35),
-            Spacer(1, 35)
-        ],
-        [
-            Paragraph("ລົງຊື່: ...........................................................", meta_label_style),
-            Paragraph("ລົງຊື່: ...........................................................", meta_label_style)
-        ],
-        [
-            Paragraph("(....................................................................)", meta_label_style),
-            Paragraph("(....................................................................)", meta_label_style)
-        ],
-        [
-            Paragraph("ຕຳແໜ່ງ: .......................................................", meta_label_style),
-            Paragraph("ຕຳແໜ່ງ: .......................................................", meta_label_style)
-        ]
-    ]
-    sig_table = Table(sig_data, colWidths=[260, 260])
-    sig_table.setStyle(TableStyle([
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
-        ('TOPPADDING', (0, 0), (-1, -1), 3),
-    ]))
-    
-    story.append(Spacer(1, 15))
-    story.append(KeepTogether([
-        sig_table
-    ]))
-
-
 def generate_revenue_report_pdf(start_date: str = None, end_date: str = None) -> bytes:
-    """Generates the Revenue, Expenses, and Profit Report as PDF bytes."""
     db = get_db()
     cursor = db.cursor(dictionary=True)
     try:
@@ -2369,7 +2133,6 @@ def generate_revenue_report_pdf(start_date: str = None, end_date: str = None) ->
         if not start_date:
             start_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
         
-        # 1. Fetch shop info
         cursor.execute("SELECT name, address, phone FROM Shop LIMIT 1")
         shop = cursor.fetchone() or {
             "name": "J&P Auto Maxing",
@@ -2377,7 +2140,6 @@ def generate_revenue_report_pdf(start_date: str = None, end_date: str = None) ->
             "phone": "020 22224444"
         }
         
-        # 2. Financial Totals
         cursor.execute("""
             SELECT 
                 SUM(final_total) as total_revenue,
@@ -2390,7 +2152,6 @@ def generate_revenue_report_pdf(start_date: str = None, end_date: str = None) ->
         """, (start_date, end_date))
         revenue_data = cursor.fetchone() or {}
         
-        # Parts cost
         cursor.execute("""
             SELECT 
                 SUM(pu.qty * pu.cost_price) as total_parts_cost
@@ -2400,7 +2161,6 @@ def generate_revenue_report_pdf(start_date: str = None, end_date: str = None) ->
         """, (start_date, end_date))
         parts_cost_data = cursor.fetchone() or {}
         
-        # Purchase cost
         cursor.execute("""
             SELECT 
                 SUM(total_amount) as total_purchase_cost
@@ -2410,7 +2170,6 @@ def generate_revenue_report_pdf(start_date: str = None, end_date: str = None) ->
         """, (start_date, end_date))
         purchase_cost_data = cursor.fetchone() or {}
         
-        # Payment methods
         cursor.execute("""
             SELECT 
                 payment_method,
@@ -2423,7 +2182,6 @@ def generate_revenue_report_pdf(start_date: str = None, end_date: str = None) ->
         """, (start_date, end_date))
         payment_methods = cursor.fetchall()
         
-        # Daily revenue
         cursor.execute("""
             SELECT 
                 DATE(paid_date) as date,
@@ -2445,14 +2203,12 @@ def generate_revenue_report_pdf(start_date: str = None, end_date: str = None) ->
         cursor.close()
         db.close()
         
-    # Formatting helper for currency
     def format_kip(val):
         try:
             return f"{int(val or 0):,} KIP"
         except:
             return "0 KIP"
             
-    # Calculate
     total_rev = revenue_data.get('total_revenue', 0) or 0
     total_disc = revenue_data.get('total_discount_given', 0) or 0
     total_parts = parts_cost_data.get('total_parts_cost', 0) or 0
@@ -2461,11 +2217,9 @@ def generate_revenue_report_pdf(start_date: str = None, end_date: str = None) ->
     net_profit = total_rev - total_expenses
     profit_margin = (net_profit / total_rev * 100) if total_rev > 0 else 0
     
-    # Story
     story = []
-    build_report_header(story, "ລາຍງານລາຍຮັບ-ລາຍຈ່າຍ ແລະ ກຳໄລ", "Revenue, Expenses, and Profit Report", start_date, end_date, shop)
+    build_report_header(story, "ລາຍງານລາຍຮັບ-ລາຍຈ່າຍ ແລະ ກຳໄລ", start_date, end_date, shop)
     
-    # Styling
     normal_style = ParagraphStyle('ReportNormal', fontName=FONT_NAME, fontSize=10, leading=14)
     
     sect_title_style = ParagraphStyle(
@@ -2492,19 +2246,18 @@ def generate_revenue_report_pdf(start_date: str = None, end_date: str = None) ->
         fontSize=9,
         leading=12,
         textColor=colors.white,
-        alignment=1 # Center
+        alignment=1
     )
     
-    # Financial Summary Table
     summary_data = [
-        [Paragraph("<b>ລາຍການ / Financial Item</b>", table_hdr), Paragraph("<b>ມູນຄ່າ / Amount (KIP)</b>", table_hdr)],
-        [Paragraph("ລາຍຮັບທັງໝົດ / Total Revenue", table_cell), Paragraph(format_kip(total_rev), table_cell)],
-        [Paragraph("ສ່ວນຫຼຸດທັງໝົດ / Total Discounts Given", table_cell), Paragraph(format_kip(total_disc), table_cell)],
-        [Paragraph("ຕົ້ນທຶນອາໄຫຼ່ທີ່ໃຊ້ / Spare Parts Expenses", table_cell), Paragraph(format_kip(total_parts), table_cell)],
-        [Paragraph("ຕົ້ນທຶນການສັ່ງຊື້ອາໄຫຼ່ / Purchase Expenses", table_cell), Paragraph(format_kip(total_purchase), table_cell)],
-        [Paragraph("ລາຍຈ່າຍທັງໝົດ / Total Expenses (Parts + Purchases)", table_cell), Paragraph(format_kip(total_expenses), table_cell)],
-        [Paragraph("<b>ກຳໄລສຸດທິ / Net Profit</b>", table_cell), Paragraph(f"<b>{format_kip(net_profit)}</b>", table_cell)],
-        [Paragraph("<b>ອັດຕາກຳໄລ / Net Profit Margin</b>", table_cell), Paragraph(f"<b>{profit_margin:.1f}%</b>", table_cell)]
+        [Paragraph("<b>ລາຍການ</b>", table_hdr), Paragraph("<b>ມູນຄ່າ (KIP)</b>", table_hdr)],
+        [Paragraph("ລາຍຮັບທັງໝົດ", table_cell), Paragraph(format_kip(total_rev), table_cell)],
+        [Paragraph("ສ່ວນຫຼຸດທັງໝົດ", table_cell), Paragraph(format_kip(total_disc), table_cell)],
+        [Paragraph("ຕົ້ນທຶນອາໄຫຼ່ທີ່ໃຊ້", table_cell), Paragraph(format_kip(total_parts), table_cell)],
+        [Paragraph("ຕົ້ນທຶນການສັ່ງຊື້ອາໄຫຼ່", table_cell), Paragraph(format_kip(total_purchase), table_cell)],
+        [Paragraph("ລາຍຈ່າຍທັງໝົດ", table_cell), Paragraph(format_kip(total_expenses), table_cell)],
+        [Paragraph("<b>ກຳໄລສຸດທິ</b>", table_cell), Paragraph(f"<b>{format_kip(net_profit)}</b>", table_cell)],
+        [Paragraph("<b>ອັດຕາກຳໄລ</b>", table_cell), Paragraph(f"<b>{profit_margin:.1f}%</b>", table_cell)]
     ]
     summary_table = Table(summary_data, colWidths=[300, 220])
     summary_table.setStyle(TableStyle([
@@ -2516,28 +2269,27 @@ def generate_revenue_report_pdf(start_date: str = None, end_date: str = None) ->
         ('BACKGROUND', (0, 6), (1, 7), colors.HexColor('#F1F5F9')),
     ]))
     
-    story.append(Paragraph("<b>ສະຫຼຸບລາຍຮັບ-ລາຍຈ່າຍ / Financial Summary</b>", sect_title_style))
+    story.append(Paragraph("<b>ສະຫຼຸບລາຍຮັບ-ລາຍຈ່າຍ</b>", sect_title_style))
     story.append(summary_table)
     story.append(Spacer(1, 10))
     
-    # Payment Method Table
     pm_data = [
         [
-            Paragraph("<b>ວິທີການຊຳລະ / Payment Method</b>", table_hdr), 
-            Paragraph("<b>ຈຳນວນບິນ / Invoices</b>", table_hdr), 
-            Paragraph("<b>ຍອດເງິນ / Amount (KIP)</b>", table_hdr)
+            Paragraph("<b>ວິທີການຊຳລະ</b>", table_hdr), 
+            Paragraph("<b>ຈຳນວນບິນ</b>", table_hdr), 
+            Paragraph("<b>ຍອດເງິນ (KIP)</b>", table_hdr)
         ]
     ]
     for method in payment_methods:
         name = method.get('payment_method', '-')
-        display = "ເງິນສົດ (Cash)" if name == 'cash' else "ໂອນເງິນ (Transfer)" if name == 'transfer' else name.capitalize()
+        display = "ເງິນສົດ" if name == 'cash' else "ໂອນເງິນ" if name == 'transfer' else name.capitalize()
         pm_data.append([
             Paragraph(display, table_cell),
             Paragraph(str(method.get('count', 0)), table_cell),
             Paragraph(format_kip(method.get('amount', 0)), table_cell)
         ])
     if len(pm_data) == 1:
-        pm_data.append([Paragraph("ບໍ່ມີຂໍ້ມູນ (No data)", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell)])
+        pm_data.append([Paragraph("ບໍ່ມີຂໍ້ມູນ", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell)])
         
     pm_table = Table(pm_data, colWidths=[200, 120, 200])
     pm_table.setStyle(TableStyle([
@@ -2548,19 +2300,18 @@ def generate_revenue_report_pdf(start_date: str = None, end_date: str = None) ->
         ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
     ]))
     
-    story.append(Paragraph("<b>ຊ່ອງທາງການຊຳລະເງິນ / Payment Methods</b>", sect_title_style))
+    story.append(Paragraph("<b>ຊ່ອງທາງການຊຳລະເງິນ</b>", sect_title_style))
     story.append(pm_table)
     story.append(Spacer(1, 10))
     
-    # Daily Revenue Table
     daily_data = [
         [
-            Paragraph("<b>ວັນທີ / Date</b>", table_hdr),
-            Paragraph("<b>ຈຳນວນບິນ / Invoices</b>", table_hdr),
-            Paragraph("<b>ຍອດລາຍຮັບ / Revenue (KIP)</b>", table_hdr)
+            Paragraph("<b>ວັນທີ</b>", table_hdr),
+            Paragraph("<b>ຈຳນວນບິນ</b>", table_hdr),
+            Paragraph("<b>ຍອດລາຍຮັບ (KIP)</b>", table_hdr)
         ]
     ]
-    for d in daily_revenue[:20]: # show top 20 days
+    for d in daily_revenue[:20]:
         date_str = str(d.get('date', '-'))
         daily_data.append([
             Paragraph(date_str, table_cell),
@@ -2568,7 +2319,7 @@ def generate_revenue_report_pdf(start_date: str = None, end_date: str = None) ->
             Paragraph(format_kip(d.get('daily_revenue', 0)), table_cell)
         ])
     if len(daily_data) == 1:
-        daily_data.append([Paragraph("ບໍ່ມີຂໍ້ມູນ (No data)", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell)])
+        daily_data.append([Paragraph("ບໍ່ມີຂໍ້ມູນ", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell)])
         
     daily_table = Table(daily_data, colWidths=[150, 120, 250])
     daily_table.setStyle(TableStyle([
@@ -2580,12 +2331,9 @@ def generate_revenue_report_pdf(start_date: str = None, end_date: str = None) ->
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F8FAFC')]),
     ]))
     
-    story.append(Paragraph("<b>ລາຍຮັບປະຈຳວັນ / Daily Breakdown (Top 20 Days)</b>", sect_title_style))
+    story.append(Paragraph("<b>ລາຍຮັບປະຈຳວັນ (20 ວັນຫຼ້າສຸດ)</b>", sect_title_style))
     story.append(daily_table)
     
-    build_report_signatures(story)
-    
-    # Build
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
         buffer,
@@ -2595,14 +2343,13 @@ def generate_revenue_report_pdf(start_date: str = None, end_date: str = None) ->
         topMargin=36,
         bottomMargin=54
     )
-    doc.build(story, canvasmaker=create_canvas_class("ລາຍງານລາຍຮັບ-ລາຍຈ່າຍ ແລະ ກຳໄລ (Revenue Report)"))
+    doc.build(story, canvasmaker=create_canvas_class("ລາຍງານລາຍຮັບ-ລາຍຈ່າຍ ແລະ ກຳໄລ"))
     pdf_content = buffer.getvalue()
     buffer.close()
     return pdf_content
 
 
 def generate_repair_summary_pdf(start_date: str = None, end_date: str = None) -> bytes:
-    """Generates the Repair Statistics Report as PDF bytes."""
     db = get_db()
     cursor = db.cursor(dictionary=True)
     try:
@@ -2611,7 +2358,6 @@ def generate_repair_summary_pdf(start_date: str = None, end_date: str = None) ->
         if not start_date:
             start_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
         
-        # Shop info
         cursor.execute("SELECT name, address, phone FROM Shop LIMIT 1")
         shop = cursor.fetchone() or {
             "name": "J&P Auto Maxing",
@@ -2619,7 +2365,6 @@ def generate_repair_summary_pdf(start_date: str = None, end_date: str = None) ->
             "phone": "020 22224444"
         }
         
-        # Status summary
         cursor.execute("""
             SELECT 
                 status,
@@ -2631,7 +2376,6 @@ def generate_repair_summary_pdf(start_date: str = None, end_date: str = None) ->
         """, (start_date, end_date))
         status_summary = cursor.fetchall()
         
-        # Overall repair stats
         cursor.execute("""
             SELECT 
                 COUNT(*) as total_repairs,
@@ -2645,7 +2389,6 @@ def generate_repair_summary_pdf(start_date: str = None, end_date: str = None) ->
         """, (start_date, end_date))
         repair_stats = cursor.fetchone() or {}
         
-        # Vehicle brand stats
         cursor.execute("""
             SELECT 
                 COALESCE(b.name, 'ບໍ່ລະບຸ') as brand,
@@ -2665,7 +2408,6 @@ def generate_repair_summary_pdf(start_date: str = None, end_date: str = None) ->
         """, (start_date, end_date))
         vehicle_stats = cursor.fetchall()
         
-        # Daily repair trends
         cursor.execute("""
             SELECT 
                 DATE(start_date) as date,
@@ -2693,11 +2435,9 @@ def generate_repair_summary_pdf(start_date: str = None, end_date: str = None) ->
     avg_hours = repair_stats.get('avg_repair_hours', 0) or 0
     completion_rate = (completed_repairs / total_repairs * 100) if total_repairs > 0 else 0
     
-    # Story
     story = []
-    build_report_header(story, "ລາຍງານການສ້ອມແປງ", "Repair Statistics Report", start_date, end_date, shop)
+    build_report_header(story, "ລາຍງານການສ້ອມແປງ", start_date, end_date, shop)
     
-    # Styling
     normal_style = ParagraphStyle('ReportNormal', fontName=FONT_NAME, fontSize=10, leading=14)
     
     sect_title_style = ParagraphStyle(
@@ -2724,20 +2464,19 @@ def generate_repair_summary_pdf(start_date: str = None, end_date: str = None) ->
         fontSize=9,
         leading=12,
         textColor=colors.white,
-        alignment=1 # Center
+        alignment=1
     )
     
-    # Overall metrics
     metrics_data = [
         [
-            Paragraph("<b>ຕົວຊີ້ບອກ / Metric</b>", table_hdr), 
-            Paragraph("<b>ຄ່າສະຖິຕິ / Value</b>", table_hdr)
+            Paragraph("<b>ຕົວຊີ້ບອກ</b>", table_hdr), 
+            Paragraph("<b>ຄ່າສະຖິຕິ</b>", table_hdr)
         ],
-        [Paragraph("ວຽກສ້ອມແປງທັງໝົດ / Total Repair Orders", table_cell), Paragraph(str(total_repairs), table_cell)],
-        [Paragraph("ສຳເລັດແລ້ວ / Completed", table_cell), Paragraph(str(completed_repairs), table_cell)],
-        [Paragraph("ກຳລັງດຳເນີນການ / In-Progress", table_cell), Paragraph(str(working_repairs), table_cell)],
-        [Paragraph("ອັດຕາຊ່ອມສຳເລັດ / Completion Success Rate", table_cell), Paragraph(f"{completion_rate:.1f}%", table_cell)],
-        [Paragraph("ໄລຍະເວລາຊ່ອມສະເລ່ຍ / Average Repair Time", table_cell), Paragraph(f"{avg_hours:.1f} ຊົ່ວໂມງ (Hours)", table_cell)]
+        [Paragraph("ວຽກສ້ອມແປງທັງໝົດ", table_cell), Paragraph(str(total_repairs), table_cell)],
+        [Paragraph("ສຳເລັດແລ້ວ", table_cell), Paragraph(str(completed_repairs), table_cell)],
+        [Paragraph("ກຳລັງດຳເນີນການ", table_cell), Paragraph(str(working_repairs), table_cell)],
+        [Paragraph("ອັດຕາຊ່ອມສຳເລັດ", table_cell), Paragraph(f"{completion_rate:.1f}%", table_cell)],
+        [Paragraph("ໄລຍະເວລາຊ່ອມສະເລ່ຍ", table_cell), Paragraph(f"{avg_hours:.1f} ຊົ່ວໂມງ", table_cell)]
     ]
     metrics_table = Table(metrics_data, colWidths=[300, 220])
     metrics_table.setStyle(TableStyle([
@@ -2748,17 +2487,16 @@ def generate_repair_summary_pdf(start_date: str = None, end_date: str = None) ->
         ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
     ]))
     
-    story.append(Paragraph("<b>ສະຫຼຸບສະຖິຕິການສ້ອມແປງ / Repair Summary KPIs</b>", sect_title_style))
+    story.append(Paragraph("<b>ສະຫຼຸບສະຖິຕິການສ້ອມແປງ</b>", sect_title_style))
     story.append(metrics_table)
     story.append(Spacer(1, 10))
     
-    # Repairs by brand
     brand_data = [
         [
-            Paragraph("<b>ຍີ່ຫໍ້ລົດ / Brand</b>", table_hdr), 
-            Paragraph("<b>ຈຳນວນງານສ້ອມແປງ / Total Repairs</b>", table_hdr), 
-            Paragraph("<b>ຊ່ອມສຳເລັດ / Completed</b>", table_hdr),
-            Paragraph("<b>ເວລາສະເລ່ຍ / Avg Hours</b>", table_hdr)
+            Paragraph("<b>ຍີ່ຫໍ້ລົດ</b>", table_hdr), 
+            Paragraph("<b>ຈຳນວນງານສ້ອມແປງ</b>", table_hdr), 
+            Paragraph("<b>ຊ່ອມສຳເລັດ</b>", table_hdr),
+            Paragraph("<b>ເວລາສະເລ່ຍ</b>", table_hdr)
         ]
     ]
     for b in vehicle_stats:
@@ -2771,7 +2509,7 @@ def generate_repair_summary_pdf(start_date: str = None, end_date: str = None) ->
             Paragraph(hours_text, table_cell)
         ])
     if len(brand_data) == 1:
-        brand_data.append([Paragraph("ບໍ່ມີຂໍ້ມູນ (No data)", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell)])
+        brand_data.append([Paragraph("ບໍ່ມີຂໍ້ມູນ", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell)])
         
     brand_table = Table(brand_data, colWidths=[180, 120, 110, 110])
     brand_table.setStyle(TableStyle([
@@ -2783,17 +2521,16 @@ def generate_repair_summary_pdf(start_date: str = None, end_date: str = None) ->
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F8FAFC')]),
     ]))
     
-    story.append(Paragraph("<b>ຍານພາຫະນະທີ່ມີການສ້ອມແປງສູງສຸດ / Top Repaired Brands</b>", sect_title_style))
+    story.append(Paragraph("<b>ຍານພາຫະນະທີ່ມີການສ້ອມແປງສູງສຸດ</b>", sect_title_style))
     story.append(brand_table)
     story.append(Spacer(1, 10))
     
-    # Daily repair trends
     daily_data = [
         [
-            Paragraph("<b>ວັນທີ / Date</b>", table_hdr), 
-            Paragraph("<b>ງານສ້ອມແປງທັງໝົດ / Total Started</b>", table_hdr), 
-            Paragraph("<b>ຊ່ອມສຳເລັດ / Completed</b>", table_hdr),
-            Paragraph("<b>ກຳລັງຊ່ອມ / In Progress</b>", table_hdr)
+            Paragraph("<b>ວັນທີ</b>", table_hdr), 
+            Paragraph("<b>ງານສ້ອມແປງທັງໝົດ</b>", table_hdr), 
+            Paragraph("<b>ຊ່ອມສຳເລັດ</b>", table_hdr),
+            Paragraph("<b>ກຳລັງຊ່ອມ</b>", table_hdr)
         ]
     ]
     for d in daily_repairs:
@@ -2804,7 +2541,7 @@ def generate_repair_summary_pdf(start_date: str = None, end_date: str = None) ->
             Paragraph(str(d.get('daily_in_progress', 0)), table_cell)
         ])
     if len(daily_data) == 1:
-        daily_data.append([Paragraph("ບໍ່ມີຂໍ້ມູນ (No data)", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell)])
+        daily_data.append([Paragraph("ບໍ່ມີຂໍ້ມູນ", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell)])
         
     daily_table = Table(daily_data, colWidths=[150, 130, 120, 120])
     daily_table.setStyle(TableStyle([
@@ -2816,12 +2553,9 @@ def generate_repair_summary_pdf(start_date: str = None, end_date: str = None) ->
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F8FAFC')]),
     ]))
     
-    story.append(Paragraph("<b>ແນວໂນ້ມການສ້ອມແປງປະຈຳວັນ / Daily Repair Trends</b>", sect_title_style))
+    story.append(Paragraph("<b>ແນວໂນ້ມການສ້ອມແປງປະຈຳວັນ</b>", sect_title_style))
     story.append(daily_table)
     
-    build_report_signatures(story)
-    
-    # Build
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
         buffer,
@@ -2831,14 +2565,13 @@ def generate_repair_summary_pdf(start_date: str = None, end_date: str = None) ->
         topMargin=36,
         bottomMargin=54
     )
-    doc.build(story, canvasmaker=create_canvas_class("ລາຍງານການສ້ອມແປງ (Repair Statistics Report)"))
+    doc.build(story, canvasmaker=create_canvas_class("ລາຍງານການສ້ອມແປງ"))
     pdf_content = buffer.getvalue()
     buffer.close()
     return pdf_content
 
 
 def generate_parts_service_sales_pdf(start_date: str = None, end_date: str = None) -> bytes:
-    """Generates the Services and Spare Parts Sales Report as PDF bytes."""
     db = get_db()
     cursor = db.cursor(dictionary=True)
     try:
@@ -2847,7 +2580,6 @@ def generate_parts_service_sales_pdf(start_date: str = None, end_date: str = Non
         if not start_date:
             start_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
         
-        # Shop info
         cursor.execute("SELECT name, address, phone FROM Shop LIMIT 1")
         shop = cursor.fetchone() or {
             "name": "J&P Auto Maxing",
@@ -2855,7 +2587,6 @@ def generate_parts_service_sales_pdf(start_date: str = None, end_date: str = Non
             "phone": "020 22224444"
         }
         
-        # 1. Services Sales Breakdown from approved quotations
         cursor.execute("""
             SELECT 
                 COALESCE(s.name, qi.custom_name) as service_name,
@@ -2874,7 +2605,6 @@ def generate_parts_service_sales_pdf(start_date: str = None, end_date: str = Non
         """, (start_date, end_date))
         service_sales = cursor.fetchall()
         
-        # 2. Spare Parts Sales Breakdown from approved quotations
         cursor.execute("""
             SELECT 
                 p.name as part_name,
@@ -2906,7 +2636,6 @@ def generate_parts_service_sales_pdf(start_date: str = None, end_date: str = Non
         cursor.close()
         db.close()
         
-    # Formatting helper for currency
     def format_kip(val):
         try:
             return f"{int(val or 0):,} KIP"
@@ -2920,9 +2649,8 @@ def generate_parts_service_sales_pdf(start_date: str = None, end_date: str = Non
     combined_sales = total_service_sales + total_parts_sales
     
     story = []
-    build_report_header(story, "ລາຍງານຍອດຂາຍບໍລິການ ແລະ ອາໄຫຼ່", "Services and Spare Parts Sales Report", start_date, end_date, shop)
+    build_report_header(story, "ລາຍງານຍອດຂາຍບໍລິການ ແລະ ອາໄຫຼ່", start_date, end_date, shop)
     
-    # Styling
     normal_style = ParagraphStyle('ReportNormal', fontName=FONT_NAME, fontSize=10, leading=14)
     
     sect_title_style = ParagraphStyle(
@@ -2949,17 +2677,16 @@ def generate_parts_service_sales_pdf(start_date: str = None, end_date: str = Non
         fontSize=9,
         leading=11,
         textColor=colors.white,
-        alignment=1 # Center
+        alignment=1
     )
     
-    # Financial Summary
     summary_data = [
-        [Paragraph("<b>ໝວດໝູ່ຍອດຂາຍ / Category</b>", table_hdr), Paragraph("<b>ຍອດຂາຍ / Revenue (KIP)</b>", table_hdr)],
-        [Paragraph("ຍອດຂາຍບໍລິການ / Services Sales", table_cell), Paragraph(format_kip(total_service_sales), table_cell)],
-        [Paragraph("ຍອດຂາຍອາໄຫຼ່ / Spare Parts Sales", table_cell), Paragraph(format_kip(total_parts_sales), table_cell)],
-        [Paragraph("<b>ຍອດຂາຍລວມ / Combined Sales</b>", table_cell), Paragraph(f"<b>{format_kip(combined_sales)}</b>", table_cell)],
-        [Paragraph("ຕົ້ນທຶນອາໄຫຼ່ທີ່ຂາຍ / Spare Parts Cost", table_cell), Paragraph(format_kip(total_parts_cost), table_cell)],
-        [Paragraph("<b>ກຳໄລຂັ້ນຕົ້ນຈາກອາໄຫຼ່ / Spare Parts Profit</b>", table_cell), Paragraph(f"<b>{format_kip(total_parts_profit)}</b>", table_cell)]
+        [Paragraph("<b>ໝວດໝູ່ຍອດຂາຍ</b>", table_hdr), Paragraph("<b>ຍອດຂາຍ (KIP)</b>", table_hdr)],
+        [Paragraph("ຍອດຂາຍບໍລິການ", table_cell), Paragraph(format_kip(total_service_sales), table_cell)],
+        [Paragraph("ຍອດຂາຍອາໄຫຼ່", table_cell), Paragraph(format_kip(total_parts_sales), table_cell)],
+        [Paragraph("<b>ຍອດຂາຍລວມ</b>", table_cell), Paragraph(f"<b>{format_kip(combined_sales)}</b>", table_cell)],
+        [Paragraph("ຕົ້ນທຶນອາໄຫຼ່ທີ່ຂາຍ", table_cell), Paragraph(format_kip(total_parts_cost), table_cell)],
+        [Paragraph("<b>ກຳໄລຂັ້ນຕົ້ນຈາກອາໄຫຼ່</b>", table_cell), Paragraph(f"<b>{format_kip(total_parts_profit)}</b>", table_cell)]
     ]
     summary_table = Table(summary_data, colWidths=[280, 240])
     summary_table.setStyle(TableStyle([
@@ -2971,21 +2698,20 @@ def generate_parts_service_sales_pdf(start_date: str = None, end_date: str = Non
         ('BACKGROUND', (0, 3), (1, 3), colors.HexColor('#F1F5F9')),
         ('BACKGROUND', (0, 5), (1, 5), colors.HexColor('#E2E8F0')),
     ]))
-    story.append(Paragraph("<b>ສະຫຼຸບຍອດຂາຍ / Sales Summary</b>", sect_title_style))
+    story.append(Paragraph("<b>ສະຫຼຸບຍອດຂາຍ</b>", sect_title_style))
     story.append(summary_table)
     story.append(Spacer(1, 10))
     
-    # Top Services
     srv_data = [
         [
             Paragraph("<b>ລຳດັບ<br/>No.</b>", table_hdr),
-            Paragraph("<b>ชື່ການບໍລິການ / Service Description</b>", table_hdr), 
-            Paragraph("<b>ຈຳນວນຄັ້ງ / Qty</b>", table_hdr), 
-            Paragraph("<b>ລາຄາສະເລ່ຍ / Avg Price</b>", table_hdr),
-            Paragraph("<b>ຍອດລວມ / Total (KIP)</b>", table_hdr)
+            Paragraph("<b>ຊື່ການບໍລິການ</b>", table_hdr), 
+            Paragraph("<b>ຈຳນວນຄັ້ງ</b>", table_hdr), 
+            Paragraph("<b>ລາຄາສະເລ່ຍ</b>", table_hdr),
+            Paragraph("<b>ຍອດລວມ (KIP)</b>", table_hdr)
         ]
     ]
-    for idx, s in enumerate(service_sales[:15]): # top 15 services
+    for idx, s in enumerate(service_sales[:15]):
         srv_data.append([
             Paragraph(str(idx + 1), table_cell),
             Paragraph(s.get('service_name', '-'), table_cell),
@@ -2994,7 +2720,7 @@ def generate_parts_service_sales_pdf(start_date: str = None, end_date: str = Non
             Paragraph(format_kip(s.get('total_sales_amount', 0)), table_cell)
         ])
     if len(srv_data) == 1:
-        srv_data.append([Paragraph("ບໍ່ມີຂໍ້ມູນ (No data)", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell)])
+        srv_data.append([Paragraph("ບໍ່ມີຂໍ້ມູນ", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell)])
         
     srv_table = Table(srv_data, colWidths=[35, 185, 50, 110, 140])
     srv_table.setStyle(TableStyle([
@@ -3005,22 +2731,21 @@ def generate_parts_service_sales_pdf(start_date: str = None, end_date: str = Non
         ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F8FAFC')]),
     ]))
-    story.append(Paragraph("<b>ການບໍລິການຍອດນິຍົມ / Top Services Sold</b>", sect_title_style))
+    story.append(Paragraph("<b>ການບໍລິການຍອດນິຍົມ</b>", sect_title_style))
     story.append(srv_table)
     story.append(Spacer(1, 10))
     
-    # Top Parts
     prt_data = [
         [
             Paragraph("<b>ລຳດັບ<br/>No.</b>", table_hdr),
-            Paragraph("<b>ຊື່ອາໄຫຼ່ / Spare Part Description</b>", table_hdr), 
-            Paragraph("<b>ປະເພດ / Category</b>", table_hdr),
-            Paragraph("<b>ຈຳນວນ / Qty</b>", table_hdr), 
-            Paragraph("<b>ຍອດຂາຍ / Revenue</b>", table_hdr),
-            Paragraph("<b>ກຳໄລ / Profit</b>", table_hdr)
+            Paragraph("<b>ຊື່ອາໄຫຼ່</b>", table_hdr), 
+            Paragraph("<b>ປະເພດ</b>", table_hdr),
+            Paragraph("<b>ຈຳນວນ</b>", table_hdr), 
+            Paragraph("<b>ຍອດຂາຍ</b>", table_hdr),
+            Paragraph("<b>ກຳໄລ</b>", table_hdr)
         ]
     ]
-    for idx, p in enumerate(parts_sales[:15]): # top 15 parts
+    for idx, p in enumerate(parts_sales[:15]):
         prt_data.append([
             Paragraph(str(idx + 1), table_cell),
             Paragraph(p.get('part_name', '-'), table_cell),
@@ -3030,7 +2755,7 @@ def generate_parts_service_sales_pdf(start_date: str = None, end_date: str = Non
             Paragraph(format_kip(p.get('profit', 0)), table_cell)
         ])
     if len(prt_data) == 1:
-        prt_data.append([Paragraph("ບໍ່ມີຂໍ້ມູນ (No data)", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell)])
+        prt_data.append([Paragraph("ບໍ່ມີຂໍ້ມູນ", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell)])
         
     prt_table = Table(prt_data, colWidths=[35, 175, 90, 60, 80, 80])
     prt_table.setStyle(TableStyle([
@@ -3041,12 +2766,9 @@ def generate_parts_service_sales_pdf(start_date: str = None, end_date: str = Non
         ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F8FAFC')]),
     ]))
-    story.append(Paragraph("<b>ລາຍການອາໄຫຼ່ຂາຍດີ / Top Spare Parts Sold</b>", sect_title_style))
+    story.append(Paragraph("<b>ລາຍການອາໄຫຼ່ຂາຍດີ</b>", sect_title_style))
     story.append(prt_table)
     
-    build_report_signatures(story)
-    
-    # Build
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
         buffer,
@@ -3056,14 +2778,13 @@ def generate_parts_service_sales_pdf(start_date: str = None, end_date: str = Non
         topMargin=36,
         bottomMargin=54
     )
-    doc.build(story, canvasmaker=create_canvas_class("ລາຍງານຍອດຂາຍບໍລິການ ແລະ ອາໄຫຼ່ (Sales Report)"))
+    doc.build(story, canvasmaker=create_canvas_class("ລາຍງານຍອດຂາຍບໍລິການ ແລະ ອາໄຫຼ່"))
     pdf_content = buffer.getvalue()
     buffer.close()
     return pdf_content
 
 
 def generate_mechanic_performance_pdf(start_date: str = None, end_date: str = None) -> bytes:
-    """Generates the Mechanic Performance Report as PDF bytes."""
     db = get_db()
     cursor = db.cursor(dictionary=True)
     try:
@@ -3072,7 +2793,6 @@ def generate_mechanic_performance_pdf(start_date: str = None, end_date: str = No
         if not start_date:
             start_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
         
-        # Shop info
         cursor.execute("SELECT name, address, phone FROM Shop LIMIT 1")
         shop = cursor.fetchone() or {
             "name": "J&P Auto Maxing",
@@ -3140,7 +2860,6 @@ def generate_mechanic_performance_pdf(start_date: str = None, end_date: str = No
         m['parts_profit'] = float(m['parts_profit'] or 0)
         m['total_profit'] = m['labor_revenue'] + m['parts_profit']
         
-        # Efficiency
         assigned = m['total_assigned']
         m['efficiency'] = round((m['completed_count'] / assigned * 100), 1) if assigned > 0 else 0
         
@@ -3155,13 +2874,11 @@ def generate_mechanic_performance_pdf(start_date: str = None, end_date: str = No
     avg_workshop_hours = round(sum(valid_durations) / len(valid_durations), 1) if valid_durations else 0
     workshop_efficiency = (total_completed / total_assigned * 100) if total_assigned > 0 else 0
     
-    # Sort by total profit descending
     mechanic_stats.sort(key=lambda x: x['total_profit'], reverse=True)
     
     story = []
-    build_report_header(story, "ລາຍງານປະສິດທິພາບຂອງຊ່າງ", "Mechanic Performance Report", start_date, end_date, shop)
+    build_report_header(story, "ລາຍງານປະສິດທິພາບຂອງຊ່າງ", start_date, end_date, shop)
     
-    # Styling
     normal_style = ParagraphStyle('ReportNormal', fontName=FONT_NAME, fontSize=10, leading=14)
     
     sect_title_style = ParagraphStyle(
@@ -3185,7 +2902,7 @@ def generate_mechanic_performance_pdf(start_date: str = None, end_date: str = No
     table_cell_right = ParagraphStyle(
         'TableCellRight',
         parent=table_cell,
-        alignment=2 # Right
+        alignment=2
     )
     
     table_hdr = ParagraphStyle(
@@ -3194,19 +2911,18 @@ def generate_mechanic_performance_pdf(start_date: str = None, end_date: str = No
         fontSize=9,
         leading=12,
         textColor=colors.white,
-        alignment=1 # Center
+        alignment=1
     )
     
-    # KPI metrics table
     metrics_data = [
-        [Paragraph("<b>ຕົວຊີ້ບອກ / KPI Indicator</b>", table_hdr), Paragraph("<b>ຄ່າວັດແທກ / Performance Value</b>", table_hdr)],
-        [Paragraph("ຈຳນວນຊ່າງສ້ອມແປງທັງໝົດ / Total Mechanics", table_cell), Paragraph(str(len(mechanic_stats)), table_cell)],
-        [Paragraph("ຈຳນວນງານສ້ອມແປງທີ່ມອບໝາຍ / Total Assigned Jobs", table_cell), Paragraph(str(total_assigned), table_cell)],
-        [Paragraph("ງານຊ່ອມແປງທີ່ສຳເລັດ / Completed Jobs", table_cell), Paragraph(str(total_completed), table_cell)],
-        [Paragraph("ເວລາຊ່ອມແປງສະເລ່ຍ / Avg Workshop Repair Duration", table_cell), Paragraph(f"{avg_workshop_hours:.1f} ຊົ່ວໂມງ (Hours)", table_cell)],
-        [Paragraph("ລາຍຮັບຄ່າແຮງລວມ / Total Labor Revenue", table_cell), Paragraph(f"{int(total_labor_revenue):,} KIP", table_cell)],
-        [Paragraph("ກຳໄລອາໄຫຼ່ລວມ / Total Parts Profit", table_cell), Paragraph(f"{int(total_parts_profit):,} KIP", table_cell)],
-        [Paragraph("ກຳໄລລວມທັງໝົດ / Total Combined Profit", table_cell), Paragraph(f"<b>{int(total_labor_revenue + total_parts_profit):,} KIP</b>", table_cell)],
+        [Paragraph("<b>ຕົວຊີ້ບອກ</b>", table_hdr), Paragraph("<b>ຄ່າວັດແທກ</b>", table_hdr)],
+        [Paragraph("ຈຳນວນຊ່າງສ້ອມແປງທັງໝົດ", table_cell), Paragraph(str(len(mechanic_stats)), table_cell)],
+        [Paragraph("ຈຳນວນງານສ້ອມແປງທີ່ມອບໝາຍ", table_cell), Paragraph(str(total_assigned), table_cell)],
+        [Paragraph("ງານຊ່ອມແປງທີ່ສຳເລັດ", table_cell), Paragraph(str(total_completed), table_cell)],
+        [Paragraph("ເວລາຊ່ອມແປງສະເລ່ຍ", table_cell), Paragraph(f"{avg_workshop_hours:.1f} ຊົ່ວໂມງ", table_cell)],
+        [Paragraph("ລາຍຮັບຄ່າແຮງລວມ", table_cell), Paragraph(f"{int(total_labor_revenue):,} KIP", table_cell)],
+        [Paragraph("ກຳໄລອາໄຫຼ່ລວມ", table_cell), Paragraph(f"{int(total_parts_profit):,} KIP", table_cell)],
+        [Paragraph("ກຳໄລລວມທັງໝົດ", table_cell), Paragraph(f"<b>{int(total_labor_revenue + total_parts_profit):,} KIP</b>", table_cell)],
     ]
     metrics_table = Table(metrics_data, colWidths=[280, 240])
     metrics_table.setStyle(TableStyle([
@@ -3216,22 +2932,21 @@ def generate_mechanic_performance_pdf(start_date: str = None, end_date: str = No
         ('TOPPADDING', (0, 0), (-1, -1), 5),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
     ]))
-    story.append(Paragraph("<b>ພາບລວມປະສິດທິພາບຮ້ານ / Workshop Performance Overview</b>", sect_title_style))
+    story.append(Paragraph("<b>ພາບລວມປະສິດທິພາບຮ້ານ</b>", sect_title_style))
     story.append(metrics_table)
     story.append(Spacer(1, 10))
     
-    # Mechanic details
     perf_data = [
         [
             Paragraph("<b>ລຳດັບ<br/>No.</b>", table_hdr),
-            Paragraph("<b>ຊື່ນາຍຊ່າງ / Name</b>", table_hdr),
+            Paragraph("<b>ຊື່ນາຍຊ່າງ</b>", table_hdr),
             Paragraph("<b>ມອບໝາຍ<br/>Jobs</b>", table_hdr),
             Paragraph("<b>ສຳເລັດ<br/>Done</b>", table_hdr),
             Paragraph("<b>ສະເລ່ຍ<br/>Hours</b>", table_hdr),
-            Paragraph("<b>ລາຍຮັບຄ່າແຮງ<br/>Labor (KIP)</b>", table_hdr),
-            Paragraph("<b>ກຳໄລອາໄຫຼ່<br/>Parts (KIP)</b>", table_hdr),
-            Paragraph("<b>ກຳໄລລວມ<br/>Profit (KIP)</b>", table_hdr),
-            Paragraph("<b>ອັດຕາສຳເລັດ<br/>Rate (%)</b>", table_hdr)
+            Paragraph("<b>ລາຍຮັບຄ່າແຮງ<br/>(KIP)</b>", table_hdr),
+            Paragraph("<b>ກຳໄລອາໄຫຼ່<br/>(KIP)</b>", table_hdr),
+            Paragraph("<b>ກຳໄລລວມ<br/>(KIP)</b>", table_hdr),
+            Paragraph("<b>ອັດຕາສຳເລັດ<br/>(%)</b>", table_hdr)
         ]
     ]
     for idx, m in enumerate(mechanic_stats):
@@ -3256,7 +2971,7 @@ def generate_mechanic_performance_pdf(start_date: str = None, end_date: str = No
         ])
     if len(perf_data) == 1:
         perf_data.append([
-            Paragraph("ບໍ່ມີຂໍ້ມູນຊ່າງສ້ອມແປງ (No mechanic data available)", table_cell),
+            Paragraph("ບໍ່ມີຂໍ້ມູນຊ່າງສ້ອມແປງ", table_cell),
             Paragraph("-", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell),
             Paragraph("-", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell),
             Paragraph("-", table_cell), Paragraph("-", table_cell)
@@ -3271,12 +2986,9 @@ def generate_mechanic_performance_pdf(start_date: str = None, end_date: str = No
         ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F8FAFC')]),
     ]))
-    story.append(Paragraph("<b>ລາຍລະອຽດປະສິດທິພາບຂອງຊ່າງ / Mechanic Performance Details</b>", sect_title_style))
+    story.append(Paragraph("<b>ລາຍລະອຽດປະສິດທິພາບຂອງຊ່າງ</b>", sect_title_style))
     story.append(perf_table)
     
-    build_report_signatures(story)
-    
-    # Build
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
         buffer,
@@ -3286,14 +2998,13 @@ def generate_mechanic_performance_pdf(start_date: str = None, end_date: str = No
         topMargin=36,
         bottomMargin=54
     )
-    doc.build(story, canvasmaker=create_canvas_class("ລາຍງານປະສິດທິພາບຂອງຊ່າງ (Mechanic Performance Report)"))
+    doc.build(story, canvasmaker=create_canvas_class("ລາຍງານປະສິດທິພາບຂອງຊ່າງ"))
     pdf_content = buffer.getvalue()
     buffer.close()
     return pdf_content
 
 
 def generate_promotion_usage_pdf(start_date: str = None, end_date: str = None) -> bytes:
-    """Generates the Promotion & Discount Usage Report as PDF bytes."""
     db = get_db()
     cursor = db.cursor(dictionary=True)
     try:
@@ -3302,7 +3013,6 @@ def generate_promotion_usage_pdf(start_date: str = None, end_date: str = None) -
         if not start_date:
             start_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
         
-        # Shop info
         cursor.execute("SELECT name, address, phone FROM Shop LIMIT 1")
         shop = cursor.fetchone() or {
             "name": "J&P Auto Maxing",
@@ -3310,7 +3020,6 @@ def generate_promotion_usage_pdf(start_date: str = None, end_date: str = None) -
             "phone": "020 22224444"
         }
         
-        # 1. Promotion usage from invoices
         cursor.execute("""
             SELECT 
                 p.name as promotion_name,
@@ -3331,7 +3040,6 @@ def generate_promotion_usage_pdf(start_date: str = None, end_date: str = None) -
         """, (start_date, end_date))
         promotion_usage = cursor.fetchall()
         
-        # 2. Promotions quoted but not yet used
         cursor.execute("""
             SELECT 
                 p.name as promotion_name,
@@ -3347,7 +3055,6 @@ def generate_promotion_usage_pdf(start_date: str = None, end_date: str = None) -
         """, (start_date, end_date))
         promotion_quoted = cursor.fetchall()
         
-        # 3. Compare revenue with vs without promotion
         cursor.execute("""
             SELECT 
                 CASE 
@@ -3372,7 +3079,6 @@ def generate_promotion_usage_pdf(start_date: str = None, end_date: str = None) -
         cursor.close()
         db.close()
         
-    # Formatting helper for currency
     def format_kip(val):
         try:
             return f"{int(val or 0):,} KIP"
@@ -3384,9 +3090,8 @@ def generate_promotion_usage_pdf(start_date: str = None, end_date: str = None) -
     total_promo_revenue = sum([float(x['total_revenue_with_promotion'] or 0) for x in promotion_usage])
     
     story = []
-    build_report_header(story, "ລາຍງານການນຳໃຊ້ໂປຣໂມຊັນ", "Promotion & Discount Usage Report", start_date, end_date, shop)
+    build_report_header(story, "ລາຍງານການນຳໃຊ້ໂປຣໂມຊັນ", start_date, end_date, shop)
     
-    # Styling
     normal_style = ParagraphStyle('ReportNormal', fontName=FONT_NAME, fontSize=10, leading=14)
     
     sect_title_style = ParagraphStyle(
@@ -3413,15 +3118,14 @@ def generate_promotion_usage_pdf(start_date: str = None, end_date: str = None) -
         fontSize=9,
         leading=12,
         textColor=colors.white,
-        alignment=1 # Center
+        alignment=1
     )
     
-    # KPI metrics table
     metrics_data = [
-        [Paragraph("<b>ຕົວຊີ້ບອກ / KPI Indicator</b>", table_hdr), Paragraph("<b>ຄ່າສະຖິຕິ / Value</b>", table_hdr)],
-        [Paragraph("ຈຳນວນຄັ້ງທີ່ໃຊ້ໂປຣໂມຊັນ / Total Promotions Applied", table_cell), Paragraph(str(total_promo_invoices), table_cell)],
-        [Paragraph("ສ່ວນຫຼຸດທັງໝົດທີ່ມອບໃຫ້ / Total Discount Given", table_cell), Paragraph(format_kip(total_discount_given), table_cell)],
-        [Paragraph("ລາຍຮັບຈາກໃບບິນໂປໂມຊັນ / Revenue from Promo Invoices", table_cell), Paragraph(format_kip(total_promo_revenue), table_cell)],
+        [Paragraph("<b>ຕົວຊີ້ບອກ</b>", table_hdr), Paragraph("<b>ຄ່າສະຖິຕິ</b>", table_hdr)],
+        [Paragraph("ຈຳນວນຄັ້ງທີ່ໃຊ້ໂປຣໂມຊັນ", table_cell), Paragraph(str(total_promo_invoices), table_cell)],
+        [Paragraph("ສ່ວນຫຼຸດທັງໝົດທີ່ມອບໃຫ້", table_cell), Paragraph(format_kip(total_discount_given), table_cell)],
+        [Paragraph("ລາຍຮັບຈາກໃບບິນໂປໂມຊັນ", table_cell), Paragraph(format_kip(total_promo_revenue), table_cell)],
     ]
     metrics_table = Table(metrics_data, colWidths=[280, 240])
     metrics_table.setStyle(TableStyle([
@@ -3431,18 +3135,17 @@ def generate_promotion_usage_pdf(start_date: str = None, end_date: str = None) -
         ('TOPPADDING', (0, 0), (-1, -1), 5),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
     ]))
-    story.append(Paragraph("<b>ສະຫຼຸບການນຳໃຊ້ / Campaign Summary</b>", sect_title_style))
+    story.append(Paragraph("<b>ສະຫຼຸບການນຳໃຊ້</b>", sect_title_style))
     story.append(metrics_table)
     story.append(Spacer(1, 10))
     
-    # Detailed Usage
     det_data = [
         [
-            Paragraph("<b>ຊື່ໂປຣໂມຊັນ / Promotion Name</b>", table_hdr),
-            Paragraph("<b>ປະເພດສ່ວນຫຼຸດ / Type</b>", table_hdr),
-            Paragraph("<b>ຈຳນວນຄັ້ງ / Count</b>", table_hdr),
-            Paragraph("<b>ສ່ວນຫຼຸດລວມ / Discount</b>", table_hdr),
-            Paragraph("<b>ລາຍຮັບ / Revenue</b>", table_hdr)
+            Paragraph("<b>ຊື່ໂປຣໂມຊັນ</b>", table_hdr),
+            Paragraph("<b>ປະເພດສ່ວນຫຼຸດ</b>", table_hdr),
+            Paragraph("<b>ຈຳນວນຄັ້ງ</b>", table_hdr),
+            Paragraph("<b>ສ່ວນຫຼຸດລວມ</b>", table_hdr),
+            Paragraph("<b>ລາຍຮັບ</b>", table_hdr)
         ]
     ]
     for p in promotion_usage:
@@ -3457,7 +3160,7 @@ def generate_promotion_usage_pdf(start_date: str = None, end_date: str = None) -
             Paragraph(format_kip(p.get('total_revenue_with_promotion', 0)), table_cell)
         ])
     if len(det_data) == 1:
-        det_data.append([Paragraph("ບໍ່ມີຂໍ້ມູນໂປຣໂມຊັນທີ່ໃຊ້ງານ (No promotions used)", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell)])
+        det_data.append([Paragraph("ບໍ່ມີຂໍ້ມູນໂປຣໂມຊັນທີ່ໃຊ້ງານ", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell)])
         
     det_table = Table(det_data, colWidths=[150, 90, 60, 110, 110])
     det_table.setStyle(TableStyle([
@@ -3468,21 +3171,20 @@ def generate_promotion_usage_pdf(start_date: str = None, end_date: str = None) -
         ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F8FAFC')]),
     ]))
-    story.append(Paragraph("<b>ລາຍລະອຽດການນຳໃຊ້ໂປຣໂມຊັນ / Detailed Promotion Usage</b>", sect_title_style))
+    story.append(Paragraph("<b>ລາຍລະອຽດການນຳໃຊ້ໂປຣໂມຊັນ</b>", sect_title_style))
     story.append(det_table)
     story.append(Spacer(1, 10))
     
-    # Revenue comparison
     comp_data = [
         [
-            Paragraph("<b>ສະຖານະ / Promo Status</b>", table_hdr),
-            Paragraph("<b>ຈຳນວນບິນ / Invoices</b>", table_hdr),
-            Paragraph("<b>ລາຍຮັບ / Total Revenue</b>", table_hdr),
-            Paragraph("<b>ຍອດສະເລ່ຍ / Average Value</b>", table_hdr)
+            Paragraph("<b>ສະຖານະ</b>", table_hdr),
+            Paragraph("<b>ຈຳນວນບິນ</b>", table_hdr),
+            Paragraph("<b>ລາຍຮັບ</b>", table_hdr),
+            Paragraph("<b>ຍອດສະເລ່ຍ</b>", table_hdr)
         ]
     ]
     for c in comparison:
-        status_text = "ນຳໃຊ້ໂປຣໂມຊັນ (With Promo)" if c.get('promo_status') == 'With Promotion' else "ບໍ່ໃຊ້ໂປຣໂມຊັນ (Without Promo)"
+        status_text = "ນຳໃຊ້ໂປຣໂມຊັນ" if c.get('promo_status') == 'With Promotion' else "ບໍ່ໃຊ້ໂປຣໂມຊັນ"
         rev = float(c.get('total_revenue', 0) or 0)
         cnt = int(c.get('invoice_count', 0) or 0)
         avg_val = (rev / cnt) if cnt > 0 else 0
@@ -3493,7 +3195,7 @@ def generate_promotion_usage_pdf(start_date: str = None, end_date: str = None) -
             Paragraph(format_kip(avg_val), table_cell)
         ])
     if len(comp_data) == 1:
-        comp_data.append([Paragraph("ບໍ່ມີຂໍ້ມູນ (No data)", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell)])
+        comp_data.append([Paragraph("ບໍ່ມີຂໍ້ມູນ", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell), Paragraph("-", table_cell)])
         
     comp_table = Table(comp_data, colWidths=[170, 90, 130, 130])
     comp_table.setStyle(TableStyle([
@@ -3504,12 +3206,9 @@ def generate_promotion_usage_pdf(start_date: str = None, end_date: str = None) -
         ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F8FAFC')]),
     ]))
-    story.append(Paragraph("<b>ປຽບທຽບຍອດຂາຍ / Campaign Revenue Comparison</b>", sect_title_style))
+    story.append(Paragraph("<b>ປຽບທຽບຍອດຂາຍ</b>", sect_title_style))
     story.append(comp_table)
     
-    build_report_signatures(story)
-    
-    # Build
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
         buffer,
@@ -3519,18 +3218,16 @@ def generate_promotion_usage_pdf(start_date: str = None, end_date: str = None) -
         topMargin=36,
         bottomMargin=54
     )
-    doc.build(story, canvasmaker=create_canvas_class("ລາຍງານການນຳໃຊ້ໂປຣໂມຊັນ (Promotion Usage Report)"))
+    doc.build(story, canvasmaker=create_canvas_class("ລາຍງານການນຳໃຊ້ໂປຣໂມຊັນ"))
     pdf_content = buffer.getvalue()
     buffer.close()
     return pdf_content
 
 
 def generate_purchase_order_pdf(po_id: int) -> bytes:
-    """Queries purchase order information and generates a formal A4 PDF purchase order."""
     db = get_db()
     cursor = db.cursor(dictionary=True)
     try:
-        # Fetch PO details and associated supplier, creator, etc.
         cursor.execute("""
             SELECT po.*, 
                    s.name as supplier_name, s.contact_person as supplier_contact,
@@ -3542,11 +3239,9 @@ def generate_purchase_order_pdf(po_id: int) -> bytes:
             WHERE po.id = %s
         """, (po_id,))
         po = cursor.fetchone()
-        
         if not po:
             raise HTTPException(status_code=404, detail=f"Purchase Order ID {po_id} not found")
 
-        # Fetch shop information
         cursor.execute("SELECT name, address, phone FROM Shop LIMIT 1")
         shop = cursor.fetchone()
         if not shop:
@@ -3556,7 +3251,6 @@ def generate_purchase_order_pdf(po_id: int) -> bytes:
                 "phone": "020 22224444"
             }
 
-        # Fetch PO items
         cursor.execute("""
             SELECT pi.*, p.name as part_name, u.name as unit_name
             FROM purchase_items pi
@@ -3574,7 +3268,6 @@ def generate_purchase_order_pdf(po_id: int) -> bytes:
         cursor.close()
         db.close()
 
-    # Build ReportLab PDF flowables
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
         buffer,
@@ -3582,10 +3275,9 @@ def generate_purchase_order_pdf(po_id: int) -> bytes:
         rightMargin=36,
         leftMargin=36,
         topMargin=36,
-        bottomMargin=54 # extra space at bottom for footer canvas
+        bottomMargin=54
     )
 
-    # Styles
     styles = getSampleStyleSheet()
     normal_style = styles['Normal']
     normal_style.fontName = FONT_NAME
@@ -3598,18 +3290,8 @@ def generate_purchase_order_pdf(po_id: int) -> bytes:
         fontName=FONT_NAME,
         fontSize=18,
         leading=22,
-        alignment=2, # Right aligned
+        alignment=2,
         textColor=colors.HexColor('#0D47A1')
-    )
-
-    subtitle_style = ParagraphStyle(
-        'DocSubtitlePO',
-        parent=normal_style,
-        fontName=FONT_NAME,
-        fontSize=9,
-        leading=11,
-        alignment=2, # Right aligned
-        textColor=colors.HexColor('#64748B')
     )
 
     section_header_style = ParagraphStyle(
@@ -3649,7 +3331,7 @@ def generate_purchase_order_pdf(po_id: int) -> bytes:
         fontSize=9,
         leading=11,
         textColor=colors.white,
-        alignment=1 # Center aligned
+        alignment=1
     )
 
     table_cell_style = ParagraphStyle(
@@ -3664,18 +3346,17 @@ def generate_purchase_order_pdf(po_id: int) -> bytes:
     table_cell_right_style = ParagraphStyle(
         'TableCellRightPO',
         parent=table_cell_style,
-        alignment=2 # Right aligned
+        alignment=2
     )
 
     table_cell_center_style = ParagraphStyle(
         'TableCellCenterPO',
         parent=table_cell_style,
-        alignment=1 # Center aligned
+        alignment=1
     )
 
     story = []
 
-    # A. PDF Header Table
     shop_name = shop.get('name', 'J&P Auto Maxing')
     shop_address = shop.get('address', '')
     shop_phone = shop.get('phone', '')
@@ -3701,17 +3382,17 @@ def generate_purchase_order_pdf(po_id: int) -> bytes:
         
     status = po.get('status', 'ordering')
     status_translations = {
-        "ordering": "ກຳລັງສັ່ງຊື້ (Ordering)",
-        "partial": "ຮັບບາງສ່ວນ (Partial)",
-        "completed": "ສຳເລັດແລ້ວ (Completed)",
-        "cancelled": "ຍົກເລີກແລ້ວ (Cancelled)"
+        "ordering": "ກຳລັງສັ່ງຊື້",
+        "partial": "ຮັບບາງສ່ວນ",
+        "completed": "ສຳເລັດແລ້ວ",
+        "cancelled": "ຍົກເລີກແລ້ວ"
     }
     status_text = status_translations.get(status, status)
 
     meta_box_data = [
-        [Paragraph("<b>ເລກທີໃບສັ່ງຊື້ / PO No:</b>", meta_label_style), Paragraph(f"<b>{po_no}</b>", meta_value_style)],
-        [Paragraph("<b>ວັນທີສັ່ງຊື້ / Order Date:</b>", meta_label_style), Paragraph(order_date_str, meta_value_style)],
-        [Paragraph("<b>ສະຖານະ / Status:</b>", meta_label_style), Paragraph(status_text, meta_value_style)]
+        [Paragraph("<b>ເລກທີໃບສັ່ງຊື້:</b>", meta_label_style), Paragraph(f"<b>{po_no}</b>", meta_value_style)],
+        [Paragraph("<b>ວັນທີສັ່ງຊື້:</b>", meta_label_style), Paragraph(order_date_str, meta_value_style)],
+        [Paragraph("<b>ສະຖານະ:</b>", meta_label_style), Paragraph(status_text, meta_value_style)]
     ]
     meta_table = Table(meta_box_data, colWidths=[130, 90])
     meta_table.setStyle(TableStyle([
@@ -3726,13 +3407,12 @@ def generate_purchase_order_pdf(po_id: int) -> bytes:
     header_left = Paragraph(
         f"<font size=16 color='#0D47A1'><b>{shop_name}</b></font><br/>"
         f"<font size=9 color='#475569'>{shop_address}<br/>"
-        f"ເບີໂທລະສັບ / Phone: {shop_phone}</font>",
+        f"ເບີໂທລະສັບ: {shop_phone}</font>",
         normal_style
     )
 
     header_right = [
         Paragraph("<b>ໃບສັ່ງຊື້ອາໄຫຼ່</b>", title_style),
-        Paragraph("PURCHASE ORDER", subtitle_style),
         Spacer(1, 6),
         meta_table
     ]
@@ -3746,7 +3426,6 @@ def generate_purchase_order_pdf(po_id: int) -> bytes:
     ]))
     story.append(header_table)
 
-    # B. Divider line
     divider = Table([[""]], colWidths=[520])
     divider.setStyle(TableStyle([
         ('LINEABOVE', (0, 0), (-1, -1), 1.5, colors.HexColor('#0D47A1')),
@@ -3757,7 +3436,6 @@ def generate_purchase_order_pdf(po_id: int) -> bytes:
     ]))
     story.append(divider)
 
-    # C. Supplier & Info Section
     supplier_name = po.get('supplier_name', '-')
     supplier_contact = po.get('supplier_contact', '-')
     supplier_phone = po.get('supplier_phone', '-')
@@ -3765,11 +3443,11 @@ def generate_purchase_order_pdf(po_id: int) -> bytes:
     created_by_name = po.get('created_by_name', '-')
 
     left_info = [
-        [Paragraph("<b>ຜູ້ສະໜອງ / Supplier Info</b>", section_header_style), ""],
-        [Paragraph("<b>ชື່ຜູ້ສະໜອງ / Name:</b>", meta_label_style), Paragraph(supplier_name, meta_value_style)],
-        [Paragraph("<b>ຜູ້ຕິດຕໍ່ / Contact:</b>", meta_label_style), Paragraph(supplier_contact or '-', meta_value_style)],
-        [Paragraph("<b>ເບີໂທລະສັບ / Phone:</b>", meta_label_style), Paragraph(supplier_phone or '-', meta_value_style)],
-        [Paragraph("<b>ທີ່ຢູ່ / Address:</b>", meta_label_style), Paragraph(supplier_address or '-', meta_value_style)]
+        [Paragraph("<b>ຜູ້ສະໜອງ</b>", section_header_style), ""],
+        [Paragraph("<b>ຊື່:</b>", meta_label_style), Paragraph(supplier_name, meta_value_style)],
+        [Paragraph("<b>ຜູ້ຕິດຕໍ່:</b>", meta_label_style), Paragraph(supplier_contact or '-', meta_value_style)],
+        [Paragraph("<b>ເບີໂທລະສັບ:</b>", meta_label_style), Paragraph(supplier_phone or '-', meta_value_style)],
+        [Paragraph("<b>ທີ່ຢູ່:</b>", meta_label_style), Paragraph(supplier_address or '-', meta_value_style)]
     ]
     left_table = Table(left_info, colWidths=[100, 150])
     left_table.setStyle(TableStyle([
@@ -3780,10 +3458,10 @@ def generate_purchase_order_pdf(po_id: int) -> bytes:
     ]))
 
     right_info = [
-        [Paragraph("<b>ຂໍ້ມູນການຈັດຊື້ / PO Info</b>", section_header_style), ""],
-        [Paragraph("<b>ເລກທີໃບສັ່ງຊື້ / PO No:</b>", meta_label_style), Paragraph(po_no, meta_value_style)],
-        [Paragraph("<b>ຜູ້ຈັດຊື້ / Created By:</b>", meta_label_style), Paragraph(created_by_name, meta_value_style)],
-        [Paragraph("<b>ວັນທີສັ່ງຊື້ / Date:</b>", meta_label_style), Paragraph(order_date_str, meta_value_style)]
+        [Paragraph("<b>ຂໍ້ມູນການຈັດຊື້</b>", section_header_style), ""],
+        [Paragraph("<b>ເລກທີໃບສັ່ງຊື້:</b>", meta_label_style), Paragraph(po_no, meta_value_style)],
+        [Paragraph("<b>ຜູ້ຈັດຊື້:</b>", meta_label_style), Paragraph(created_by_name, meta_value_style)],
+        [Paragraph("<b>ວັນທີສັ່ງຊື້:</b>", meta_label_style), Paragraph(order_date_str, meta_value_style)]
     ]
     right_table = Table(right_info, colWidths=[110, 140])
     right_table.setStyle(TableStyle([
@@ -3802,18 +3480,17 @@ def generate_purchase_order_pdf(po_id: int) -> bytes:
     story.append(info_layout_table)
     story.append(Spacer(1, 10))
 
-    # D. PO Items Table
-    story.append(Paragraph("<b>ລາຍການສັ່ງຊື້ / Purchase Items:</b>", section_header_style))
+    story.append(Paragraph("<b>ລາຍການສັ່ງຊື້</b>", section_header_style))
     story.append(Spacer(1, 4))
 
     table_data = [
         [
             Paragraph("<b>ລຳດັບ<br/>No.</b>", table_header_style),
-            Paragraph("<b>ລາຍການອາໄຫຼ່<br/>Part Name / Description</b>", table_header_style),
-            Paragraph("<b>ຈຳນວນ<br/>Qty</b>", table_header_style),
-            Paragraph("<b>ຫົວໜ່ວຍ<br/>Unit</b>", table_header_style),
-            Paragraph("<b>ລາຄາ/ໜ່ວຍ<br/>Unit Cost (KIP)</b>", table_header_style),
-            Paragraph("<b>ລວມ<br/>Total (KIP)</b>", table_header_style)
+            Paragraph("<b>ລາຍການອາໄຫຼ່</b>", table_header_style),
+            Paragraph("<b>ຈຳນວນ</b>", table_header_style),
+            Paragraph("<b>ຫົວໜ່ວຍ</b>", table_header_style),
+            Paragraph("<b>ລາຄາ/ໜ່ວຍ</b>", table_header_style),
+            Paragraph("<b>ລວມ</b>", table_header_style)
         ]
     ]
 
@@ -3835,13 +3512,12 @@ def generate_purchase_order_pdf(po_id: int) -> bytes:
             Paragraph(f"{int(total_line):,}", table_cell_right_style)
         ])
 
-    # E. Totals Table
     table_data.append([
         "",
         "",
         "",
         "",
-        Paragraph("<b>ຍອດລວມທັງໝົດ / Grand Total:</b>", ParagraphStyle('TotalLblPO', parent=meta_label_style, fontSize=10, alignment=2)),
+        Paragraph("<b>ຍອດລວມທັງໝົດ:</b>", ParagraphStyle('TotalLblPO', parent=meta_label_style, fontSize=10, alignment=2)),
         Paragraph(f"<b>{int(total_amount):,} KIP</b>", ParagraphStyle('TotalValPO', parent=meta_value_style, fontSize=10, alignment=2, textColor=colors.HexColor('#10B981')))
     ])
 
@@ -3850,7 +3526,7 @@ def generate_purchase_order_pdf(po_id: int) -> bytes:
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0D47A1')),
         ('GRID', (0, 0), (-1, -2), 0.5, colors.HexColor('#CBD5E1')),
-        ('SPAN', (0, -1), (3, -1)), # Span the bottom empty columns
+        ('SPAN', (0, -1), (3, -1)),
         ('LINEABOVE', (4, -1), (5, -1), 1.5, colors.HexColor('#0D47A1')),
         ('TOPPADDING', (0, 0), (-1, -1), 5),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
@@ -3858,11 +3534,10 @@ def generate_purchase_order_pdf(po_id: int) -> bytes:
     story.append(item_table)
     story.append(Spacer(1, 20))
 
-    # F. Signature Block
     sig_data = [
         [
-            Paragraph("<b>ຜູ້ຈັດຊື້ / Purchaser:</b><br/><br/><br/>___________________________<br/>ວັນທີ / Date: ____/____/______", meta_label_style),
-            Paragraph("<b>ຜູ້ສະໜອງ / Supplier Acknowledgement:</b><br/><br/><br/>___________________________<br/>ວັນທີ / Date: ____/____/______", meta_label_style)
+            Paragraph("<b>ຜູ້ຈັດຊື້:</b><br/><br/><br/>___________________________<br/>ວັນທີ: ____/____/______", meta_label_style),
+            Paragraph("<b>ຜູ້ສະໜອງຮັບຮູ້:</b><br/><br/><br/>___________________________<br/>ວັນທີ: ____/____/______", meta_label_style)
         ]
     ]
     sig_table = Table(sig_data, colWidths=[260, 260])
@@ -3878,8 +3553,7 @@ def generate_purchase_order_pdf(po_id: int) -> bytes:
     ])
     story.append(sig_section)
 
-    # Build the document
-    doc.build(story, canvasmaker=create_canvas_class("ໃບສັ່ງຊື້ອາໄຫຼ່ (Purchase Order)"))
+    doc.build(story, canvasmaker=create_canvas_class("ໃບສັ່ງຊື້ອາໄຫຼ່"))
     pdf_content = buffer.getvalue()
     buffer.close()
     return pdf_content

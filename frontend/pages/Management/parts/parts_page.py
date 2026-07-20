@@ -166,16 +166,16 @@ class PartsContent:
         ], expand=True, spacing=0)
     
     def _create_table_header(self):
-        """Create table header row with reduced widths"""
+        """Create table header row with adjusted widths for full price display"""
         return ft.Container(
             content=ft.Row([
                 ft.Container(content=ft.Text("#", size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=40, alignment=ft.Alignment(0, 0)),
                 ft.Container(content=ft.Text(get_text('parts_name'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=160, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=8, right=0, top=0, bottom=0)),
                 ft.Container(content=ft.Text(get_text('category'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=90, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=8, right=0, top=0, bottom=0)),
-                ft.Container(content=ft.Text(get_text('parts_stock'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=60, alignment=ft.Alignment(0, 0)),
+                ft.Container(content=ft.Text(get_text('qty'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=60, alignment=ft.Alignment(0, 0)),
                 ft.Container(content=ft.Text(get_text('unit'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=50, alignment=ft.Alignment(0, 0)),
-                ft.Container(content=ft.Text(get_text('cost_price'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=90, alignment=ft.Alignment(1, 0), padding=ft.Padding(left=0, right=8, top=0, bottom=0)),
-                ft.Container(content=ft.Text(get_text('sell_price'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=90, alignment=ft.Alignment(1, 0), padding=ft.Padding(left=0, right=8, top=0, bottom=0)),
+                ft.Container(content=ft.Text(get_text('cost_price'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=130, alignment=ft.Alignment(1, 0), padding=ft.Padding(left=0, right=8, top=0, bottom=0)),
+                ft.Container(content=ft.Text(get_text('sell_price'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=130, alignment=ft.Alignment(1, 0), padding=ft.Padding(left=0, right=8, top=0, bottom=0)),
                 ft.Container(content=ft.Text(get_text('supplier'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=100, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=8, right=0, top=0, bottom=0)),
                 ft.Container(content=ft.Text(get_text('status'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=70, alignment=ft.Alignment(0, 0)),
                 ft.Container(content=ft.Text(get_text('actions'), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=90, alignment=ft.Alignment(0, 0)),
@@ -204,20 +204,16 @@ class PartsContent:
         return "-"
     
     def _format_price(self, price):
-        """Format price to short string"""
-        if price >= 1000000:
-            return f"{price/1000000:.1f}M"
-        elif price >= 1000:
-            return f"{int(price/1000)}K"
-        else:
-            return str(int(price))
+        """Format price as full number with commas and KIP suffix"""
+        try:
+            price = int(price)
+            return f"{price:,} KIP"
+        except:
+            return "0 KIP"
     
     def _format_stock(self, stock_qty):
-        """Format stock quantity - if over 999, show as K"""
-        if stock_qty >= 10000:
-            return f"{stock_qty/1000:.0f}K"
-        else:
-            return str(stock_qty)
+        """Format stock as full number (no abbreviation)"""
+        return str(stock_qty)
     
     def _create_table_row(self, part, index, row_number):
         """Create a single table row with reduced widths"""
@@ -340,13 +336,13 @@ class PartsContent:
                 ),
                 ft.Container(
                     content=ft.Text(self._format_price(cost_price), size=11, color="#64748B"),
-                    width=90,
+                    width=130,
                     alignment=ft.Alignment(1, 0),
                     padding=ft.Padding(left=0, right=8, top=0, bottom=0),
                 ),
                 ft.Container(
                     content=ft.Text(self._format_price(sell_price), size=12, weight=ft.FontWeight.W_600, color=ft.Colors.GREEN_700),
-                    width=90,
+                    width=130,
                     alignment=ft.Alignment(1, 0),
                     padding=ft.Padding(left=0, right=8, top=0, bottom=0),
                 ),
@@ -674,7 +670,7 @@ class PartsContent:
         
         # Auto dismiss after 3 seconds using asyncio
         async def dismiss_after_delay():
-            await asyncio.sleep(3.0)
+            await asyncio.sleep(2.0)
             if snackbar in self.page.overlay:
                 snackbar.opacity = 0
                 self.page.update()

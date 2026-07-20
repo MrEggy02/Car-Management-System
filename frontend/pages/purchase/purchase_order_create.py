@@ -431,7 +431,7 @@ class PurchaseOrderCreateContent:
                 else:
                     stock_color = "#10B981"
                     stock_bg = "#D1FAE5"
-                    stock_text = f"✓ {get_text('stock')}: {current_stock}"
+                    stock_text = f"{get_text('stock')}: {current_stock}"
                 
                 add_btn = ft.IconButton(
                     icon=ft.Icons.ADD_CIRCLE_OUTLINE,
@@ -556,7 +556,7 @@ class PurchaseOrderCreateContent:
             if self.supplier_dropdown and self.items:
                 self.supplier_dropdown.disabled = True
             
-            self.show_snack_bar(f"✓ {get_text('added')}: {part_name}", is_error=False)
+            self.show_snack_bar(f"{get_text('added')}: {part_name}", is_error=False)
         
         dialog = ft.AlertDialog(
             modal=True,
@@ -594,6 +594,7 @@ class PurchaseOrderCreateContent:
                 ]),
                 padding=ft.Padding(left=20, right=20, top=20, bottom=20),
                 width=320,
+                height=180,
             ),
             actions=[
                 ft.TextButton(get_text("cancel"), on_click=lambda e: self._close_dialog(dialog), style=ft.ButtonStyle(color="#64748B")),
@@ -788,7 +789,8 @@ class PurchaseOrderCreateContent:
                     ),
                 ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=6),
                 padding=ft.Padding(left=20, right=20, top=20, bottom=20),
-                width=340,
+                width=360,
+                height=180,
             ),
             actions=[
                 ft.Container(
@@ -871,7 +873,7 @@ class PurchaseOrderCreateContent:
         
         # Auto dismiss after 3 seconds using asyncio
         async def dismiss_after_delay():
-            await asyncio.sleep(3.0)
+            await asyncio.sleep(2.0)
             if snackbar in self.page.overlay:
                 snackbar.opacity = 0
                 self.page.update()

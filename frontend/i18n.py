@@ -540,7 +540,7 @@ LO: Dict[str, str] = {
     "view_repair_detail": "ເບິ່ງລາຍລະອຽດ",
     "update_status": "ອັບເດດສະຖານະ",
     "parts_used": "ອາໄຫຼ່ທີ່ໃຊ້",
-    "more_part": "ອາໄຫຼ່ເສີມ",
+    "more_part": "ອາໄຫຼ່ທີ່ໃ້ຊຕົວຈິງ",
     "total_parts_cost": "ລາຄາອາໄຫຼ່ລວມ",
     # Repair - New UI improvements
     "vehicle": "ລົດ",
@@ -651,7 +651,7 @@ LO: Dict[str, str] = {
     "no_stock_movements": "ບໍ່ພົບຂໍ້ມູນການເຄື່ອນໄຫວ",
     "purchase_order_create_title": "ສ້າງໃບສັ່ງຊື້",
     "purchase_order_create_subtitle": "ເລືອກຜູ້ສະໜອງ ແລະ ເພີ່ມອາໄຫຼ່ທີ່ຕ້ອງການສັ່ງ",
-    "purchase_order_list_title": "ຄັງອາໄຫຼ່",
+    "purchase_order_list_title": "ລາຍການສັ່ງຊື້",
     "purchase_order_list_subtitle": "ຈັດການຄັງອາໄຫຼ່ ແລະ ໃບສັ່ງຊື້",
     "purchase_order_detail_title": "ລາຍລະອຽດໃບສັ່ງຊື້",
     "purchase_order_receive_title": "ຮັບອາໄຫຼ່ເຂົ້າຄັງ",
@@ -790,7 +790,7 @@ LO: Dict[str, str] = {
     "create_purchase_order": "ສ້າງໃບສັ່ງຊື້",
     "purchase_order_list": "ລາຍການໃບສັ່ງຊື້",
     "stock_movement": "ປະຫວັດການເຄື່ອນໄຫວ",
-    "purchase_management": "ຄັງອາໄຫຼ່",
+    "purchase_management": "ສັ່ງຊື້ອາໄຫຼ່",
     "ordering": "ກຳລັງສັ່ງຊື້",
     "partial": "ຮັບບາງສ່ວນ",
     "completed": "ສຳເລັດແລ້ວ",
@@ -879,6 +879,7 @@ LO: Dict[str, str] = {
     "stock_movement_summary": "ສະຫຼຸບການເຄື່ອນໄຫວສາງສິນຄ້າ",
     "stock_in": "ນຳເຂົ້າສາງ",
     "stock_out": "ຈ່າຍອອກຈາກສາງ",
+    "revenue": "ລາຍຮັບ",
     "movements": "ການເຄື່ອນໄຫວ",
     "top_services": "ການບໍລິການຍອດນິຍົມ",
     "services_by_vehicle_brand": "ການບໍລິການແຍກຕາມຍີ່ຫໍ້ລົດ",
@@ -1148,7 +1149,7 @@ LO: Dict[str, str] = {
 # Purchase Management Section
 "purchase_order_create_title": "ສ້າງໃບສັ່ງຊື້",
 "purchase_order_create_subtitle": "ເລືອກຜູ້ສະໜອງ ແລະ ເພີ່ມອາໄຫຼ່ທີ່ຕ້ອງການສັ່ງ",
-"purchase_order_list_title": "ຄັງອາໄຫຼ່",
+"purchase_order_list_title": "ລາຍການສັ່ງຊື້",
 "purchase_order_list_subtitle": "ຈັດການຄັງອາໄຫຼ່ ແລະ ໃບສັ່ງຊື້",
 "purchase_order_detail_title": "ລາຍລະອຽດໃບສັ່ງຊື້",
 "purchase_order_receive_title": "ຮັບອາໄຫຼ່ເຂົ້າຄັງ",
@@ -1225,7 +1226,7 @@ LO: Dict[str, str] = {
 "no_items_added": "ຍັງບໍ່ມີລາຍການ",
 "total_amount": "ລວມທັງໝົດ",
 "select_supplier": "ເລືອກຜູ້ສະໜອງ",
-"purchase_management": "ຄັງອາໄຫຼ່",
+"purchase_management": "ສັ່ງຊື້ອາໄຫຼ່",
 "only_ordering_po_can_be_received": "ສາມາດຮັບເຄື່ອງໄດ້ສະເພາະໃບສັ່ງຊື້ທີ່ມີສະຖານະ ກຳລັງສັ່ງ ຫຼື ຮັບບາງສ່ວນ ເທົ່ານັ້ນ",
 "low_stock_alert": "ແຈ້ງເຕືອນອາໄຫຼ່ໃກ້ໝົດ",
 "critical_stock": "ວິກິດ",
@@ -1280,10 +1281,12 @@ LO: Dict[str, str] = {
   "promotion_name": "ຊື່ໂປຣໂມຊັນ",
   "percent": "ເປີເຊັນ",
   "change":"ເງິນທອນ",
+  "click_to_start": "ກົດເພື່ອໄປຫນ້າ",
 }
 
 
 EN: Dict[str, str] = {
+     "click_to_start": "click to start",
     "change":"Change",
     "receiving": "Receiving",
   "given": "Given",
@@ -2231,6 +2234,7 @@ EN: Dict[str, str] = {
     "add": "Add",
     "search": "Search",
     "back": "Back",
+    "revenue": "Revenue",
     "confirm": "Confirm",
     "loading": "Loading...",
     "error": "Error",

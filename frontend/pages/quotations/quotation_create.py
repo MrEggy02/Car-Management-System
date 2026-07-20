@@ -632,6 +632,7 @@ class QuotationCreateContent:
             self.promotion_parts = []
             self.promotion_services = []
 
+    # ==================== MODIFIED: UPDATE SELECTED ITEMS TABLE WITH STOCK WARNING ====================
     def _update_selected_items_table(self):
         self.auto_apply_best_promotion()
         
@@ -646,11 +647,33 @@ class QuotationCreateContent:
             return
         
         subtotal = 0
+        has_stock_warning = False
+        warning_items = []
+        
         for idx, item in enumerate(self.temp_items):
             bg_color = ft.Colors.GREY_50 if idx % 2 == 0 else ft.Colors.WHITE
             temp_id = item.get("temp_id")
             
-            # Create remove button with lambda that captures current temp_id
+            # Check stock for parts
+            stock_qty = item.get('stock_qty', 0)
+            qty = item.get('qty', 0)
+            
+            # If item is a part and qty exceeds stock, highlight yellow
+            is_stock_warning = False
+            if item.get('item_type') == 'part' and stock_qty > 0 and qty > stock_qty:
+                is_stock_warning = True
+                has_stock_warning = True
+                warning_items.append(item.get('name', '-'))
+                # Yellow highlight
+                bg_color = "#FEF3C7"  # Amber/Yellow background
+            elif item.get('item_type') == 'part' and stock_qty == 0:
+                # Also warn if stock is 0
+                is_stock_warning = True
+                has_stock_warning = True
+                warning_items.append(item.get('name', '-'))
+                bg_color = "#FEF3C7"
+            
+            # Remove button with lambda that captures current temp_id
             remove_btn = ft.IconButton(
                 icon=ft.Icons.DELETE_OUTLINE,
                 icon_size=18,
@@ -659,20 +682,42 @@ class QuotationCreateContent:
                 padding=0,
             )
             
+            # Show stock info in the row
+            stock_info = ""
+            if item.get('item_type') == 'part':
+                if stock_qty > 0:
+                    stock_info = f" | ຄັງ: {stock_qty}"
+                    if qty > stock_qty:
+                        stock_info = f" | ⚠️ ຄັງ: {stock_qty} (ຕ້ອງການ {qty})"
+                else:
+                    stock_info = " | ⚠️ ສິນຄ້າຫມົດສະຕ໋ອກ"
+            
             row = ft.Container(
                 content=ft.Row([
                     ft.Container(content=ft.Text(str(idx + 1), size=13, color="#64748B"), width=35, alignment=ft.Alignment(0, 0)),
-                    ft.Container(content=ft.Text(item.get("name", "-"), size=13, weight=ft.FontWeight.W_500, color="#1E293B", max_lines=1), expand=True, alignment=ft.Alignment(-1, 0)),
-                    ft.Container(content=ft.Text(str(item.get("qty", 1)), size=13, color="#1E293B"), width=65, alignment=ft.Alignment(0, 0)),
+                    ft.Container(
+                        content=ft.Column([
+                            ft.Text(item.get("name", "-"), size=13, weight=ft.FontWeight.W_500, color="#1E293B", max_lines=1),
+                            ft.Text(stock_info, size=10, color="#EF4444" if is_stock_warning else "#64748B"),
+                        ], spacing=0),
+                        expand=True,
+                        alignment=ft.Alignment(-1, 0),
+                    ),
+                    ft.Container(content=ft.Text(str(item.get("qty", 1)), size=13, color="#EF4444" if is_stock_warning else "#1E293B"), width=65, alignment=ft.Alignment(0, 0)),
                     ft.Container(content=ft.Text(f"{int(item.get('unit_price', 0)):,}", size=13, color="#64748B"), width=110, alignment=ft.Alignment(1, 0)),
                     ft.Container(content=ft.Text(f"{int(item.get('total', 0)):,}", size=13, weight=ft.FontWeight.W_600, color="#10B981"), width=110, alignment=ft.Alignment(1, 0)),
                     ft.Container(content=remove_btn, width=40, alignment=ft.Alignment(0, 0)),
                 ], spacing=6, vertical_alignment=ft.CrossAxisAlignment.CENTER),
                 padding=ft.Padding(left=10, right=10, top=8, bottom=8),
                 bgcolor=bg_color,
+                border=ft.Border(top=ft.BorderSide(2, "#F59E0B")) if is_stock_warning else None,
             )
             self.items_table_body.controls.append(row)
             subtotal += item.get("total", 0)
+        
+        # Show warning snackbar if any stock issue
+        if has_stock_warning:
+            self._show_warning_snackbar("ຈຳນວນອາໄຫລ່ທີ່ມີບໍ່ພໍ ກາລຸນາເພີ່ມອາໄຫຼ່ເຂົ້າຄັງກ່ອນສ້ອມແປງ")
         
         subtotal_row = ft.Container(content=ft.Row([ft.Container(expand=True), ft.Text(get_text("subtotal") + ":", size=12, weight=ft.FontWeight.W_500, color="#64748B"), ft.Text(f"{int(subtotal):,} KIP", size=13, weight=ft.FontWeight.W_600, color="#1E293B")], spacing=8), padding=ft.Padding(left=10, right=10, top=8, bottom=8), bgcolor=ft.Colors.GREY_100)
         self.items_table_body.controls.append(subtotal_row)
@@ -687,6 +732,69 @@ class QuotationCreateContent:
         self.update_promotion_list()
         self.page.update()
     
+    # ==================== NEW: SHOW WARNING SNACKBAR ====================
+    def _show_warning_snackbar(self, message):
+        """Show warning snackbar with yellow/amber color"""
+        
+        # Remove existing snackbar if any
+        if self.current_snackbar:
+            try:
+                self.page.overlay.remove(self.current_snackbar)
+            except:
+                pass
+            self.current_snackbar = None
+        
+        bgcolor = "#F59E0B"  # Yellow/Amber
+        icon = ft.Icons.WARNING
+        
+        snack_content = ft.Container(
+            content=ft.Row(
+                [
+                    ft.Icon(icon, color=ft.Colors.WHITE, size=16),
+                    ft.Text(message, color=ft.Colors.WHITE, size=13, weight=ft.FontWeight.W_500),
+                ],
+                spacing=8,
+                alignment=ft.MainAxisAlignment.START,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            ),
+            padding=ft.Padding(left=14, right=14, top=8, bottom=8),
+            bgcolor=bgcolor,
+            border_radius=8,
+            shadow=ft.BoxShadow(
+                spread_radius=1,
+                blur_radius=8,
+                color=ft.Colors.with_opacity(0.2, ft.Colors.BLACK),
+            ),
+        )
+        
+        snackbar = ft.Container(
+            content=snack_content,
+            margin=ft.Margin(left=30, right=30, top=0, bottom=20),
+            alignment=ft.Alignment(0, 1),
+            animate_opacity=ft.Animation(300, ft.AnimationCurve.EASE_IN),
+            opacity=0,
+        )
+        
+        self.page.overlay.append(snackbar)
+        self.current_snackbar = snackbar
+        
+        snackbar.opacity = 1
+        self.page.update()
+        
+        async def dismiss_after_delay():
+            await asyncio.sleep(3.0)
+            if snackbar in self.page.overlay:
+                snackbar.opacity = 0
+                self.page.update()
+                await asyncio.sleep(0.3)
+                if snackbar in self.page.overlay:
+                    self.page.overlay.remove(snackbar)
+                    if self.current_snackbar == snackbar:
+                        self.current_snackbar = None
+                    self.page.update()
+        
+        self.page.run_task(dismiss_after_delay)
+
     # ----------------------------------------------------------------------
     # Data Loading
     # ----------------------------------------------------------------------
@@ -949,7 +1057,7 @@ class QuotationCreateContent:
                         stock_bg = "#D1FAE5"
                         stock_text = f"{get_text('stock')}: {stock}"
                     
-                    add_callback = functools.partial(self.add_item, "part", part.get('id'), part.get('name'), part.get('sell_price', 0))
+                    add_callback = functools.partial(self.add_item, "part", part.get('id'), part.get('name'), part.get('sell_price', 0), part.get('stock_qty', 0))
                     
                     item_card = ft.Container(
                         content=ft.Row([
@@ -1012,7 +1120,7 @@ class QuotationCreateContent:
     # ----------------------------------------------------------------------
     # Item Management
     # ----------------------------------------------------------------------
-    def add_item(self, item_type, ref_id, name, price, e=None):
+    def add_item(self, item_type, ref_id, name, price, stock_qty=0, e=None):
         if not ref_id:
             self.show_snackbar(get_text("invalid_item_missing_id"), True)
             return
@@ -1026,18 +1134,22 @@ class QuotationCreateContent:
             existing["total"] = existing["qty"] * existing["unit_price"]
         else:
             self.temp_id_counter += 1
-            self.temp_items.append({
+            new_item = {
                 "temp_id": self.temp_id_counter,
                 "item_type": item_type,
                 "ref_id": ref_id,
                 "name": name,
                 "qty": qty,
                 "unit_price": price,
-                "total": qty * price
-            })
+                "total": qty * price,
+            }
+            # Store stock quantity for parts to enable warning
+            if item_type == "part":
+                new_item["stock_qty"] = stock_qty
+            self.temp_items.append(new_item)
         
         self._update_selected_items_table()
-        self.show_snackbar(f"✓ {get_text('added')}: {name}", "success")
+        self.show_snackbar(f"{get_text('added')}: {name}", "success")
         self.page.update()
     
     def remove_item(self, temp_id, e=None):
@@ -1086,12 +1198,19 @@ class QuotationCreateContent:
         
         return discounts
     
+    # ==================== MODIFIED: SAVE QUOTATION WITH PART VALIDATION ====================
     def save_quotation(self, e=None):
         if not self.selected_job_id:
             self.show_snackbar(get_text("select_job_order_first"), "error")
             return
         if not self.temp_items:
             self.show_snackbar(get_text("please_add_items_first"), "error")
+            return
+        
+        # --- NEW: Check if at least one part is selected ---
+        has_parts = any(item.get("item_type") == "part" for item in self.temp_items)
+        if not has_parts:
+            self.show_snackbar(get_text("please_select_at_least_one_part"), "error")
             return
         
         try:
@@ -1208,7 +1327,7 @@ class QuotationCreateContent:
         
         # Auto dismiss after 3 seconds using asyncio
         async def dismiss_after_delay():
-            await asyncio.sleep(3.0)
+            await asyncio.sleep(2.0)
             if snackbar in self.page.overlay:
                 snackbar.opacity = 0
                 self.page.update()
@@ -1254,7 +1373,7 @@ class QuotationCreateContent:
             self._update_selected_items_table()
             dialog.open = False
             self.page.update()
-            self.show_snackbar(f"✓ {get_text('added')}: {name_input.value}", "success")
+            self.show_snackbar(f"{get_text('added')}: {name_input.value}", "success")
             
         def on_close(evt):
             dialog.open = False
