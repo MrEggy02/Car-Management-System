@@ -88,11 +88,7 @@ class InvoiceCreateContent:
                                 weight=ft.FontWeight.BOLD,
                                 color=ft.Colors.WHITE,
                             ),
-                            ft.Text(
-                                get_text("create_invoice_subtitle"),
-                                size=12,
-                                color=ft.Colors.with_opacity(0.85, ft.Colors.WHITE),
-                            ),
+                           
                         ],
                         spacing=2,
                     ),
@@ -243,6 +239,9 @@ class InvoiceCreateContent:
             self.page.update()
             return
         
+        # ✅ Show pending jobs immediately without search
+        self._display_pending_jobs()
+        
         selection_card = ft.Container(
             content=ft.Column([
                 ft.Row(
@@ -269,13 +268,61 @@ class InvoiceCreateContent:
         self.content_area.content = selection_card
         self.page.update()
     
+    def _display_pending_jobs(self):
+        """Display all pending jobs in the results list (without search)"""
+        self.job_results_list.controls.clear()
+        
+        if not self.pending_jobs:
+            self.job_results_list.controls.append(
+                ft.Container(
+                    content=ft.Text(get_text("no_orders_found"), size=13, color="#94A3B8"),
+                    padding=ft.Padding(left=20, right=20, top=20, bottom=20),
+                    alignment=ft.Alignment(0, 0),
+                )
+            )
+            self.job_results_container.visible = True
+            return
+        
+        # Show up to 10 pending jobs
+        for job in self.pending_jobs[:10]:
+            job_id = job.get('id')
+            job_no = job.get('job_no', '-')
+            customer_name = job.get('customer_name', '-')
+            plate_number = job.get('plate_number', '-')
+            
+            result_item = ft.Container(
+                content=ft.Row([
+                    ft.Container(
+                        content=ft.Icon(ft.Icons.RECEIPT, size=20, color=self.primary_color),
+                        bgcolor=ft.Colors.with_opacity(0.1, self.primary_color),
+                        border_radius=10,
+                        padding=ft.Padding(left=8, right=8, top=8, bottom=8),
+                    ),
+                    ft.Column([
+                        ft.Text(job_no, size=14, weight=ft.FontWeight.W_500, color="#1E293B"),
+                        ft.Text(f"{customer_name} | {plate_number}", size=11, color="#64748B"),
+                    ], spacing=2, expand=True),
+                    ft.Icon(ft.Icons.CHEVRON_RIGHT, size=20, color="#94A3B8"),
+                ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                padding=ft.Padding(left=10, right=10, top=10, bottom=10),
+                bgcolor=ft.Colors.WHITE,
+                border_radius=10,
+                border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_200), right=ft.BorderSide(1, ft.Colors.GREY_200), bottom=ft.BorderSide(1, ft.Colors.GREY_200), left=ft.BorderSide(1, ft.Colors.GREY_200)),
+                ink=True,
+                on_click=lambda e, jid=job_id: self.select_job(jid),
+            )
+            self.job_results_list.controls.append(result_item)
+        
+        self.job_results_container.visible = True
+        self.page.update()
+    
     def on_search_job(self, e):
         query = self.job_search_field.value.lower() if self.job_search_field.value else ""
         self.job_clear_button.visible = bool(query)
         
         if not query:
-            self.job_results_container.visible = False
-            self.page.update()
+            # If search is cleared, show all pending jobs again
+            self._display_pending_jobs()
             return
         
         filtered = [
@@ -331,7 +378,7 @@ class InvoiceCreateContent:
     def clear_search(self):
         self.job_search_field.value = ""
         self.job_clear_button.visible = False
-        self.job_results_container.visible = False
+        self._display_pending_jobs()
         self.page.update()
     
     def clear_selected_job(self):
@@ -339,7 +386,7 @@ class InvoiceCreateContent:
         self.selected_job_data = None
         self.selected_job_card.visible = False
         self.job_search_field.value = ""
-        self._build_search_ui()
+        self._display_pending_jobs()
         self.page.update()
     
     def select_job(self, job_id):

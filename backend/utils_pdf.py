@@ -72,7 +72,7 @@ class NumberedCanvas(canvas.Canvas):
         page_text = f"ໜ້າ {self._pageNumber} / {page_count}"
         self.drawRightString(559, 22, page_text)
         
-        self.drawString(36, 22, "J&P Auto Maxing — ໃບສັ່ງງານຊ່ອມແປງ")
+        self.drawString(36, 22, "J&P Auto Maxing — ໃບສັ່ງງານສ້ອມແປງ")
         self.restoreState()
 
 
@@ -258,7 +258,7 @@ def generate_repair_work_order_pdf(repair_id: int) -> bytes:
     job_no = repair.get('job_no', '-')
 
     meta_box_data = [
-        [Paragraph("<b>ເລກທີໃບສັ່ງຊ່ອມ:</b>", meta_label_style), Paragraph(f"<b>{ro_no}</b>", meta_value_style)],
+        [Paragraph("<b>ເລກທີໃບສັ່ງສ້ອມ:</b>", meta_label_style), Paragraph(f"<b>{ro_no}</b>", meta_value_style)],
         [Paragraph("<b>ວັນທີ:</b>", meta_label_style), Paragraph(created_date, meta_value_style)],
         [Paragraph("<b>ເລກທີໃບຮັບລົດ:</b>", meta_label_style), Paragraph(job_no, meta_value_style)],
     ]
@@ -280,7 +280,7 @@ def generate_repair_work_order_pdf(repair_id: int) -> bytes:
     )
 
     header_right = [
-        Paragraph("<b>ໃບສັ່ງງານຊ່ອມແປງ</b>", title_style),
+        Paragraph("<b>ໃບສັ່ງງານສ້ອມແປງ</b>", title_style),
         Spacer(1, 6),
         meta_table
     ]
@@ -361,7 +361,7 @@ def generate_repair_work_order_pdf(repair_id: int) -> bytes:
     if problem:
         problem = problem.replace('\n', '<br/>')
     problem_box_data = [
-        [Paragraph("<b>ອາການເສຍ ແລະ ບັນຫາທີ່ແຈ້ງຊ່ອມ:</b>", meta_label_style)],
+        [Paragraph("<b>ອາການເສຍ ແລະ ບັນຫາທີ່ແຈ້ງສ້ອມ:</b>", meta_label_style)],
         [Paragraph(problem if problem else 'ບໍ່ມີຂໍ້ມູນ', meta_value_style)]
     ]
     problem_table = Table(problem_box_data, colWidths=[520])
@@ -380,7 +380,7 @@ def generate_repair_work_order_pdf(repair_id: int) -> bytes:
     services_data = [
         [
             Paragraph("<b>ລຳດັບ<br/>No.</b>", table_header_style),
-            Paragraph("<b>ລາຍການບໍລິການ ແລະ ໜ້າວຽກຊ່ອມແປງ</b>", table_header_style),
+            Paragraph("<b>ລາຍການບໍລິການ ແລະ ໜ້າວຽກສ້ອມແປງ</b>", table_header_style),
             Paragraph("<b>ສະຖານະໜ້າວຽກ</b>", table_header_style),
             Paragraph("<b>ບັນທຶກຂອງຊ່າງ / ໝາຍເຫດ</b>", table_header_style)
         ]
@@ -775,7 +775,7 @@ def generate_job_order_pdf(order_id: int) -> bytes:
     )
     
     problem_data = [
-        [Paragraph("<b>ອາການລົດ ຫຼື ບັນຫາທີ່ແຈ້ງຊ່ອມ:</b>", section_header_style)],
+        [Paragraph("<b>ອາການລົດ ຫຼື ບັນຫາທີ່ແຈ້ງສ້ອມ:</b>", section_header_style)],
         [Paragraph(problem, problem_style)],
         [Paragraph("<b>ຕຳນິເດີມຂອງລົດ:</b>", section_header_style)],
         [Paragraph(car_defects, problem_style)]
@@ -795,7 +795,7 @@ def generate_job_order_pdf(order_id: int) -> bytes:
 
     sig_data = [
         [
-            Paragraph("<b>ລູກຄ້າຜູ້ແຈ້ງຊ່ອມ</b>", meta_label_style),
+            Paragraph("<b>ລູກຄ້າຜູ້ແຈ້ງສ້ອມ</b>", meta_label_style),
             Paragraph("<b>ພະນັກງານຕ້ອນຮັບ</b>", meta_label_style)
         ],
         [
@@ -2475,8 +2475,8 @@ def generate_repair_summary_pdf(start_date: str = None, end_date: str = None) ->
         [Paragraph("ວຽກສ້ອມແປງທັງໝົດ", table_cell), Paragraph(str(total_repairs), table_cell)],
         [Paragraph("ສຳເລັດແລ້ວ", table_cell), Paragraph(str(completed_repairs), table_cell)],
         [Paragraph("ກຳລັງດຳເນີນການ", table_cell), Paragraph(str(working_repairs), table_cell)],
-        [Paragraph("ອັດຕາຊ່ອມສຳເລັດ", table_cell), Paragraph(f"{completion_rate:.1f}%", table_cell)],
-        [Paragraph("ໄລຍະເວລາຊ່ອມສະເລ່ຍ", table_cell), Paragraph(f"{avg_hours:.1f} ຊົ່ວໂມງ", table_cell)]
+        [Paragraph("ອັດຕາສ້ອມສຳເລັດ", table_cell), Paragraph(f"{completion_rate:.1f}%", table_cell)],
+        [Paragraph("ໄລຍະເວລາສ້ອມສະເລ່ຍ", table_cell), Paragraph(f"{avg_hours:.1f} ຊົ່ວໂມງ", table_cell)]
     ]
     metrics_table = Table(metrics_data, colWidths=[300, 220])
     metrics_table.setStyle(TableStyle([
@@ -2495,7 +2495,7 @@ def generate_repair_summary_pdf(start_date: str = None, end_date: str = None) ->
         [
             Paragraph("<b>ຍີ່ຫໍ້ລົດ</b>", table_hdr), 
             Paragraph("<b>ຈຳນວນງານສ້ອມແປງ</b>", table_hdr), 
-            Paragraph("<b>ຊ່ອມສຳເລັດ</b>", table_hdr),
+            Paragraph("<b>ສ້ອມສຳເລັດ</b>", table_hdr),
             Paragraph("<b>ເວລາສະເລ່ຍ</b>", table_hdr)
         ]
     ]
@@ -2529,8 +2529,8 @@ def generate_repair_summary_pdf(start_date: str = None, end_date: str = None) ->
         [
             Paragraph("<b>ວັນທີ</b>", table_hdr), 
             Paragraph("<b>ງານສ້ອມແປງທັງໝົດ</b>", table_hdr), 
-            Paragraph("<b>ຊ່ອມສຳເລັດ</b>", table_hdr),
-            Paragraph("<b>ກຳລັງຊ່ອມ</b>", table_hdr)
+            Paragraph("<b>ສ້ອມແປງສຳເລັດ</b>", table_hdr),
+            Paragraph("<b>ກຳລັງສ້ອມແປງ</b>", table_hdr)
         ]
     ]
     for d in daily_repairs:
@@ -2918,8 +2918,8 @@ def generate_mechanic_performance_pdf(start_date: str = None, end_date: str = No
         [Paragraph("<b>ຕົວຊີ້ບອກ</b>", table_hdr), Paragraph("<b>ຄ່າວັດແທກ</b>", table_hdr)],
         [Paragraph("ຈຳນວນຊ່າງສ້ອມແປງທັງໝົດ", table_cell), Paragraph(str(len(mechanic_stats)), table_cell)],
         [Paragraph("ຈຳນວນງານສ້ອມແປງທີ່ມອບໝາຍ", table_cell), Paragraph(str(total_assigned), table_cell)],
-        [Paragraph("ງານຊ່ອມແປງທີ່ສຳເລັດ", table_cell), Paragraph(str(total_completed), table_cell)],
-        [Paragraph("ເວລາຊ່ອມແປງສະເລ່ຍ", table_cell), Paragraph(f"{avg_workshop_hours:.1f} ຊົ່ວໂມງ", table_cell)],
+        [Paragraph("ງານສ້ອມແປງທີ່ສຳເລັດ", table_cell), Paragraph(str(total_completed), table_cell)],
+        [Paragraph("ເວລາສ້ອມແປງສະເລ່ຍ", table_cell), Paragraph(f"{avg_workshop_hours:.1f} ຊົ່ວໂມງ", table_cell)],
         [Paragraph("ລາຍຮັບຄ່າແຮງລວມ", table_cell), Paragraph(f"{int(total_labor_revenue):,} KIP", table_cell)],
         [Paragraph("ກຳໄລອາໄຫຼ່ລວມ", table_cell), Paragraph(f"{int(total_parts_profit):,} KIP", table_cell)],
         [Paragraph("ກຳໄລລວມທັງໝົດ", table_cell), Paragraph(f"<b>{int(total_labor_revenue + total_parts_profit):,} KIP</b>", table_cell)],

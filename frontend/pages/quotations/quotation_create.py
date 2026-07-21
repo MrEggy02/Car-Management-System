@@ -1341,10 +1341,34 @@ class QuotationCreateContent:
         # Run the dismiss task
         self.page.run_task(dismiss_after_delay)
 
+    # ==================== MODIFIED: ADD CUSTOM SERVICE DIALOG (NO QUANTITY FIELD) ====================
     def show_add_custom_service_dialog(self, e=None):
-        name_input = ft.TextField(label=get_text("service_name") or "Service Name", border_radius=10, bgcolor=ft.Colors.WHITE)
-        price_input = ft.TextField(label=get_text("price") or "Price (KIP)", border_radius=10, bgcolor=ft.Colors.WHITE, input_filter=ft.NumbersOnlyInputFilter())
-        qty_input = ft.TextField(label=get_text("quantity") or "Quantity", value="1", border_radius=10, bgcolor=ft.Colors.WHITE, input_filter=ft.NumbersOnlyInputFilter())
+        """ແດງ Dialog ເພີ່ມບໍລິການທີ່ສ້າງເອງ (ບໍ່ມີຟີນຈຳນວນ) ດ້ວຍ UI ທີ່ທັນສະໄໝ"""
+        
+        name_input = ft.TextField(
+            label=get_text("service_name") or "ຊື່ບໍລິການ",
+            hint_text="ປ້ອນຊື່ບໍລິການ",
+            border_radius=12,
+            bgcolor=ft.Colors.WHITE,
+            filled=True,
+            content_padding=ft.Padding(left=16, right=16, top=12, bottom=12),
+            expand=True,
+            border_color=ft.Colors.GREY_200,
+            focused_border_color=self.primary_color,
+        )
+        
+        price_input = ft.TextField(
+            label=get_text("price") or "ລາຄາ (KIP)",
+            hint_text="0",
+            border_radius=12,
+            bgcolor=ft.Colors.WHITE,
+            filled=True,
+            input_filter=ft.NumbersOnlyInputFilter(),
+            content_padding=ft.Padding(left=16, right=16, top=12, bottom=12),
+            expand=True,
+            border_color=ft.Colors.GREY_200,
+            focused_border_color=self.primary_color,
+        )
         
         def on_confirm(evt):
             if not name_input.value:
@@ -1356,7 +1380,8 @@ class QuotationCreateContent:
                 price_input.update()
                 return
             
-            qty = int(qty_input.value) if qty_input.value and qty_input.value.isdigit() else 1
+            # ກຳນົດຈຳນວນເປັນ 1 ສະເໝີ (ບໍ່ມີຟີນໃຫ້ປ້ອນ)
+            qty = 1
             price = float(price_input.value) if price_input.value else 0.0
             
             self.temp_id_counter += 1
@@ -1378,22 +1403,82 @@ class QuotationCreateContent:
         def on_close(evt):
             dialog.open = False
             self.page.update()
-            
+        
+        # ສ້າງ Dialog ດ້ວຍ UI ທີ່ທັນສະໄໝ ແລະ ເຂົ້າກັບໜ້າອື່ນ
         dialog = ft.AlertDialog(
-            title=ft.Text(get_text("add_custom_service") or "Add Custom Service", weight=ft.FontWeight.BOLD),
-            content=ft.Column([
-                name_input,
-                ft.Container(height=6),
-                price_input,
-                ft.Container(height=6),
-                qty_input
-            ], spacing=0, tight=True, width=300),
+            modal=True,
+            shape=ft.RoundedRectangleBorder(radius=16),
+            bgcolor=ft.Colors.WHITE,
+            title=ft.Container(
+                content=ft.Row(
+                    [
+                        ft.Container(
+                            content=ft.Icon(ft.Icons.ADD_CIRCLE, size=24, color=ft.Colors.WHITE),
+                            bgcolor=self.primary_color,
+                            border_radius=12,
+                            padding=ft.Padding(left=8, right=8, top=8, bottom=8),
+                        ),
+                        ft.Text(
+                            get_text("add_custom_service") or "ເພີ່ມບໍລິການ",
+                            size=18,
+                            weight=ft.FontWeight.BOLD,
+                            color="#1E293B",
+                        ),
+                    ],
+                    spacing=12,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                ),
+                padding=ft.Padding(left=20, right=20, top=16, bottom=16),
+                border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
+            ),
+            content=ft.Container(
+                content=ft.Column([
+                    ft.Container(height=4),
+                    name_input,
+                    ft.Container(height=12),
+                    price_input,
+                    ft.Container(height=4),
+                    ft.Text(
+                        "ຈຳນວນຈະຖືກກຳນົດເປັນ 1 ອັດຕະໂນມັດ",
+                        size=12,
+                        color="#94A3B8",
+                        text_align=ft.TextAlign.CENTER,
+                    ),
+                ], spacing=0),
+                padding=ft.Padding(left=20, right=20, top=12, bottom=20),
+                width=360,
+                height=200,
+            ),
             actions=[
-                ft.TextButton(get_text("cancel") or "Cancel", on_click=on_close),
-                ft.ElevatedButton(get_text("confirm") or "Confirm", bgcolor=self.primary_color, color=ft.Colors.WHITE, on_click=on_confirm)
+                ft.Container(
+                    content=ft.Row([
+                        ft.TextButton(
+                            get_text("cancel") or "ຍົກເລີກ",
+                            on_click=on_close,
+                            style=ft.ButtonStyle(
+                                color="#64748B",
+                                shape=ft.RoundedRectangleBorder(radius=8),
+                            ),
+                        ),
+                        ft.ElevatedButton(
+                            get_text("confirm") or "ຢືນຢັນ",
+                            on_click=on_confirm,
+                            style=ft.ButtonStyle(
+                                bgcolor=self.primary_color,
+                                color=ft.Colors.WHITE,
+                                shape=ft.RoundedRectangleBorder(radius=8),
+                                elevation=0,
+                                padding=ft.Padding(left=20, right=20, top=10, bottom=10),
+                            ),
+                        ),
+                    ], spacing=12, alignment=ft.MainAxisAlignment.END),
+                    padding=ft.Padding(left=20, right=20, top=12, bottom=12),
+                    border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_100)),
+                ),
             ],
             actions_alignment=ft.MainAxisAlignment.END,
         )
+        
         self.page.overlay.append(dialog)
         dialog.open = True
         self.page.update()

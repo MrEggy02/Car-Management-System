@@ -39,7 +39,8 @@ class SidebarManager:
         self._create_main_nav_buttons(nav_column)
         
         # สร้าง Data Management Menu (Dropdown)
-        self._create_data_management_menu(nav_column)
+        if self.parent.user.get("role") == "admin":
+            self._create_data_management_menu(nav_column)
         
         # สร้าง Customer Management (Single Menu)
         self._create_customer_management_menu(nav_column)
@@ -63,7 +64,8 @@ class SidebarManager:
         self._create_receiving_menu(nav_column)
         
         # สร้าง Reports Management (Dropdown)
-        self._create_reports_management_menu(nav_column)
+        if self.parent.user.get("role") == "admin":
+            self._create_reports_management_menu(nav_column)
         
         # อัพเดทสถานะปุ่มที่ถูกเลือก
         self._update_selected_button()
@@ -578,13 +580,11 @@ class SidebarManager:
     
     def _on_single_menu_hover(self, e, btn_container):
         """Handle hover for single item menus"""
-        # Include all single menu indices: 11,13,15,17,20,23,35,36
-        single_indices = [11, 13, 15, 17, 20, 23, 35, 36]
         if e.data == "true":
-            if self.parent.current_index not in single_indices:
+            if self.parent.current_index not in [11, 13, 15, 17, 20, 23]:
                 btn_container.bgcolor = self.parent.hover_color
         else:
-            if self.parent.current_index not in single_indices:
+            if self.parent.current_index not in [11, 13, 15, 17, 20, 23]:
                 btn_container.bgcolor = None
         if btn_container.page:
             btn_container.page.update()
@@ -617,9 +617,9 @@ class SidebarManager:
         for btn in [self.customer_main_btn, self.job_order_main_btn, self.quotation_main_btn,
                     self.repair_main_btn, self.purchase_main_btn, self.receiving_main_btn]:
             if btn:
-                # Reset icon and text color (handle both Image and Icon)
+                # Reset icon and text color
                 for child in btn.content.controls:
-                    if isinstance(child, (ft.Image, ft.Icon)):
+                    if isinstance(child, ft.Image):
                         child.color = self.parent.unselected_color
                     elif isinstance(child, ft.Text):
                         child.color = self.parent.unselected_color
@@ -663,7 +663,7 @@ class SidebarManager:
                 btn = btn_map.get(current)
                 if btn:
                     for child in btn.content.controls:
-                        if isinstance(child, (ft.Image, ft.Icon)):
+                        if isinstance(child, ft.Image):
                             child.color = self.parent.selected_color
                         elif isinstance(child, ft.Text):
                             child.color = self.parent.selected_color

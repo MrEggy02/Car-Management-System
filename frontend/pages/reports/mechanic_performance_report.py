@@ -289,7 +289,7 @@ class MechanicPerformanceReportContent:
                 subtitle=f"ງານສຳເລັດແລ້ວ: {summary.get('total_completed', 0)}",
             ),
             self._build_stat_card(
-                title="ສະເລ່ຍຊົ່ວໂມງຊ່ອມ/ງານ",
+                title="ສະເລ່ຍຊົ່ວໂມງສ້ອມແປງ/ງານ",
                 value=f"{summary.get('avg_workshop_hours', 0):.1f} ຊມ",
                 icon=ft.Icons.ACCESS_TIME,
                 color="#10B981",

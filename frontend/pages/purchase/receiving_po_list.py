@@ -339,7 +339,7 @@ class ReceivingPoListContent:
                         cost_field,
                     ], spacing=4, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
                     ft.Column([
-                        ft.Text("ຈຳນວນຮັບ", size=11, color="#64748B", text_align=ft.TextAlign.CENTER),
+                        ft.Text("ຈຳນວນທີ່ໄດ້ຮັບ", size=11, color="#64748B", text_align=ft.TextAlign.CENTER),
                         qty_field,
                     ], spacing=4, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
                 ], spacing=16, vertical_alignment=ft.CrossAxisAlignment.CENTER),
@@ -405,7 +405,7 @@ class ReceivingPoListContent:
                     ft.Container(width=42),
                     ft.Text("ລາຍການອາໄຫຼ່", size=12, weight=ft.FontWeight.BOLD, color="#64748B", expand=True),
                     ft.Text("ລາຄາທຶນ/ໜ່ວຍ", size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=140, text_align=ft.TextAlign.CENTER),
-                    ft.Text("ຈຳນວນຮັບ", size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=100, text_align=ft.TextAlign.CENTER),
+                    ft.Text("ຈຳນວນທີ່ໄດ້ຮັບ", size=12, weight=ft.FontWeight.BOLD, color="#64748B", width=100, text_align=ft.TextAlign.CENTER),
                 ], spacing=16),
                 padding=ft.Padding(left=0, right=0, top=12, bottom=8),
             ),
