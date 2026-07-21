@@ -32,6 +32,7 @@ class InvoiceCreateContent:
         self.discount_amount = 0
         self.final_total = 0
         self.total_amount = 0
+        self.available_quotations = []  # List of all approved quotations for the job
         
         # UI references
         self.job_search_field = None
@@ -49,6 +50,7 @@ class InvoiceCreateContent:
         self.change_text = None
         self.create_btn = None
         self.is_processing = False
+        self.quotation_container = None
         
     def build(self):
         # Header with Create Button in right side
@@ -141,16 +143,13 @@ class InvoiceCreateContent:
         try:
             all_orders = self.client.get_job_orders() or []
             
+            # Show ALL job orders with status 'finished' or 'closed'
+            # to allow multiple invoices per job order
             self.pending_jobs = []
             for order in all_orders:
                 status = order.get('status', '')
                 if status in ['finished', 'closed']:
-                    try:
-                        invoices = self.client.get_invoices(job_order_id=order.get('id'))
-                        if not invoices:
-                            self.pending_jobs.append(order)
-                    except:
-                        self.pending_jobs.append(order)
+                    self.pending_jobs.append(order)
             
             if self.job_order_id:
                 for job in self.pending_jobs:
@@ -243,6 +242,9 @@ class InvoiceCreateContent:
             self.page.update()
             return
         
+        # Show pending jobs immediately without search
+        self._display_pending_jobs()
+        
         selection_card = ft.Container(
             content=ft.Column([
                 ft.Row(
@@ -269,13 +271,61 @@ class InvoiceCreateContent:
         self.content_area.content = selection_card
         self.page.update()
     
+    def _display_pending_jobs(self):
+        """Display all pending jobs in the results list (without search)"""
+        self.job_results_list.controls.clear()
+        
+        if not self.pending_jobs:
+            self.job_results_list.controls.append(
+                ft.Container(
+                    content=ft.Text(get_text("no_orders_found"), size=13, color="#94A3B8"),
+                    padding=ft.Padding(left=20, right=20, top=20, bottom=20),
+                    alignment=ft.Alignment(0, 0),
+                )
+            )
+            self.job_results_container.visible = True
+            return
+        
+        # Show up to 10 pending jobs
+        for job in self.pending_jobs[:10]:
+            job_id = job.get('id')
+            job_no = job.get('job_no', '-')
+            customer_name = job.get('customer_name', '-')
+            plate_number = job.get('plate_number', '-')
+            
+            result_item = ft.Container(
+                content=ft.Row([
+                    ft.Container(
+                        content=ft.Icon(ft.Icons.RECEIPT, size=20, color=self.primary_color),
+                        bgcolor=ft.Colors.with_opacity(0.1, self.primary_color),
+                        border_radius=10,
+                        padding=ft.Padding(left=8, right=8, top=8, bottom=8),
+                    ),
+                    ft.Column([
+                        ft.Text(job_no, size=14, weight=ft.FontWeight.W_500, color="#1E293B"),
+                        ft.Text(f"{customer_name} | {plate_number}", size=11, color="#64748B"),
+                    ], spacing=2, expand=True),
+                    ft.Icon(ft.Icons.CHEVRON_RIGHT, size=20, color="#94A3B8"),
+                ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                padding=ft.Padding(left=10, right=10, top=10, bottom=10),
+                bgcolor=ft.Colors.WHITE,
+                border_radius=10,
+                border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_200), right=ft.BorderSide(1, ft.Colors.GREY_200), bottom=ft.BorderSide(1, ft.Colors.GREY_200), left=ft.BorderSide(1, ft.Colors.GREY_200)),
+                ink=True,
+                on_click=lambda e, jid=job_id: self.select_job(jid),
+            )
+            self.job_results_list.controls.append(result_item)
+        
+        self.job_results_container.visible = True
+        self.page.update()
+    
     def on_search_job(self, e):
         query = self.job_search_field.value.lower() if self.job_search_field.value else ""
         self.job_clear_button.visible = bool(query)
         
         if not query:
-            self.job_results_container.visible = False
-            self.page.update()
+            # If search is cleared, show all pending jobs again
+            self._display_pending_jobs()
             return
         
         filtered = [
@@ -331,15 +381,18 @@ class InvoiceCreateContent:
     def clear_search(self):
         self.job_search_field.value = ""
         self.job_clear_button.visible = False
-        self.job_results_container.visible = False
+        self._display_pending_jobs()
         self.page.update()
     
     def clear_selected_job(self):
         self.selected_job_id = None
         self.selected_job_data = None
+        self.available_quotations = []
+        self.parts = []
+        self.services = []
         self.selected_job_card.visible = False
         self.job_search_field.value = ""
-        self._build_search_ui()
+        self._display_pending_jobs()
         self.page.update()
     
     def select_job(self, job_id):
@@ -375,20 +428,93 @@ class InvoiceCreateContent:
         self.page.update()
         
         try:
-            result = self.client.get_invoice_info_by_job_order(self.selected_job_id)
+            # Get ALL approved quotations for this job
+            quotations = self.client.get_quotations(job_order_id=self.selected_job_id) or []
+            self.available_quotations = [q for q in quotations if q.get('status') == 'approved']
             
-            self.selected_job_data = result.get('job_order', {})
-            self.parts = result.get('parts', [])
-            self.services = result.get('services', [])
-            self.summary = result.get('summary', {})
-            self.total_amount = self.summary.get('total_amount', 0)
-            self.discount_amount = self.summary.get('total_discount', 0)
-            self.final_total = self.summary.get('final_total', self.total_amount)
+            if not self.available_quotations:
+                # No approved quotation found
+                self.quotation_container = ft.Container(
+                    content=ft.Column([
+                        ft.Icon(ft.Icons.WARNING, size=48, color="#F59E0B"),
+                        ft.Text(get_text("no_approved_quotation_found"), size=16, color="#64748B", text_align=ft.TextAlign.CENTER),
+                        ft.Text(get_text("please_approve_quotation_first"), size=12, color="#94A3B8", text_align=ft.TextAlign.CENTER),
+                    ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=12),
+                    padding=ft.Padding(left=40, right=40, top=40, bottom=40),
+                    bgcolor=ft.Colors.WHITE,
+                    border_radius=12,
+                    expand=True,
+                )
+                self.content_area.content = self.quotation_container
+                self.page.update()
+                return
             
-            self._build_invoice_form()
+            # Load combined data from ALL approved quotations
+            self._load_combined_invoice_data()
             
         except Exception as ex:
             print(f"Error loading invoice info: {ex}")
+            self._show_error(str(ex))
+    
+    def _load_combined_invoice_data(self):
+        """Load combined data from ALL approved quotations"""
+        if not self.selected_job_id or not self.available_quotations:
+            return
+        
+        self.content_area.content = ft.Container(
+            content=ft.Column([
+                ft.ProgressRing(width=50, height=50),
+                ft.Text(get_text("loading"), size=16, color="#64748B"),
+            ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+            alignment=ft.Alignment(0, 0),
+            expand=True,
+            padding=ft.Padding(left=40, right=40, top=40, bottom=40),
+        )
+        self.page.update()
+        
+        try:
+            all_parts = []
+            all_services = []
+            total_amount = 0
+            total_discount = 0
+            quotation_count = len(self.available_quotations)
+            
+            # Loop through all approved quotations and combine their items
+            for q in self.available_quotations:
+                q_id = q.get('id')
+                q_discount = float(q.get('discount_amount', 0) or 0)
+                total_discount += q_discount
+                
+                # Get items for this quotation
+                result = self.client.get_invoice_info_by_job_order(self.selected_job_id, q_id)
+                
+                if result:
+                    parts = result.get('parts', [])
+                    services = result.get('services', [])
+                    
+                    # Add quotation reference to item names for clarity
+                    q_ref = f"QT-{q_id:04d}"
+                    for part in parts:
+                        part['name'] = f"{part['name']} [{q_ref}]"
+                        all_parts.append(part)
+                        total_amount += part.get('total', 0)
+                    
+                    for service in services:
+                        service['name'] = f"{service['name']} [{q_ref}]"
+                        all_services.append(service)
+                        total_amount += service.get('total', 0)
+            
+            self.parts = all_parts
+            self.services = all_services
+            self.total_amount = total_amount
+            self.discount_amount = total_discount
+            self.final_total = max(0, total_amount - total_discount)
+            
+            # Build the form with combined items
+            self._build_invoice_form()
+            
+        except Exception as ex:
+            print(f"Error loading combined invoice info: {ex}")
             self._show_error(str(ex))
     
     def _show_error(self, message):
@@ -420,8 +546,14 @@ class InvoiceCreateContent:
             border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_50)),
         )
     
+    def _format_currency(self, amount):
+        try:
+            return f"{int(amount or 0):,} KIP"
+        except:
+            return "0 KIP"
+    
     def _build_invoice_form(self):
-        # Job Info Card (Clean Card)
+        # Job Info Card
         job_card = ft.Container(
             content=ft.Column([
                 ft.Row([
@@ -443,7 +575,21 @@ class InvoiceCreateContent:
             margin=ft.Margin(left=0, right=0, top=0, bottom=16),
         )
         
-        # Items List (Clean Card)
+        # Add combined quotation info if multiple quotations
+        if len(self.available_quotations) > 1:
+            qt_info = ft.Container(
+                content=ft.Row([
+                    ft.Icon(ft.Icons.MERGE_TYPE, size=16, color=self.primary_color),
+                    ft.Text(f"ລວມ {len(self.available_quotations)} ໃບສະເໜີລາຄາ", size=13, weight=ft.FontWeight.W_500, color=self.primary_color),
+                ], spacing=6),
+                padding=ft.Padding(left=10, right=10, top=6, bottom=6),
+                bgcolor=ft.Colors.with_opacity(0.1, self.primary_color),
+                border_radius=8,
+                margin=ft.Margin(left=0, right=0, top=8, bottom=0),
+            )
+            job_card.content.controls.insert(1, qt_info)
+        
+        # Items List
         items_list = ft.Column(spacing=0)
         total_amount = 0
         
@@ -574,6 +720,13 @@ class InvoiceCreateContent:
         )
         
         # Summary Section (Clean Card)
+        quotation_info = ""
+        if len(self.available_quotations) == 1:
+            q = self.available_quotations[0]
+            quotation_info = f"QT-{q.get('id', 0):04d}"
+        elif len(self.available_quotations) > 1:
+            quotation_info = f"{len(self.available_quotations)} ໃບສະເໜີ (ລວມ)"
+        
         payment_card = ft.Container(
             content=ft.Column([
                 ft.Row([
@@ -583,6 +736,8 @@ class InvoiceCreateContent:
                 ft.Divider(height=1, color=ft.Colors.GREY_100),
                 ft.Container(height=8),
                 self._create_info_row(get_text("final_total"), self._format_currency(self.final_total)),
+                ft.Container(height=4),
+                self._create_info_row("ໃບສະເໜີລາຄາ", quotation_info if quotation_info else "-"),
                 ft.Container(height=16),
                 ft.Text("ໃບເກັບເງິນນີ້ຈະຖືກບັນທຶກໃນສະຖານະ 'ໜີ້ຕ້ອງຮັບ' (Pending) ແລະ ສາມາດກົດຮັບຊຳລະເງິນໄດ້ໃນໜ້າລາຍການໃບຮັບເງິນ.", size=12, color="#64748B"),
             ], spacing=0),
@@ -629,12 +784,18 @@ class InvoiceCreateContent:
         if self.is_processing:
             return
         
+        # No need to check quotation selection – we combine all approved quotations
+        if not self.available_quotations:
+            self.show_snack_bar("ບໍ່ມີໃບສະເໜີລາຄາທີ່ຖືກອະນຸມັດ", "error")
+            return
+        
         self.is_processing = True
         if self.create_btn:
             self.create_btn.disabled = True
         self.page.update()
         
         try:
+            # Create invoice without quotation_id (backend doesn't need it)
             result = self.client.create_invoice(
                 job_order_id=self.selected_job_id,
                 total_amount=self.total_amount,
@@ -764,12 +925,6 @@ class InvoiceCreateContent:
         self.page.overlay.append(popup)
         popup.open = True
         self.page.update()
-    
-    def _format_currency(self, amount):
-        try:
-            return f"{int(amount or 0):,} KIP"
-        except:
-            return "0 KIP"
     
     def show_snack_bar(self, message: str, type="success"):
         """Show snackbar notification - Bottom center with auto width"""

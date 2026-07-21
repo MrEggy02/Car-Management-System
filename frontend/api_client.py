@@ -637,6 +637,24 @@ class APIClient:
     def delete_job_order(self, order_id: int) -> Dict:
         return self._request("DELETE", f"/job-orders/{order_id}")
 
+    def get_job_orders_with_details(self, status: str = None) -> List[Dict]:
+        """Get all job orders with customer and vehicle details in ONE query"""
+        params = {"status": status} if status else None
+        return self._request("GET", "/job-orders-with-details", params=params)
+
+    # ========== NEW: Get job order with all related data ==========
+    def get_job_order_all_details(self, order_id: int) -> Dict:
+        """
+        Get job order with all related quotations, repair orders, and invoices
+        Returns: {
+            "job_order": {...},
+            "quotations": [...],
+            "repair_orders": [...],
+            "invoices": [...]
+        }
+        """
+        return self._request("GET", f"/job-orders/{order_id}/all-details")
+
     # ========== Process 4: Quotations ==========
     def get_quotations(self, job_order_id: int = None) -> List[Dict]:
         params = {"job_order_id": job_order_id} if job_order_id else None
@@ -726,11 +744,23 @@ class APIClient:
         """Get car delivery note PDF as bytes"""
         return self._request("GET", f"/invoices/{invoice_id}/delivery-note/pdf")
 
-    def create_repair_order(self, job_order_id: int, mechanic_id: int = None) -> Dict:
+    def create_repair_order(self, job_order_id: int, mechanic_id: int = None, quotation_id: int = None) -> Dict:
+        """Create a new repair order (with optional quotation_id)"""
         data = {"job_order_id": job_order_id}
         if mechanic_id:
             data["mechanic_id"] = mechanic_id
+        if quotation_id:
+            data["quotation_id"] = quotation_id  # ✅ Pass as parameter to backend
         return self._request("POST", "/repair-orders", data=data)
+
+    # ========== NEW: Create repair order with specific quotation ==========
+    def create_repair_order_with_quotation(self, job_order_id: int, mechanic_id: int, quotation_id: int) -> Dict:
+        """Create a repair order referencing a specific quotation"""
+        return self._request("POST", "/repair-orders", data={
+            "job_order_id": job_order_id,
+            "mechanic_id": mechanic_id,
+            "quotation_id": quotation_id
+        })
 
     def assign_mechanic(self, repair_id: int, mechanic_id: int) -> Dict:
         return self._request(
@@ -755,8 +785,14 @@ class APIClient:
     def delete_part_usage(self, repair_id: int, usage_id: int) -> Dict:
         return self._request("DELETE", f"/repair-orders/{repair_id}/parts-usage/{usage_id}")
 
-    def pull_quotation_parts(self, repair_id: int) -> Dict:
-        return self._request("POST", f"/repair-orders/{repair_id}/pull-quotation-parts")
+    def pull_quotation_parts(self, repair_id: int, quotation_id: int = None) -> Dict:
+        """
+        Pull parts from a quotation (specific or latest approved)
+        """
+        data = {}
+        if quotation_id:
+            data["quotation_id"] = quotation_id
+        return self._request("POST", f"/repair-orders/{repair_id}/pull-quotation-parts", data=data)
 
     def delete_repair_order(self, repair_id: int) -> Dict:
         return self._request("DELETE", f"/repair-orders/{repair_id}")
@@ -773,8 +809,16 @@ class APIClient:
     def get_invoice(self, invoice_id: int) -> Dict:
         return self._request("GET", f"/invoices/{invoice_id}")
 
-    def get_invoice_info_by_job_order(self, job_order_id: int) -> Dict:
-        return self._request("GET", f"/job-orders/{job_order_id}/invoice-info")
+    # ========== MODIFIED: get invoice info with optional quotation_id ==========
+    def get_invoice_info_by_job_order(self, job_order_id: int, quotation_id: Optional[int] = None) -> Dict:
+        """
+        Get invoice info for job order, optionally for a specific quotation.
+        If quotation_id is provided, use that quotation; otherwise use the latest approved one.
+        """
+        params = {}
+        if quotation_id:
+            params["quotation_id"] = quotation_id
+        return self._request("GET", f"/job-orders/{job_order_id}/invoice-info", params=params)
 
     def create_invoice(
         self,
@@ -797,6 +841,24 @@ class APIClient:
             "received_amount": received_amount,
             "change_amount": change_amount
         })
+
+    # ========== NEW: Create invoice with specific quotation ==========
+    def create_invoice_with_quotation(self, job_order_id: int, quotation_id: int, **kwargs) -> Dict:
+        """
+        Create an invoice referencing a specific quotation
+        """
+        data = {
+            "job_order_id": job_order_id,
+            "quotation_id": quotation_id,
+            "total_amount": kwargs.get("total_amount", 0),
+            "total_discount": kwargs.get("total_discount", 0),
+            "final_total": kwargs.get("final_total", 0),
+            "payment_method": kwargs.get("payment_method", "cash"),
+            "payment_status": kwargs.get("payment_status", "pending"),
+            "received_amount": kwargs.get("received_amount", 0),
+            "change_amount": kwargs.get("change_amount", 0),
+        }
+        return self._request("POST", "/invoices", data=data)
 
     def record_payment(self, invoice_id: int, payment_method: str, received_amount: float, change_amount: float) -> Dict:
         return self._request("PUT", f"/invoices/{invoice_id}/payment", data={

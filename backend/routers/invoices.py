@@ -154,6 +154,7 @@ def get_invoice(invoice_id: int, user: dict = Depends(authenticate_user)):
 @router.get("/job-orders/{job_order_id}/invoice-info")
 def get_invoice_info_by_job_order(
     job_order_id: int, 
+    quotation_id: Optional[int] = None,  # ເພີ່ມພາຣາມິເຕີໃໝ່
     user: dict = Depends(authenticate_user)
 ):
     """
@@ -161,6 +162,7 @@ def get_invoice_info_by_job_order(
     ດຶງຂໍ້ມູນຈາກ:
     - Parts_Usage (ອາໄຫຼ່ທີ່ເບີກໃຊ້ຈິງ)
     - Quotation_Items (ບໍລິການ ແລະ ອາໄຫຼ່ທີ່ຕົກລົງໃນໃບສະເໜີ)
+    ✅ ສາມາດເລືອກ quotation_id ໄດ້
     """
     db = get_db()
     cursor = db.cursor(dictionary=True)
@@ -220,13 +222,23 @@ def get_invoice_info_by_job_order(
         total_discount = 0
         
         # ========== GET PARTS AND SERVICES FROM APPROVED QUOTATION ==========
-        cursor.execute("""
-            SELECT id, discount_amount, sub_total, net_total
-            FROM quotations
-            WHERE job_order_id = %s AND status = 'approved'
-            ORDER BY id DESC LIMIT 1
-        """, (job_order_id,))
-        quotation = cursor.fetchone()
+        if quotation_id:
+            # ໃຊ້ quotation_id ທີ່ລະບຸມາ
+            cursor.execute("""
+                SELECT id, discount_amount, sub_total, net_total
+                FROM quotations
+                WHERE id = %s AND job_order_id = %s AND status = 'approved'
+            """, (quotation_id, job_order_id))
+            quotation = cursor.fetchone()
+        else:
+            # ດຶງໃບສະເໜີຫຼ້າສຸດ
+            cursor.execute("""
+                SELECT id, discount_amount, sub_total, net_total
+                FROM quotations
+                WHERE job_order_id = %s AND status = 'approved'
+                ORDER BY id DESC LIMIT 1
+            """, (job_order_id,))
+            quotation = cursor.fetchone()
         
         if quotation:
             total_discount = float(quotation.get('discount_amount', 0) or 0)
@@ -318,7 +330,8 @@ def get_invoice_info_by_job_order(
                 "total_amount": total_amount,
                 "total_discount": total_discount,
                 "final_total": final_total
-            }
+            },
+            "quotation_id": quotation['id'] if quotation else None
         }
         
     except Exception as e:
@@ -352,6 +365,7 @@ def get_invoice_info_by_job_order(
         db.close()
 
 
+# ==================== MODIFIED: Allow multiple invoices per job order ====================
 @router.post("/invoices")
 def create_invoice(
     job_order_id: int = Form(...),
@@ -364,22 +378,17 @@ def create_invoice(
     change_amount: float = Form(0),
     user: dict = Depends(authenticate_user)
 ):
-    """Create a new invoice"""
+    """
+    Create a new invoice
+    ✅ ອະນຸຍາດໃຫ້ສ້າງຫຼາຍອັນຕໍ່ Job Order ໄດ້
+    ແລະ ບໍ່ຕ້ອງການ quotation_id ເພາະຖານຂໍ້ມູນບໍ່ມີຄໍລຳນີ້
+    """
     db = get_db()
     cursor = db.cursor(dictionary=True)
     try:
-        # Check if invoice already exists
-        cursor.execute("SELECT id FROM invoices WHERE job_order_id = %s", (job_order_id,))
-        existing = cursor.fetchone()
+        # ✅ ລຶບ Code ສ່ວນກວດສອບຊ້ຳອອກ (ປ່ອຍໃຫ້ສ້າງຫຼາຍອັນໄດ້)
         
-        if existing:
-            return {
-                "id": existing['id'],
-                "message": "Invoice already exists",
-                "existing": True
-            }
-        
-        # Create new invoice
+        # Create new invoice (without quotation_id)
         paid_date = datetime.now() if payment_status == 'paid' else None
         cursor.execute("""
             INSERT INTO invoices 

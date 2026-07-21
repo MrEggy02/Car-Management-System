@@ -8,6 +8,7 @@ import tempfile
 import os
 import threading
 import time
+import asyncio
 
 from i18n import get_text
 
@@ -21,25 +22,26 @@ class InvoiceListContent:
         self.primary_color = "#1565C0"
         self.primary_dark = "#0D47A1"
         self.success_color = "#10B981"
+        self.current_snackbar = None
         self.invoices = []
         self.filtered_invoices = []
         self.current_page = 1
         self.items_per_page = 10
         self.total_pages = 1
         self.search_field = None
-        self.current_status_filter = "all"  # เปลี่ยนจาก dropdown เป็น chip
+        self.current_status_filter = "all"
         self.status_chips = None
         self.table_rows = None
         self.pagination_container = None
         self.current_dialog = None
-        self._dialog_stack = []  # Track all dialogs we've added to overlay
-        
+        self._dialog_stack = []
+
     def build(self):
         header = self._build_header()
         search_bar = self._build_search_bar()
         table = self._build_table()
         self.pagination_container = ft.Container(padding=ft.Padding(left=20, right=20, top=12, bottom=12))
-        
+
         content_area = ft.Container(
             content=ft.Column([
                 search_bar,
@@ -50,17 +52,17 @@ class InvoiceListContent:
             padding=ft.Padding(left=24, right=24, top=24, bottom=24),
             bgcolor="#F5F7FA",
         )
-        
+
         main_content = ft.Container(
             content=ft.Column([header, content_area]),
             expand=True,
             bgcolor="#F5F7FA",
         )
-        
+
         self.load_invoices()
-        
+
         return main_content
-    
+
     def _build_header(self):
         return ft.Container(
             content=ft.Row(
@@ -102,20 +104,20 @@ class InvoiceListContent:
             ),
             border_radius=ft.BorderRadius.only(bottom_left=20, bottom_right=20),
         )
-    
+
     def _load_status_chips(self):
         """Load status filter chips"""
         if not self.status_chips:
             return
-        
+
         self.status_chips.controls.clear()
-        
+
         status_list = [
             {"id": "all", "name": get_text("all_status")},
             {"id": "pending", "name": get_text("status_pending")},
             {"id": "paid", "name": get_text("status_paid")},
         ]
-        
+
         for status in status_list:
             is_active = self.current_status_filter == status["id"]
             chip = ft.Container(
@@ -128,20 +130,20 @@ class InvoiceListContent:
                 on_click=lambda e, sid=status["id"]: self.filter_by_status(sid),
             )
             self.status_chips.controls.append(chip)
-        
+
         self.page.update()
-    
+
     def filter_by_status(self, status_id):
         """Filter by status chip click"""
         self.current_status_filter = status_id
         self._load_status_chips()
         self.apply_filters()
-    
+
     def _build_search_bar(self):
         # Status Chips
         self.status_chips = ft.Row(spacing=8, scroll=ft.ScrollMode.AUTO)
         self._load_status_chips()
-        
+
         self.search_field = ft.TextField(
             hint_text=get_text("search_invoice"),
             border_radius=12,
@@ -154,7 +156,7 @@ class InvoiceListContent:
             focused_border_color=self.primary_color,
         )
         self.search_field.on_change = self.on_search_change
-        
+
         refresh_button = ft.IconButton(
             icon=ft.Icons.REFRESH,
             icon_size=22,
@@ -165,7 +167,7 @@ class InvoiceListContent:
                 side=ft.BorderSide(1, ft.Colors.GREY_300),
             ),
         )
-        
+
         return ft.Container(
             content=ft.Column([
                 ft.Row([self.search_field, refresh_button], spacing=10),
@@ -174,7 +176,7 @@ class InvoiceListContent:
             ], spacing=0),
             margin=ft.Margin(left=0, right=0, top=0, bottom=16),
         )
-    
+
     def _build_table(self):
         table_header = ft.Container(
             content=ft.Row([
@@ -229,10 +231,11 @@ class InvoiceListContent:
             bgcolor=ft.Colors.GREY_100,
             border_radius=ft.BorderRadius.only(top_left=12, top_right=12),
         )
-        
+
         self.table_rows = ft.Column(spacing=0, scroll=ft.ScrollMode.AUTO, expand=True)
-        
-        return ft.Container(
+
+        # Table container with horizontal scroll
+        table_container = ft.Container(
             content=ft.Column([
                 table_header,
                 ft.Divider(height=1, color=ft.Colors.GREY_300),
@@ -244,11 +247,17 @@ class InvoiceListContent:
             border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_200), right=ft.BorderSide(1, ft.Colors.GREY_200), bottom=ft.BorderSide(1, ft.Colors.GREY_200), left=ft.BorderSide(1, ft.Colors.GREY_200)),
             expand=True,
         )
-    
+
+        # Wrap table in a Row with horizontal scroll
+        return ft.Container(
+            content=ft.Row([table_container], scroll=ft.ScrollMode.AUTO, expand=True),
+            expand=True,
+        )
+
     def load_invoices(self):
         self.table_rows.controls.clear()
         self.page.update()
-        
+
         try:
             invoices = self.client.get_invoices()
             print(f"DEBUG: Loaded {len(invoices)} invoices")
@@ -267,22 +276,22 @@ class InvoiceListContent:
                 )
             )
             self.page.update()
-    
+
     def on_search_change(self, e):
         """Real-time search"""
         self.apply_filters()
-    
+
     def apply_filters(self):
         """Apply both status and search filters"""
         selected_status = self.current_status_filter if self.current_status_filter else "all"
         keyword = self.search_field.value.lower() if self.search_field.value else ""
-        
+
         filtered = self.invoices.copy()
-        
+
         # Apply status filter
         if selected_status and selected_status != "all":
             filtered = [i for i in filtered if i.get("payment_status") == selected_status]
-        
+
         # Apply search filter
         if keyword:
             filtered = [
@@ -292,26 +301,26 @@ class InvoiceListContent:
                 or keyword in i.get("customer_name", "").lower()
                 or keyword in i.get("plate_number", "").lower()
             ]
-        
+
         self.filtered_invoices = filtered
         self.current_page = 1
         self.display_invoices()
-    
+
     def display_invoices(self):
         self.table_rows.controls.clear()
-        
+
         total_items = len(self.filtered_invoices)
         self.total_pages = max(1, (total_items + self.items_per_page - 1) // self.items_per_page)
-        
+
         if self.current_page > self.total_pages:
             self.current_page = self.total_pages
         if self.current_page < 1:
             self.current_page = 1
-        
+
         start_idx = (self.current_page - 1) * self.items_per_page
         end_idx = min(start_idx + self.items_per_page, total_items)
         page_items = self.filtered_invoices[start_idx:end_idx]
-        
+
         if page_items:
             for i, invoice in enumerate(page_items):
                 self.table_rows.controls.append(self._create_invoice_row(invoice, start_idx + i))
@@ -325,10 +334,10 @@ class InvoiceListContent:
                     padding=ft.Padding(left=40, right=40, top=40, bottom=40),
                 )
             )
-        
+
         self.update_pagination()
         self.page.update()
-    
+
     def _create_invoice_row(self, invoice: Dict, index: int):
         invoice_id = invoice.get("id")
         invoice_no = f"INV-{invoice_id:04d}"
@@ -343,9 +352,9 @@ class InvoiceListContent:
             paid_date = paid_date[:10] if " " in paid_date else paid_date[:10]
         else:
             paid_date = "-"
-        
+
         row_bg = ft.Colors.GREY_50 if index % 2 == 0 else ft.Colors.WHITE
-        
+
         status_colors = {
             "pending": "#FF9800",
             "paid": "#4CAF50"
@@ -354,12 +363,12 @@ class InvoiceListContent:
             "pending": get_text("status_pending"),
             "paid": get_text("status_paid")
         }
-        
+
         method_texts = {
             "cash": get_text("payment_cash"),
             "transfer": get_text("payment_transfer")
         }
-        
+
         status_badge = ft.Container(
             content=ft.Row([
                 ft.Icon(ft.Icons.CIRCLE, size=8, color=ft.Colors.WHITE),
@@ -369,7 +378,7 @@ class InvoiceListContent:
             border_radius=12,
             padding=ft.Padding(left=10, right=10, top=4, bottom=4),
         )
-        
+
         view_btn = ft.Container(
             content=ft.Row([
                 ft.Icon(ft.Icons.VISIBILITY_OUTLINED, size=16, color="#1565C0"),
@@ -379,7 +388,7 @@ class InvoiceListContent:
             padding=ft.Padding(left=8, right=8, top=4, bottom=4),
             border_radius=6,
         )
-        
+
         print_btn = ft.Container(
             content=ft.Row([
                 ft.Icon(ft.Icons.PRINT_OUTLINED, size=16, color=self.primary_color),
@@ -389,7 +398,7 @@ class InvoiceListContent:
             padding=ft.Padding(left=8, right=8, top=4, bottom=4),
             border_radius=6,
         )
-        
+
         actions_list = [view_btn, print_btn]
         if payment_status == "pending":
             pay_btn = ft.Container(
@@ -403,7 +412,7 @@ class InvoiceListContent:
                 border_radius=6,
             )
             actions_list.append(pay_btn)
-        
+
         row = ft.Container(
             content=ft.Row([
                 ft.Container(
@@ -456,16 +465,16 @@ class InvoiceListContent:
             padding=ft.Padding(left=10, right=10, top=12, bottom=12),
             bgcolor=row_bg,
         )
-        
+
         return ft.Column([
             row,
             ft.Divider(height=1, color=ft.Colors.GREY_200),
         ], spacing=0)
-    
+
     def update_pagination(self):
         prev_disabled = self.current_page <= 1
         next_disabled = self.current_page >= self.total_pages
-        
+
         self.pagination_container.content = ft.Row(
             [
                 ft.Text(
@@ -503,88 +512,109 @@ class InvoiceListContent:
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
         )
         self.page.update()
-    
+
     def prev_page(self, e=None):
         if self.current_page > 1:
             self.current_page -= 1
             self.display_invoices()
-    
+
     def next_page(self, e=None):
         if self.current_page < self.total_pages:
             self.current_page += 1
             self.display_invoices()
-    
+
     def view_invoice_detail(self, invoice_id: int):
         """View invoice detail - show dialog instead of navigate"""
         invoice = next((i for i in self.invoices if i.get("id") == invoice_id), None)
         if not invoice:
-            self.show_snack_bar(get_text("invoice_not_found"), is_error=True)
+            self.show_snack_bar(get_text("invoice_not_found"), "error")
             return
-        
+
         self._show_invoice_detail_dialog(invoice)
-    
+
     def print_invoice(self, invoice_id: int):
-        """พิมพ์ใบเก็บเงินโดยใช้ backend PDF generator และเปิดด้วยโปรแกรม PDF ของระบบ"""
+        """Print invoice using backend PDF generator"""
         try:
-            self.show_snack_bar(get_text("preparing_print"), is_error=False)
-            
+            self.show_snack_bar(get_text("preparing_print"), "info")
+
             pdf_bytes = self.client.get_invoice_pdf(invoice_id)
             if not pdf_bytes:
-                self.show_snack_bar(get_text("pdf_export_failed"), is_error=True)
+                self.show_snack_bar(get_text("pdf_export_failed"), "error")
                 return
-                
+
             base_dir = os.path.dirname(os.path.abspath(__file__))
             workspace_root = os.path.abspath(os.path.join(base_dir, "..", "..", ".."))
             output_dir = os.path.join(workspace_root, "output")
             os.makedirs(output_dir, exist_ok=True)
-            
+
             invoice_no = f"INV-{invoice_id:04d}"
             pdf_path = os.path.join(output_dir, f"invoice_{invoice_no}.pdf")
-            
+
             with open(pdf_path, "wb") as f:
                 f.write(pdf_bytes)
-                
+
             os.startfile(pdf_path)
-            self.show_snack_bar(get_text("pdf_export_success"), is_error=False)
-            
+            self.show_snack_bar(get_text("pdf_export_success"), "success")
+
         except Exception as ex:
             print(f"Error printing invoice: {ex}")
-            self.show_snack_bar(f"{get_text('pdf_export_failed')}: {str(ex)}", is_error=True)
+            self.show_snack_bar(f"{get_text('pdf_export_failed')}: {str(ex)}", "error")
 
     def print_delivery_note(self, invoice_id: int):
-        """ພິມໃບສົ່ງມອບລົດໂດຍໃຊ້ backend PDF generator ແລະເປີດດ້ວຍໂປຣແກຣມ PDF ຂອງລະບົບ"""
+        """Print delivery note using backend PDF generator"""
         try:
-            self.show_snack_bar("ກຳລັງກຽມພິມໃບສົ່ງມອບລົດ...", is_error=False)
-            
+            self.show_snack_bar("ກຳລັງກຽມພິມໃບສົ່ງມອບລົດ...", "info")
+
             pdf_bytes = self.client.get_delivery_note_pdf(invoice_id)
             if not pdf_bytes:
-                self.show_snack_bar("ບໍ່ສາມາດພິມໃບສົ່ງມອບລົດໄດ້", is_error=True)
+                self.show_snack_bar("ບໍ່ສາມາດພິມໃບສົ່ງມອບລົດໄດ້", "error")
                 return
-                
+
             base_dir = os.path.dirname(os.path.abspath(__file__))
             workspace_root = os.path.abspath(os.path.join(base_dir, "..", "..", ".."))
             output_dir = os.path.join(workspace_root, "output")
             os.makedirs(output_dir, exist_ok=True)
-            
+
             invoice_no = f"INV-{invoice_id:04d}"
             pdf_path = os.path.join(output_dir, f"delivery_note_{invoice_no}.pdf")
-            
+
             with open(pdf_path, "wb") as f:
                 f.write(pdf_bytes)
-                
+
             os.startfile(pdf_path)
-            self.show_snack_bar("ພິມໃບສົ່ງມອບລົດສຳເລັດແລ້ວ!", is_error=False)
-            
+            self.show_snack_bar("ພິມໃບສົ່ງມອບລົດສຳເລັດແລ້ວ!", "success")
+
         except Exception as ex:
             print(f"Error printing delivery note: {ex}")
-            self.show_snack_bar(f"Error: {str(ex)}", is_error=True)
+            self.show_snack_bar(f"Error: {str(ex)}", "error")
 
-    def show_post_payment_dialog(self, invoice_id: int):
+    def show_post_payment_dialog(self, invoice_id: int, invoice_data: Dict = None):
         """Show options to print delivery note or invoice after successful payment"""
-        def close_and_reload(dlg=None):
+        
+        def close_only():
             self._close_dialog()
-            # Reload in background thread so it doesn't block UI close
-            threading.Thread(target=self.load_invoices, daemon=True).start()
+            # Update the invoice status in the local list without reloading
+            if invoice_data:
+                # Update the invoice in self.invoices
+                for inv in self.invoices:
+                    if inv.get('id') == invoice_id:
+                        inv['payment_status'] = 'paid'
+                        inv['payment_method'] = invoice_data.get('payment_method', 'cash')
+                        inv['received_amount'] = invoice_data.get('received_amount', 0)
+                        inv['change_amount'] = invoice_data.get('change_amount', 0)
+                        inv['paid_date'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                        break
+                # Also update in filtered_invoices if present
+                for inv in self.filtered_invoices:
+                    if inv.get('id') == invoice_id:
+                        inv['payment_status'] = 'paid'
+                        inv['payment_method'] = invoice_data.get('payment_method', 'cash')
+                        inv['received_amount'] = invoice_data.get('received_amount', 0)
+                        inv['change_amount'] = invoice_data.get('change_amount', 0)
+                        inv['paid_date'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                        break
+                # Refresh the display
+                self.display_invoices()
 
         dialog = ft.AlertDialog(
             modal=True,
@@ -607,18 +637,18 @@ class InvoiceListContent:
                     icon=ft.Icons.LOCAL_SHIPPING,
                     bgcolor=self.success_color,
                     color=ft.Colors.WHITE,
-                    on_click=lambda e: (close_and_reload(dialog), self.print_delivery_note(invoice_id)),
+                    on_click=lambda e: (close_only(), self.print_delivery_note(invoice_id)),
                 ),
                 ft.ElevatedButton(
                     "ພິມໃບຮັບເງິນ",
                     icon=ft.Icons.PRINT,
                     bgcolor=self.primary_color,
                     color=ft.Colors.WHITE,
-                    on_click=lambda e: (close_and_reload(dialog), self.print_invoice(invoice_id)),
+                    on_click=lambda e: (close_only(), self.print_invoice(invoice_id)),
                 ),
                 ft.TextButton(
                     "ປິດ",
-                    on_click=lambda e: close_and_reload(dialog),
+                    on_click=lambda e: close_only(),
                     style=ft.ButtonStyle(color="#64748B"),
                 ),
             ],
@@ -628,7 +658,6 @@ class InvoiceListContent:
 
     def _show_invoice_detail_dialog(self, invoice: Dict):
         """Show invoice detail in dialog"""
-        
         invoice_no = f"INV-{invoice.get('id', 0):04d}"
         job_no = invoice.get("job_no", "-")
         customer_name = invoice.get("customer_name", "-")
@@ -644,12 +673,12 @@ class InvoiceListContent:
         received_amount = invoice.get("received_amount", 0)
         change_amount = invoice.get("change_amount", 0)
         paid_date = invoice.get("paid_date", "")
-        
+
         if paid_date:
             paid_date = paid_date[:16] if len(paid_date) > 16 else paid_date
         else:
             paid_date = "-"
-        
+
         status_colors = {
             "pending": "#FF9800",
             "paid": "#4CAF50"
@@ -658,12 +687,12 @@ class InvoiceListContent:
             "pending": get_text("status_pending"),
             "paid": get_text("status_paid")
         }
-        
+
         method_texts = {
             "cash": get_text("payment_cash"),
             "transfer": get_text("payment_transfer")
         }
-        
+
         dialog_actions = [
             ft.TextButton(
                 get_text("close"),
@@ -776,24 +805,22 @@ class InvoiceListContent:
             actions=dialog_actions,
             actions_alignment=ft.MainAxisAlignment.END,
         )
-        
+
         self._open_dialog(dialog)
-    
+
     def _open_dialog(self, dialog):
         """Open a dialog - closes all previous tracked dialogs first"""
-        # Close all previous dialogs we've tracked (just toggle open, don't remove)
         for d in self._dialog_stack:
             try:
                 d.open = False
             except Exception:
                 pass
-        # Add new dialog to overlay and open it
         self.current_dialog = dialog
         self._dialog_stack.append(dialog)
         self.page.overlay.append(dialog)
         dialog.open = True
         self.page.update()
-    
+
     def _close_dialog(self, dialog=None):
         """Close all tracked dialogs"""
         for d in self._dialog_stack:
@@ -804,20 +831,90 @@ class InvoiceListContent:
         self._dialog_stack.clear()
         self.current_dialog = None
         self.page.update()
-    
-    def show_snack_bar(self, message: str, is_error: bool = False):
-        self.page.snack_bar = ft.SnackBar(
-            content=ft.Text(message, size=13),
-            bgcolor=ft.Colors.RED_600 if is_error else ft.Colors.GREEN_600,
-            open=True,
-            duration=3000,
+
+    def show_snack_bar(self, message: str, type: str = "success"):
+        """Show snackbar notification - Bottom center with auto width"""
+
+        # Remove existing snackbar if any
+        if self.current_snackbar:
+            try:
+                self.page.overlay.remove(self.current_snackbar)
+            except:
+                pass
+            self.current_snackbar = None
+
+        if type == "success":
+            bgcolor = ft.Colors.GREEN_600
+            icon = ft.Icons.CHECK_CIRCLE
+        elif type == "error":
+            bgcolor = ft.Colors.RED_600
+            icon = ft.Icons.ERROR
+        else:
+            bgcolor = ft.Colors.GREY_800
+            icon = ft.Icons.INFO
+
+        # Create snackbar content with auto width
+        snack_content = ft.Container(
+            content=ft.Row(
+                [
+                    ft.Icon(icon, color=ft.Colors.WHITE, size=16),
+                    ft.Text(message, color=ft.Colors.WHITE, size=13, weight=ft.FontWeight.W_500),
+                ],
+                spacing=8,
+                alignment=ft.MainAxisAlignment.START,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            ),
+            padding=ft.Padding(left=14, right=14, top=8, bottom=8),
+            bgcolor=bgcolor,
+            border_radius=8,
+            shadow=ft.BoxShadow(
+                spread_radius=1,
+                blur_radius=8,
+                color=ft.Colors.with_opacity(0.2, ft.Colors.BLACK),
+            ),
         )
+
+        # Create overlay container - positioned at bottom center
+        snackbar = ft.Container(
+            content=snack_content,
+            margin=ft.Margin(left=30, right=30, top=0, bottom=20),
+            alignment=ft.Alignment(0, 1),  # Bottom Center
+            animate_opacity=ft.Animation(300, ft.AnimationCurve.EASE_IN),
+            opacity=0,
+        )
+
+        # Add to overlay
+        self.page.overlay.append(snackbar)
+        self.current_snackbar = snackbar
+
+        # Animate in
+        snackbar.opacity = 1
         self.page.update()
 
+        # Auto dismiss after 3 seconds using asyncio
+        async def dismiss_after_delay():
+            await asyncio.sleep(2.0)
+            if snackbar in self.page.overlay:
+                snackbar.opacity = 0
+                self.page.update()
+                await asyncio.sleep(0.3)
+                if snackbar in self.page.overlay:
+                    self.page.overlay.remove(snackbar)
+                    if self.current_snackbar == snackbar:
+                        self.current_snackbar = None
+                    self.page.update()
+
+        # Run the dismiss task
+        self.page.run_task(dismiss_after_delay)
+
+    # ==================== FIXED PAYMENT DIALOG WITH VALIDATION ====================
     def _show_payment_dialog(self, invoice: Dict):
         final_total = invoice.get('final_total', 0)
         invoice_id = invoice.get('id')
-        
+
+        # Error label
+        payment_error = ft.Text("", color=ft.Colors.RED_600, size=11, visible=False)
+
         payment_method_dropdown = ft.Dropdown(
             label=get_text("payment_method"),
             value="cash",
@@ -830,40 +927,63 @@ class InvoiceListContent:
             bgcolor=ft.Colors.WHITE,
             filled=True,
         )
-        
+
         received_field = ft.TextField(
             label=get_text("received_amount"),
-            value=str(final_total),
+            value=str(int(final_total)),
             expand=True,
             input_filter=ft.NumbersOnlyInputFilter(),
             border_radius=12,
             bgcolor=ft.Colors.WHITE,
             filled=True,
         )
-        
+
         change_text = ft.Text("0 KIP", size=16, weight=ft.FontWeight.BOLD, color=self.success_color, text_align=ft.TextAlign.RIGHT)
-        
+
         def on_received_change(e):
             try:
-                received = float(e.control.value) if e.control.value else 0
+                raw_value = e.control.value.replace(',', '').strip()
+                received = float(raw_value) if raw_value else 0
                 change = max(0, received - final_total)
                 change_text.value = f"{int(change):,} KIP"
+                # Clear error if amount is sufficient
+                if received >= final_total:
+                    payment_error.visible = False
+                    payment_error.update()
                 self.page.update()
             except:
                 change_text.value = "0 KIP"
-        
+
         received_field.on_change = on_received_change
-        
+
+        def validate_payment(received):
+            """Validate payment amount"""
+            if received < final_total:
+                payment_error.value = f"ຈຳນວນເງິນທີ່ຮັບ ({int(received):,} KIP) ຕ້ອງຫຼາຍກວ່າ ຫຼື ເທົ່າກັບຍອດລວມ ({int(final_total):,} KIP)"
+                payment_error.visible = True
+                payment_error.update()
+                return False
+            else:
+                payment_error.visible = False
+                payment_error.update()
+                return True
+
         def confirm_payment(e):
             try:
                 method = payment_method_dropdown.value
                 try:
-                    received = float(received_field.value)
+                    received = float(received_field.value.replace(',', '')) if received_field.value else 0
                 except:
                     received = final_total
-                
+
+                # Validate payment amount
+                if not validate_payment(received):
+                    if dialog:
+                        dialog.update()
+                    return
+
                 change = max(0, received - final_total)
-                
+
                 self.client.record_invoice_payment(
                     invoice_id=invoice_id,
                     payment_method=method,
@@ -871,11 +991,16 @@ class InvoiceListContent:
                     change_amount=change
                 )
                 # Close payment dialog first, then show post-payment dialog
+                invoice_data = {
+                    'payment_method': method,
+                    'received_amount': received,
+                    'change_amount': change
+                }
                 self._close_dialog(dialog)
-                self.show_post_payment_dialog(invoice_id)
+                self.show_post_payment_dialog(invoice_id, invoice_data)
             except Exception as ex:
-                self.show_snack_bar(f"Payment failed: {ex}", is_error=True)
-                
+                self.show_snack_bar(f"Payment failed: {ex}", "error")
+
         dialog = ft.AlertDialog(
             modal=True,
             shape=ft.RoundedRectangleBorder(radius=16),
@@ -894,8 +1019,10 @@ class InvoiceListContent:
                         ft.Container(expand=True),
                         change_text,
                     ]),
+                    payment_error,
                 ], tight=True),
                 width=350,
+                height=260,
             ),
             actions=[
                 ft.TextButton(get_text("cancel"), on_click=lambda e: self._close_dialog(dialog)),

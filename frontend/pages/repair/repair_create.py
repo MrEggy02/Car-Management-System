@@ -22,16 +22,17 @@ class RepairCreateContent:
         self.success_color = "#10B981"
         self.warning_color = "#F59E0B"
         self.current_snackbar = None
-        
+
         # Data storage
-        self.approved_jobs = []  # Job orders with status 'approved'
+        self.approved_jobs = []          # All job orders with status 'approved'
         self.selected_job = None
-        self.selected_quotation = None  # The approved quotation for this job
+        self.selected_quotation = None   # The approved quotation selected by user
         self.quotation_items = []
         self.mechanics = []
         self.filtered_mechanics = []
-        
-        # UI references - Left side (Job Order Selection & Mechanic)
+        self.available_quotations = []   # List of approved quotations for selected job
+
+        # UI references
         self.job_search_field = None
         self.job_clear_button = None
         self.job_results_container = None
@@ -39,8 +40,6 @@ class RepairCreateContent:
         self.selected_job_card = None
         self.selected_job_label = None
         self.job_details_card = None
-        
-        # UI references - Left side (Mechanic)
         self.mechanic_search_field = None
         self.mechanic_clear_button = None
         self.mechanic_results_list = None
@@ -48,12 +47,15 @@ class RepairCreateContent:
         self.selected_mechanic_label = None
         self.selected_mechanic_id = None
         self.selected_mechanic_data = None
-        
-        # UI references - Right side (Quotation Items)
         self.quotation_card = None
         self.items_table_body = None
         self.total_text = ft.Text("0 KIP", size=16, weight=ft.FontWeight.BOLD, color=self.success_color)
-        
+        self.quotation_selection_container = None
+        self.right_column_content = None
+
+        # ✅ Guard against double submission
+        self.is_creating = False
+
     def build(self):
         # --- Header with Create Button ---
         self.create_btn = ft.ElevatedButton(
@@ -69,7 +71,7 @@ class RepairCreateContent:
                 padding=ft.Padding(left=20, right=20, top=12, bottom=12),
             ),
         )
-        
+
         header = ft.Container(
             content=ft.Row(
                 [
@@ -109,7 +111,7 @@ class RepairCreateContent:
             ),
             border_radius=ft.BorderRadius.only(bottom_left=20, bottom_right=20),
         )
-        
+
         # ==================== LEFT COLUMN: JOB ORDER & MECHANIC ====================
         # Job Order Search Section
         self.job_search_field = ft.TextField(
@@ -124,7 +126,7 @@ class RepairCreateContent:
             on_change=self.on_search_job,
             border_color=ft.Colors.GREY_200,
         )
-        
+
         self.job_clear_button = ft.IconButton(
             icon=ft.Icons.CLEAR,
             icon_size=18,
@@ -132,9 +134,9 @@ class RepairCreateContent:
             on_click=lambda e: self.clear_job_search(),
             visible=False,
         )
-        
+
         search_row = ft.Row([self.job_search_field, self.job_clear_button], spacing=8)
-        
+
         self.job_results_list = ft.Column(spacing=6, scroll=ft.ScrollMode.AUTO, height=200)
         self.job_results_container = ft.Container(
             content=self.job_results_list,
@@ -144,9 +146,9 @@ class RepairCreateContent:
             bgcolor=ft.Colors.WHITE,
             visible=False,
         )
-        
+
         self.selected_job_label = ft.Text("", size=13, weight=ft.FontWeight.W_500, color="#1E293B")
-        
+
         self.selected_job_card = ft.Container(
             content=ft.Card(
                 content=ft.Container(
@@ -171,8 +173,8 @@ class RepairCreateContent:
             margin=ft.Margin(left=0, right=0, top=8, bottom=0),
             visible=False,
         )
-        
-        # Job Details Section (Clean Card style)
+
+        # Job Details Section
         self.job_details_card = ft.Container(
             content=ft.Column([
                 ft.Row([
@@ -196,7 +198,7 @@ class RepairCreateContent:
             margin=ft.Margin(left=0, right=0, top=8, bottom=0),
             visible=False,
         )
-        
+
         # Job Section
         job_section = ft.Column(
             [
@@ -214,7 +216,7 @@ class RepairCreateContent:
             ],
             spacing=0,
         )
-        
+
         # Mechanic Section
         self.mechanic_search_field = ft.TextField(
             label=get_text("search_mechanic"),
@@ -228,7 +230,7 @@ class RepairCreateContent:
             on_change=self.on_search_mechanic,
             border_color=ft.Colors.GREY_200,
         )
-        
+
         self.mechanic_clear_button = ft.IconButton(
             icon=ft.Icons.CLEAR,
             icon_size=18,
@@ -236,9 +238,9 @@ class RepairCreateContent:
             on_click=lambda e: self.clear_mechanic_search(),
             visible=False,
         )
-        
+
         mechanic_search_row = ft.Row([self.mechanic_search_field, self.mechanic_clear_button], spacing=8)
-        
+
         self.mechanic_results_list = ft.Column(spacing=8, scroll=ft.ScrollMode.AUTO)
         mechanic_results_container = ft.Container(
             content=self.mechanic_results_list,
@@ -247,9 +249,9 @@ class RepairCreateContent:
             padding=ft.Padding(left=12, right=12, top=12, bottom=12),
             bgcolor=ft.Colors.WHITE,
         )
-        
+
         self.selected_mechanic_label = ft.Text("", size=13, weight=ft.FontWeight.W_500, color="#1E293B")
-        
+
         self.selected_mechanic_card = ft.Container(
             content=ft.Card(
                 content=ft.Container(
@@ -274,7 +276,7 @@ class RepairCreateContent:
             margin=ft.Margin(left=0, right=0, top=8, bottom=0),
             visible=False,
         )
-        
+
         mechanic_section = ft.Container(
             content=ft.Column([
                 ft.Row([
@@ -295,16 +297,17 @@ class RepairCreateContent:
             bgcolor=None,
             margin=ft.Margin(left=0, right=0, top=0, bottom=0),
         )
-        
+
         left_column = ft.Container(
             content=ft.Column([job_section, ft.Container(height=16), mechanic_section], spacing=0, expand=True, scroll=ft.ScrollMode.AUTO),
             width=450,
             expand=True,
         )
-        
-        # ==================== RIGHT COLUMN: QUOTATION ITEMS (Clean Card) ====================
+
+        # ==================== RIGHT COLUMN: QUOTATION ITEMS OR SELECTION ====================
+        self.quotation_selection_container = ft.Container(visible=False)
         self.items_table_body = ft.Column(spacing=0, scroll=ft.ScrollMode.AUTO, height=350)
-        
+
         self.quotation_card = ft.Container(
             content=ft.Column([
                 ft.Row([
@@ -323,7 +326,6 @@ class RepairCreateContent:
                 ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
                 ft.Divider(height=1, color=ft.Colors.GREY_100),
                 ft.Container(height=8),
-                # Header row
                 ft.Row([
                     ft.Text("#", size=11, weight=ft.FontWeight.W_600, color="#64748B", width=35),
                     ft.Text(get_text("item_name"), size=11, weight=ft.FontWeight.W_600, color="#64748B", expand=True),
@@ -341,13 +343,18 @@ class RepairCreateContent:
             shadow=ft.BoxShadow(blur_radius=4, color=ft.Colors.with_opacity(0.05, ft.Colors.BLACK)),
             visible=False,
         )
-        
+
+        self.right_column_content = ft.Column([
+            self.quotation_selection_container,
+            self.quotation_card,
+        ], spacing=0, expand=True, scroll=ft.ScrollMode.AUTO)
+
         right_column = ft.Container(
-            content=ft.Column([self.quotation_card], spacing=0, expand=True, scroll=ft.ScrollMode.AUTO),
+            content=self.right_column_content,
             width=600,
             expand=True,
         )
-        
+
         # ==================== TWO COLUMN LAYOUT ====================
         two_columns = ft.Row(
             [left_column, ft.VerticalDivider(width=1, color=ft.Colors.GREY_300), right_column],
@@ -356,7 +363,7 @@ class RepairCreateContent:
             expand=True,
             scroll=ft.ScrollMode.AUTO,
         )
-        
+
         main_card = ft.Container(
             content=two_columns,
             padding=ft.Padding(left=24, right=24, top=20, bottom=20),
@@ -364,24 +371,23 @@ class RepairCreateContent:
             border_radius=16,
             expand=True,
         )
-        
+
         content_area = ft.Container(
             content=ft.Column([main_card], spacing=0, expand=True, scroll=ft.ScrollMode.AUTO),
             expand=True,
             padding=ft.Padding(left=20, right=20, top=20, bottom=20),
             bgcolor="#F0F2F5",
         )
-        
+
         main_content = ft.Container(
             content=ft.Column([header, content_area], spacing=0, expand=True),
             expand=True,
         )
-        
-        # Load data
+
         self.page.run_task(self._load_data)
-        
+
         return main_content
-    
+
     def _create_info_row(self, label, value, max_lines=1):
         return ft.Container(
             content=ft.Row([
@@ -391,12 +397,12 @@ class RepairCreateContent:
             padding=ft.Padding(left=0, right=0, top=5, bottom=5),
             border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_50)),
         )
-    
+
     async def _load_data(self):
         await asyncio.sleep(0.2)
         await asyncio.to_thread(self.load_mechanics)
         await asyncio.to_thread(self.load_approved_job_orders)
-    
+
     def load_mechanics(self):
         try:
             self.mechanics = self.client.get_mechanics() or []
@@ -407,19 +413,16 @@ class RepairCreateContent:
             print(f"Error loading mechanics: {ex}")
             self.mechanics = []
             self.filtered_mechanics = []
-    
+
+    # ✅ FIX: Show ALL approved job orders (allow multiple repairs)
     def load_approved_job_orders(self):
         try:
+            # Show ALL approved job orders regardless of existing repairs
+            # This allows creating multiple repair orders per job order
             all_jobs = self.client.get_job_orders(status='approved') or []
+            self.approved_jobs = all_jobs
             
-            # Optimized: Fetch all repair orders in one single call and build a set of job_order_ids
-            # that already have repair orders. This reduces database queries and API latency significantly.
-            all_repairs = self.client.get_repair_orders() or []
-            jobs_with_repairs = {r.get('job_order_id') for r in all_repairs if r.get('job_order_id')}
-            
-            self.approved_jobs = [job for job in all_jobs if job.get('id') not in jobs_with_repairs]
-            
-            print(f"DEBUG: Loaded {len(self.approved_jobs)} approved job orders ready for repair")
+            print(f"DEBUG: Loaded {len(self.approved_jobs)} approved job orders")
             
             if self.job_order_id:
                 for job in self.approved_jobs:
@@ -432,10 +435,10 @@ class RepairCreateContent:
         except Exception as ex:
             print(f"Error loading approved job orders: {ex}")
             self.approved_jobs = []
-    
+
     def _update_job_list(self):
         self.job_results_list.controls.clear()
-        
+
         if not self.approved_jobs:
             self.job_results_list.controls.append(
                 ft.Container(
@@ -449,13 +452,13 @@ class RepairCreateContent:
                 )
             )
             return
-        
+
         for job in self.approved_jobs:
             job_id = job.get('id')
             job_no = job.get('job_no', '-')
             customer_name = job.get('customer_name', '-')
             plate_number = job.get('plate_number', '-')
-            
+
             result_item = ft.Container(
                 content=ft.Row([
                     ft.Container(
@@ -478,10 +481,10 @@ class RepairCreateContent:
                 on_click=lambda e, j=job: self.select_job_order(j),
             )
             self.job_results_list.controls.append(result_item)
-    
+
     def _update_mechanic_list(self):
         self.mechanic_results_list.controls.clear()
-        
+
         if not self.filtered_mechanics:
             self.mechanic_results_list.controls.append(
                 ft.Container(
@@ -499,9 +502,9 @@ class RepairCreateContent:
                 name = mechanic.get('fullname', mechanic.get('name', '-'))
                 phone = mechanic.get('phone', '-')
                 role = mechanic.get('role', '-')
-                
+
                 is_selected = self.selected_mechanic_id == mech_id
-                
+
                 item_card = ft.Container(
                     content=ft.Row([
                         ft.Container(
@@ -528,78 +531,147 @@ class RepairCreateContent:
                     on_click=lambda e, m=mechanic: self.select_mechanic(m),
                 )
                 self.mechanic_results_list.controls.append(item_card)
-        
+
         self.page.update()
-    
+
     def select_job_order(self, job: dict):
         self.selected_job = job
-        
+
         job_no = job.get('job_no', '-')
         customer_name = job.get('customer_name', '-')
         plate_number = job.get('plate_number', '-')
         brand = job.get('brand', '-')
         model = job.get('model', '-')
         problem = job.get('problem_description', '-')
-        
+
         self.selected_job_label.value = f"{job_no} - {customer_name} - {plate_number}"
         self.job_search_field.value = job_no
         self.job_results_container.visible = False
         self.selected_job_card.visible = True
-        
+
         self._update_job_details_card(job_no, customer_name, plate_number, brand, model, problem)
         self.job_details_card.visible = True
-        
-        self.load_approved_quotation_items(job.get('id'))
-        
+
+        # Load approved quotations for this job
+        self.load_approved_quotations(job.get('id'))
+
         self.page.update()
-    
+
     def _update_job_details_card(self, job_no, customer_name, plate_number, brand, model, problem):
         details_column = self.job_details_card.content.controls[3]
-        
+
         details_column.controls[0].content.controls[1].value = job_no
         details_column.controls[1].content.controls[1].value = customer_name
         details_column.controls[2].content.controls[1].value = plate_number
         details_column.controls[3].content.controls[1].value = f"{brand} {model}"
         details_column.controls[4].content.controls[1].value = problem
-    
-    def load_approved_quotation_items(self, job_order_id: int):
+
+    def load_approved_quotations(self, job_order_id: int):
+        """Load all approved quotations for the job and show selection if multiple"""
         try:
             quotations = self.client.get_quotations(job_order_id=job_order_id) or []
-            
-            approved_quotation = None
-            for q in quotations:
-                if q.get('status') == 'approved':
-                    approved_quotation = q
-                    break
-            
-            if not approved_quotation:
+            self.available_quotations = [q for q in quotations if q.get('status') == 'approved']
+
+            if len(self.available_quotations) > 1:
+                self._show_quotation_selection()
+            elif len(self.available_quotations) == 1:
+                self.selected_quotation = self.available_quotations[0]
+                self.load_quotation_items(self.selected_quotation.get('id'))
+            else:
                 self.quotation_card.visible = False
+                self.quotation_selection_container.visible = False
                 self.show_snack_bar(get_text("no_approved_quotation_found"), "error")
-                return
-            
-            self.selected_quotation = approved_quotation
-            
-            quotation_id = approved_quotation.get('id')
+                self.page.update()
+        except Exception as ex:
+            print(f"Error loading quotations: {ex}")
+            self.quotation_card.visible = False
+            self.quotation_selection_container.visible = False
+            self.show_snack_bar(f"Error: {str(ex)}", "error")
+
+    def _show_quotation_selection(self):
+        """Show card list to select quotation when multiple approved quotations exist"""
+        def on_quotation_selected(q):
+            self.selected_quotation = q
+            self.quotation_selection_container.visible = False
+            self.load_quotation_items(q.get('id'))
+
+        cards_list = ft.Column(spacing=6, scroll=ft.ScrollMode.AUTO, height=300)
+
+        for q in self.available_quotations:
+            q_id = q.get('id')
+            q_no = f"QT-{q_id:04d}"
+            q_total = q.get('net_total', 0)
+            q_date = q.get('created_at', '')
+            if q_date:
+                try:
+                    q_date = q_date[:10] if len(q_date) > 10 else q_date
+                except:
+                    q_date = ''
+
+            card = ft.Container(
+                content=ft.Row([
+                    ft.Container(
+                        content=ft.Icon(ft.Icons.REQUEST_QUOTE, size=20, color=self.primary_color),
+                        bgcolor=ft.Colors.with_opacity(0.1, self.primary_color),
+                        border_radius=10,
+                        padding=ft.Padding(left=10, right=10, top=10, bottom=10),
+                    ),
+                    ft.Column([
+                        ft.Text(q_no, size=14, weight=ft.FontWeight.W_500, color="#1E293B"),
+                        ft.Text(f"{self._format_currency(q_total)}  |  {q_date if q_date else '-'}", 
+                               size=11, color="#64748B"),
+                    ], spacing=2, expand=True),
+                    ft.Icon(ft.Icons.CHEVRON_RIGHT, size=20, color="#94A3B8"),
+                ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                padding=ft.Padding(left=12, right=12, top=12, bottom=12),
+                bgcolor=ft.Colors.WHITE,
+                border_radius=10,
+                border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_200), right=ft.BorderSide(1, ft.Colors.GREY_200), bottom=ft.BorderSide(1, ft.Colors.GREY_200), left=ft.BorderSide(1, ft.Colors.GREY_200)),
+                ink=True,
+                on_click=lambda e, qobj=q: on_quotation_selected(qobj),
+            )
+            cards_list.controls.append(card)
+
+        self.quotation_selection_container.content = ft.Column([
+            ft.Row([
+                ft.Icon(ft.Icons.REQUEST_QUOTE, size=20, color=self.primary_color),
+                ft.Text("ເລືອກໃບສະເໜີລາຄາທີ່ຖືກອະນຸມັດ", size=15, weight=ft.FontWeight.W_600, color="#1E293B"),
+            ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+            ft.Divider(height=1, color=ft.Colors.GREY_100),
+            ft.Container(height=12),
+            ft.Text("ພົບໃບສະເໜີລາຄາທີ່ຖືກອະນຸມັດຫຼາຍສະບັບ ກະລຸນາເລືອກສະບັບທີ່ຕ້ອງການນຳໃຊ້:", size=13, color="#64748B"),
+            ft.Container(height=8),
+            cards_list,
+            ft.Container(height=12),
+            ft.Text("ທ່ານສາມາດສ້າງໃບສ້ອມແປງໄດ້ຫຼາຍສະບັບຕໍ່ Job Order ໜຶ່ງ", size=12, color="#94A3B8"),
+        ], spacing=0)
+
+        self.quotation_selection_container.visible = True
+        self.quotation_card.visible = False
+        self.page.update()
+
+    def load_quotation_items(self, quotation_id: int):
+        """Load items for a selected quotation"""
+        try:
             items = self.client.get_quotation_items(quotation_id) or []
-            
+
             self.quotation_items = []
             for item in items:
-                # Convert Decimal to float/int safely
                 try:
                     unit_price = float(item.get('unit_price', 0))
                 except (TypeError, ValueError):
                     unit_price = 0
-                
+
                 try:
                     total = float(item.get('total', 0))
                 except (TypeError, ValueError):
                     total = unit_price * int(item.get('qty', 1))
-                
+
                 try:
                     qty = int(item.get('qty', 1))
                 except (TypeError, ValueError):
                     qty = 1
-                
+
                 self.quotation_items.append({
                     'item_type': item.get('item_type'),
                     'name': item.get('name', '-'),
@@ -607,17 +679,20 @@ class RepairCreateContent:
                     'unit_price': unit_price,
                     'total': total
                 })
-            
+
             self._update_items_table()
             self.quotation_card.visible = True
-            
+            self.quotation_selection_container.visible = False
+            self.page.update()
+
         except Exception as ex:
             print(f"Error loading quotation items: {ex}")
             self.quotation_card.visible = False
-    
+            self.show_snack_bar(f"Error loading items: {str(ex)}", "error")
+
     def _update_items_table(self):
         self.items_table_body.controls.clear()
-        
+
         if not self.quotation_items:
             self.items_table_body.controls.append(
                 ft.Container(
@@ -632,7 +707,7 @@ class RepairCreateContent:
             self.total_text.value = "0 KIP"
             self.page.update()
             return
-        
+
         subtotal = 0.0
         for idx, item in enumerate(self.quotation_items):
             name = item.get('name', '-')
@@ -640,13 +715,12 @@ class RepairCreateContent:
             unit_price = item.get('unit_price', 0.0)
             total = item.get('total', 0.0)
             subtotal += total
-            
+
             border_bottom = ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_50)) if idx < len(self.quotation_items) - 1 else None
-            
-            # Convert to int for display with commas
+
             unit_price_int = int(unit_price) if unit_price else 0
             total_int = int(total) if total else 0
-            
+
             row = ft.Container(
                 content=ft.Row([
                     ft.Text(f"{idx+1}", size=12, color="#64748B", width=35),
@@ -659,14 +733,13 @@ class RepairCreateContent:
                 border=border_bottom,
             )
             self.items_table_body.controls.append(row)
-        
-        # Discount row
+
         discount_amount = self.selected_quotation.get('discount_amount', 0) if self.selected_quotation else 0
         try:
             discount_amount = float(discount_amount)
         except (TypeError, ValueError):
             discount_amount = 0
-        
+
         if discount_amount > 0:
             discount_int = int(discount_amount)
             discount_row = ft.Container(
@@ -682,8 +755,7 @@ class RepairCreateContent:
             )
             self.items_table_body.controls.append(discount_row)
             subtotal -= discount_amount
-        
-        # Total row
+
         subtotal_int = int(subtotal) if subtotal else 0
         total_row = ft.Container(
             content=ft.Row([
@@ -697,10 +769,10 @@ class RepairCreateContent:
             margin=ft.Margin(left=0, right=0, top=4, bottom=0),
         )
         self.items_table_body.controls.append(total_row)
-        
+
         self.total_text.value = f"{subtotal_int:,} KIP"
         self.page.update()
-    
+
     def select_mechanic(self, mechanic: dict):
         self.selected_mechanic_id = mechanic.get('id')
         self.selected_mechanic_data = mechanic
@@ -711,7 +783,7 @@ class RepairCreateContent:
         self.mechanic_search_field.value = name
         self._update_mechanic_list()
         self.page.update()
-    
+
     def clear_selected_mechanic(self):
         self.selected_mechanic_id = None
         self.selected_mechanic_data = None
@@ -719,38 +791,40 @@ class RepairCreateContent:
         self.mechanic_search_field.value = ""
         self._update_mechanic_list()
         self.page.update()
-    
+
     def clear_selected_job(self):
         self.selected_job = None
         self.selected_quotation = None
         self.quotation_items = []
+        self.available_quotations = []
         self.selected_job_card.visible = False
         self.job_details_card.visible = False
         self.quotation_card.visible = False
+        self.quotation_selection_container.visible = False
         self.job_search_field.value = ""
         self._update_job_list()
         self._update_items_table()
         self.page.update()
-    
+
     # ==================== SEARCH HANDLERS ====================
     def on_search_job(self, e):
         query = self.job_search_field.value.lower() if self.job_search_field.value else ""
         self.job_clear_button.visible = bool(query)
-        
+
         if not query:
             self.job_results_container.visible = False
             self.page.update()
             return
-        
+
         filtered = [
             job for job in self.approved_jobs
             if query in job.get('job_no', '').lower()
             or query in job.get('customer_name', '').lower()
             or query in job.get('plate_number', '').lower()
         ]
-        
+
         self.job_results_list.controls.clear()
-        
+
         if not filtered:
             self.job_results_list.controls.append(
                 ft.Container(
@@ -764,7 +838,7 @@ class RepairCreateContent:
                 job_no = job.get('job_no', '-')
                 customer_name = job.get('customer_name', '-')
                 plate_number = job.get('plate_number', '-')
-                
+
                 result_item = ft.Container(
                     content=ft.Row([
                         ft.Container(
@@ -787,20 +861,20 @@ class RepairCreateContent:
                     on_click=lambda e, j=job: self.select_job_order(j),
                 )
                 self.job_results_list.controls.append(result_item)
-        
+
         self.job_results_container.visible = True
         self.page.update()
-    
+
     def clear_job_search(self):
         self.job_search_field.value = ""
         self.job_clear_button.visible = False
         self.job_results_container.visible = False
         self.page.update()
-    
+
     def on_search_mechanic(self, e):
         query = self.mechanic_search_field.value.lower() if self.mechanic_search_field.value else ""
         self.mechanic_clear_button.visible = bool(query)
-        
+
         if not query:
             self.filtered_mechanics = self.mechanics.copy()
         else:
@@ -809,84 +883,99 @@ class RepairCreateContent:
                 if query in (m.get('fullname', m.get('name', '')).lower())
                 or query in m.get('phone', '').lower()
             ]
-        
+
         self._update_mechanic_list()
         self.page.update()
-    
+
     def clear_mechanic_search(self):
         self.mechanic_search_field.value = ""
         self.mechanic_clear_button.visible = False
         self.filtered_mechanics = self.mechanics.copy()
         self._update_mechanic_list()
         self.page.update()
-    
-    # ==================== CREATE REPAIR ====================
+
+    # ==================== CREATE REPAIR (WITH DOUBLE-CLICK GUARD) ====================
     def create_repair_order(self, e):
+        # ✅ Prevent double-click submission
+        if self.is_creating:
+            return
+
         if not self.selected_job:
             self.show_snack_bar(get_text("please_select_job_order"), "error")
             return
-        
+
         if not self.selected_mechanic_id:
             self.show_snack_bar(get_text("please_select_mechanic"), "error")
             return
-        
+
+        # ✅ Must select a quotation before creating repair
+        if not self.selected_quotation:
+            self.show_snack_bar(get_text("please_select_quotation_first"), "error")
+            return
+
+        # ✅ Disable button and set flag immediately
+        self.is_creating = True
         self.create_btn.disabled = True
         self.create_btn.content.controls[0].name = ft.Icons.HOURGLASS_EMPTY
         self.page.update()
-        
+
         try:
+            # ✅ Send quotation_id to backend as parameter (not stored in DB)
+            # The backend will use this quotation_id to fetch the correct parts
             result = self.client.create_repair_order(
-                self.selected_job.get('id'), 
-                self.selected_mechanic_id
+                job_order_id=self.selected_job.get('id'),
+                mechanic_id=self.selected_mechanic_id,
+                quotation_id=self.selected_quotation.get('id')  # ✅ Pass quotation_id
             )
             print(f"DEBUG: create_repair_order result = {result}")
-            
+
             if result and result.get('id'):
                 repair_id = result.get('id')
-                
-                try:
-                    self.client.update_repair_status(repair_id, 'working')
-                    print(f"DEBUG: Updated repair {repair_id} status to 'working'")
-                except Exception as status_ex:
-                    print(f"DEBUG: Error updating status: {status_ex}")
-                
+                self.is_creating = False
                 self.show_success_popup(repair_id)
             else:
+                self.is_creating = False
                 self.create_btn.disabled = False
                 self.create_btn.content.controls[0].name = ft.Icons.CONSTRUCTION
                 self.show_snack_bar(get_text("create_repair_order_failed"), "error")
+                self.page.update()
+
         except Exception as ex:
             error_msg = str(ex)
             print(f"DEBUG: Exception = {ex}")
+            self.is_creating = False
             self.create_btn.disabled = False
             self.create_btn.content.controls[0].name = ft.Icons.CONSTRUCTION
-            
+            self.page.update()
+
             if "already exists" in error_msg.lower():
                 self.show_snack_bar(get_text("repair_already_exists"), "error")
                 self.navigate("repair_list")
             else:
                 self.show_snack_bar(f"{get_text('error')}: {error_msg}", "error")
-        
-        self.page.update()
-    
-    # ==================== FIXED SUCCESS POPUP ====================
+
+    def _format_currency(self, amount):
+        try:
+            return f"{int(amount or 0):,} KIP"
+        except:
+            return "0 KIP"
+
+    # ==================== SUCCESS POPUP ====================
     def show_success_popup(self, repair_id):
         def go_to_detail(e):
-            # Close and remove popup before navigating
             popup.open = False
             self.page.update()
             if popup in self.page.overlay:
                 self.page.overlay.remove(popup)
             self.navigate("repair_detail", repair_id=repair_id)
-        
+
         def go_to_list(e):
-            # Close and remove popup before navigating
             popup.open = False
             self.page.update()
             if popup in self.page.overlay:
                 self.page.overlay.remove(popup)
             self.navigate("repair_list")
-        
+
         popup = ft.AlertDialog(
             modal=True,
             shape=ft.RoundedRectangleBorder(radius=16),
@@ -969,22 +1058,21 @@ class RepairCreateContent:
             ],
             actions_alignment=ft.MainAxisAlignment.CENTER,
         )
-        
+
         self.page.overlay.append(popup)
         popup.open = True
         self.page.update()
-    
+
     def show_snack_bar(self, message: str, type="success"):
         """Show snackbar notification - Bottom center with auto width"""
-        
-        # Remove existing snackbar if any
+
         if self.current_snackbar:
             try:
                 self.page.overlay.remove(self.current_snackbar)
             except:
                 pass
             self.current_snackbar = None
-        
+
         if type == "success":
             bgcolor = ft.Colors.GREEN_600
             icon = ft.Icons.CHECK_CIRCLE
@@ -994,8 +1082,7 @@ class RepairCreateContent:
         else:
             bgcolor = ft.Colors.GREY_800
             icon = ft.Icons.INFO
-        
-        # Create snackbar content with auto width
+
         snack_content = ft.Container(
             content=ft.Row(
                 [
@@ -1015,25 +1102,21 @@ class RepairCreateContent:
                 color=ft.Colors.with_opacity(0.2, ft.Colors.BLACK),
             ),
         )
-        
-        # Create overlay container - positioned at bottom center
+
         snackbar = ft.Container(
             content=snack_content,
             margin=ft.Margin(left=30, right=30, top=0, bottom=20),
-            alignment=ft.Alignment(0, 1),  # Bottom Center
+            alignment=ft.Alignment(0, 1),
             animate_opacity=ft.Animation(300, ft.AnimationCurve.EASE_IN),
             opacity=0,
         )
-        
-        # Add to overlay
+
         self.page.overlay.append(snackbar)
         self.current_snackbar = snackbar
-        
-        # Animate in
+
         snackbar.opacity = 1
         self.page.update()
-        
-        # Auto dismiss after 3 seconds using asyncio
+
         async def dismiss_after_delay():
             await asyncio.sleep(2.0)
             if snackbar in self.page.overlay:
@@ -1045,6 +1128,5 @@ class RepairCreateContent:
                     if self.current_snackbar == snackbar:
                         self.current_snackbar = None
                     self.page.update()
-        
-        # Run the dismiss task
+
         self.page.run_task(dismiss_after_delay)

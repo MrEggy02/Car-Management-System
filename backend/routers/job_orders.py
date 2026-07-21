@@ -294,6 +294,170 @@ def get_job_order(order_id: int, user: dict = Depends(authenticate_user)):
         db.close()
 
 
+# ==================== NEW: GET JOB ORDER WITH ALL DETAILS (Multiple Quotations, Repairs, Invoices) ====================
+@router.get("/job-orders/{order_id}/all-details")
+def get_job_order_all_details(order_id: int, user: dict = Depends(authenticate_user)):
+    """
+    Get job order with all related quotations, repair orders, and invoices
+    ດຶງ Job Order ພ້ອມຂໍ້ມູນທີ່ກ່ຽວຂ້ອງທັງໝົດ:
+    - Quotations ທັງໝົດ
+    - Repair Orders ທັງໝົດ
+    - Invoices ທັງໝົດ
+    """
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+    try:
+        # 1. Get main job order info
+        cursor.execute("""
+            SELECT 
+                jo.id,
+                jo.job_no,
+                jo.customer_id,
+                jo.vehicle_id,
+                jo.receive_date,
+                jo.problem_description,
+                jo.car_defects,
+                jo.signed_receipt_image,
+                jo.mileage,
+                jo.fuel_level,
+                jo.status,
+                jo.created_by,
+                jo.closed_by,
+                jo.closed_at,
+                c.name as customer_name,
+                c.phone as customer_phone,
+                c.address,
+                v.plate_number,
+                b.name as brand,
+                v.model,
+                v.year,
+                v.color,
+                e.name as created_by_name,
+                ce.name as closed_by_name
+            FROM job_orders jo
+            LEFT JOIN customers c ON jo.customer_id = c.id
+            LEFT JOIN vehicles v ON jo.vehicle_id = v.id
+            LEFT JOIN brands b ON v.brand_id = b.id
+            LEFT JOIN employees e ON jo.created_by = e.id
+            LEFT JOIN employees ce ON jo.closed_by = ce.id
+            WHERE jo.id = %s
+        """, (order_id,))
+        
+        order = cursor.fetchone()
+        if not order:
+            raise HTTPException(status_code=404, detail="Job order not found")
+        
+        if order.get('receive_date'):
+            order['receive_date'] = str(order['receive_date'])
+        if order.get('closed_at'):
+            order['closed_at'] = str(order['closed_at'])
+        
+        # 2. Get all quotations for this job order
+        cursor.execute("""
+            SELECT 
+                id, 
+                status, 
+                sub_total, 
+                discount_amount, 
+                net_total,
+                created_at,
+                created_by,
+                approved_by
+            FROM quotations 
+            WHERE job_order_id = %s 
+            ORDER BY id DESC
+        """, (order_id,))
+        quotations = cursor.fetchall()
+        for q in quotations:
+            if q.get('created_at'):
+                q['created_at'] = str(q['created_at'])
+            if q.get('sub_total'):
+                q['sub_total'] = float(q['sub_total'])
+            if q.get('discount_amount'):
+                q['discount_amount'] = float(q['discount_amount'])
+            if q.get('net_total'):
+                q['net_total'] = float(q['net_total'])
+        
+        # 3. Get all repair orders for this job order
+        # FIXED: Removed ro.quotation_id because column does not exist
+        cursor.execute("""
+            SELECT 
+                ro.id,
+                ro.job_order_id,
+                ro.mechanic_id,
+                ro.status,
+                ro.start_date,
+                ro.end_date,
+                e.name as mechanic_name
+            FROM repair_orders ro
+            LEFT JOIN employees e ON ro.mechanic_id = e.id
+            WHERE ro.job_order_id = %s 
+            ORDER BY ro.id DESC
+        """, (order_id,))
+        repair_orders = cursor.fetchall()
+        for ro in repair_orders:
+            if ro.get('start_date'):
+                ro['start_date'] = str(ro['start_date'])
+            if ro.get('end_date'):
+                ro['end_date'] = str(ro['end_date'])
+        
+        # 4. Get all invoices for this job order
+        # FIXED: Removed quotation_id because column does not exist
+        cursor.execute("""
+            SELECT 
+                id,
+                job_order_id,
+                total_amount,
+                total_discount,
+                final_total,
+                payment_method,
+                payment_status,
+                received_amount,
+                change_amount,
+                paid_date,
+                created_by
+            FROM invoices 
+            WHERE job_order_id = %s 
+            ORDER BY id DESC
+        """, (order_id,))
+        invoices = cursor.fetchall()
+        for inv in invoices:
+            if inv.get('paid_date'):
+                inv['paid_date'] = str(inv['paid_date'])
+            if inv.get('total_amount'):
+                inv['total_amount'] = float(inv['total_amount'])
+            if inv.get('total_discount'):
+                inv['total_discount'] = float(inv['total_discount'])
+            if inv.get('final_total'):
+                inv['final_total'] = float(inv['final_total'])
+            if inv.get('received_amount'):
+                inv['received_amount'] = float(inv['received_amount'])
+            if inv.get('change_amount'):
+                inv['change_amount'] = float(inv['change_amount'])
+        
+        # Return combined data
+        return {
+            "job_order": order,
+            "quotations": quotations,
+            "repair_orders": repair_orders,
+            "invoices": invoices
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error in get_job_order_all_details: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        db.close()
+
+
+# ==================== END NEW ====================
+
+
 @router.post("/job-orders")
 def create_job_order(
     customer_id: int = Form(...),
@@ -565,6 +729,7 @@ def get_job_orders_ready_for_invoice(user: dict = Depends(authenticate_user)):
 @router.get("/job-orders/{job_order_id}/invoice-info")
 def get_invoice_info_by_job_order(
     job_order_id: int, 
+    quotation_id: Optional[int] = None,
     user: dict = Depends(authenticate_user)
 ):
     """
@@ -627,23 +792,30 @@ def get_invoice_info_by_job_order(
         
         parts_list = []
         services_list = []
-        total_amount = 0.0
-        total_discount = 0.0
+        total_amount = 0
+        total_discount = 0
         
         # ========== GET PARTS AND SERVICES FROM APPROVED QUOTATION ==========
-        cursor.execute("""
-            SELECT id, discount_amount, sub_total, net_total
-            FROM quotations 
-            WHERE job_order_id = %s AND status = 'approved'
-            ORDER BY id DESC LIMIT 1
-        """, (job_order_id,))
-        quotation = cursor.fetchone()
+        if quotation_id:
+            cursor.execute("""
+                SELECT id, discount_amount, sub_total, net_total
+                FROM quotations
+                WHERE id = %s AND job_order_id = %s AND status = 'approved'
+            """, (quotation_id, job_order_id))
+            quotation = cursor.fetchone()
+        else:
+            cursor.execute("""
+                SELECT id, discount_amount, sub_total, net_total
+                FROM quotations
+                WHERE job_order_id = %s AND status = 'approved'
+                ORDER BY id DESC LIMIT 1
+            """, (job_order_id,))
+            quotation = cursor.fetchone()
         
         if quotation:
-            # Convert discount_amount to float
             total_discount = float(quotation.get('discount_amount', 0) or 0)
             
-            # 1. Get parts from quotation_items (using sell price from quotation)
+            # 1. Get parts from quotation_items
             cursor.execute("""
                 SELECT 
                     qi.id,
@@ -675,7 +847,7 @@ def get_invoice_info_by_job_order(
                 })
                 total_amount += total
             
-            # 2. Get only services from quotation_items (including custom services)
+            # 2. Get services from quotation_items
             cursor.execute("""
                 SELECT 
                     qi.id,
@@ -706,7 +878,6 @@ def get_invoice_info_by_job_order(
                 })
                 total_amount += total
         
-        # Calculate final total
         final_total = total_amount - total_discount
         if final_total < 0:
             final_total = 0
@@ -731,7 +902,8 @@ def get_invoice_info_by_job_order(
                 "total_amount": total_amount,
                 "total_discount": total_discount,
                 "final_total": final_total
-            }
+            },
+            "quotation_id": quotation['id'] if quotation else None
         }
         
     except Exception as e:

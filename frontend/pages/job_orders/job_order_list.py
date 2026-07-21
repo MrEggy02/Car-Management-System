@@ -599,7 +599,9 @@ class JobOrderListContent:
         dialog = show_job_order_detail_dialog(
             order, 
             self.primary_color, 
-            self._close_dialog,
+            self.client,                  # <-- เปลี่ยนเป็น positional (หรือใช้ client=self.client ก็ได้)
+            self.navigate,                # <-- เปลี่ยนเป็น positional (หรือใช้ navigate=self.navigate ก็ได้)
+            self._close_dialog,           # <-- เปลี่ยนเป็น positional (หรือใช้ on_close=self._close_dialog ก็ได้)
             on_print=lambda oid: self.print_job_order(oid),
             receipt_url=receipt_url
         )

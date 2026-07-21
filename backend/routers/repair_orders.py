@@ -63,7 +63,6 @@ def get_repair_orders(
                 order['end_date'] = str(order['end_date'])
             if order.get('brand') is None:
                 order['brand'] = "-"
-            # Convert Decimal to float for JSON
             if order.get('quotation_total'):
                 order['quotation_total'] = float(order['quotation_total'])
         
@@ -111,7 +110,7 @@ def get_repair_order(repair_id: int, user: dict = Depends(authenticate_user)):
             if repair_order.get('brand') is None:
                 repair_order['brand'] = "-"
             
-            # Get parts usage - from parts table
+            # Get parts usage
             cursor.execute("""
                 SELECT pu.*, p.name as part_name
                 FROM parts_usage pu
@@ -119,7 +118,6 @@ def get_repair_order(repair_id: int, user: dict = Depends(authenticate_user)):
                 WHERE pu.repair_id = %s
             """, (repair_id,))
             parts_usage = cursor.fetchall()
-            # Convert Decimal to float
             for part in parts_usage:
                 if part.get('cost_price'):
                     part['cost_price'] = float(part['cost_price'])
@@ -157,53 +155,59 @@ def get_repair_order_pdf(repair_id: int, user: dict = Depends(authenticate_user)
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ==================== MODIFIED: Accept quotation_id as parameter (not stored) ====================
 @router.post("/repair-orders")
 def create_repair_order(
     job_order_id: int = Form(...),
     mechanic_id: Optional[int] = Form(None),
+    quotation_id: Optional[int] = Form(None),  # ✅ Accept quotation_id but do NOT store it
     user: dict = Depends(authenticate_user)
 ):
-    """Create a new repair order from a job order (can only create once per job order)"""
+    """
+    Create a new repair order from a job order
+    ✅ ອະນຸຍາດໃຫ້ສ້າງຫຼາຍອັນຕໍ່ Job Order ໄດ້ (ລຶບການກວດສອບຊ້ຳອອກ)
+    ✅ quotation_id ຮັບເປັນ Parameter ແຕ່ບໍ່ໄດ້ເກັບໃນ Database (ຕາມ Requirement)
+    """
     db = get_db()
     cursor = db.cursor()
     try:
-        # Check if repair order already exists for this job order
-        cursor.execute("SELECT id, mechanic_id, status FROM repair_orders WHERE job_order_id = %s", (job_order_id,))
+        # ✅ Guard: If there's already an active repair for this job, return it instead of creating duplicate
+        cursor.execute(
+            "SELECT id FROM repair_orders WHERE job_order_id = %s AND status IN ('working','pending') ORDER BY id DESC LIMIT 1",
+            (job_order_id,)
+        )
         existing = cursor.fetchone()
-        
         if existing:
             existing_id = existing[0]
-            print(f"DEBUG: Repair order already exists for job_order_id={job_order_id}, id={existing_id}")
-            
-            raise HTTPException(
-                status_code=400, 
-                detail=f"Repair order already exists for this job order (ID: {existing_id}). Please use existing repair order."
-            )
-        
-        # Create new repair order with status 'working'
+            print(f"DEBUG: Existing active repair {existing_id} found for job {job_order_id}, skipping create")
+            return {
+                "id": existing_id,
+                "message": "Existing repair order returned",
+                "is_new": False,
+                "quotation_id": quotation_id
+            }
+
+        # ✅ Insert without quotation_id (not stored)
         cursor.execute("""
             INSERT INTO repair_orders (job_order_id, mechanic_id, status, start_date)
             VALUES (%s, %s, %s, %s)
         """, (job_order_id, mechanic_id, 'working', datetime.now()))
-        
         db.commit()
         repair_id = cursor.lastrowid
+        print(f"DEBUG: Created repair {repair_id} for job {job_order_id}, quotation {quotation_id} (not stored)")
         
-        print(f"DEBUG: Created new repair order id={repair_id} for job_order_id={job_order_id} with status='working'")
-        
-        # Also update job order status to 'repairing'
+        # Update job order status to 'repairing'
         cursor.execute("""
-            UPDATE job_orders SET status = 'repairing' WHERE id = %s
+            UPDATE job_orders SET status = 'repairing' WHERE id = %s AND status != 'repairing'
         """, (job_order_id,))
         db.commit()
         
         return {
             "id": repair_id,
             "message": "Repair order created successfully",
-            "is_new": True
+            "is_new": True,
+            "quotation_id": quotation_id  # return it for reference
         }
-    except HTTPException:
-        raise
     except Exception as e:
         db.rollback()
         print(f"Error creating repair order: {e}")
@@ -249,11 +253,10 @@ def update_repair_status(
     status: str = Form(...),
     user: dict = Depends(authenticate_user)
 ):
-    """Update repair order status (waiting/working/paused/completed)"""
+    """Update repair order status"""
     db = get_db()
     cursor = db.cursor()
     try:
-        # Get current status and job_order_id
         cursor.execute("SELECT status, start_date, job_order_id FROM repair_orders WHERE id = %s", (repair_id,))
         current = cursor.fetchone()
         if not current:
@@ -265,12 +268,10 @@ def update_repair_status(
         update_fields = ["status = %s"]
         params = [status]
         
-        # If starting work, set start_date (only if not already set)
         if status == 'working' and current_status != 'working':
             update_fields.append("start_date = %s")
             params.append(datetime.now())
         
-        # If completed, set end_date
         if status == 'completed':
             update_fields.append("end_date = %s")
             params.append(datetime.now())
@@ -279,16 +280,25 @@ def update_repair_status(
         cursor.execute(f"UPDATE repair_orders SET {', '.join(update_fields)} WHERE id = %s", params)
         db.commit()
         
-        # Update job order status based on repair status
+        # Update job order status based on all repairs
         if job_order_id:
-            if status == 'completed':
-                cursor.execute("""
-                    UPDATE job_orders SET status = 'finished' WHERE id = %s
-                """, (job_order_id,))
-            elif status == 'working':
-                cursor.execute("""
-                    UPDATE job_orders SET status = 'repairing' WHERE id = %s
-                """, (job_order_id,))
+            # Count total and completed repairs for this job
+            cursor.execute("""
+                SELECT COUNT(*) as total, 
+                       SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed
+                FROM repair_orders 
+                WHERE job_order_id = %s
+            """, (job_order_id,))
+            counts = cursor.fetchone()
+            total = counts[0] if counts else 0
+            completed = counts[1] if counts else 0
+            
+            if total > 0 and completed == total:
+                # All repairs are completed
+                cursor.execute("UPDATE job_orders SET status = 'finished' WHERE id = %s", (job_order_id,))
+            elif total > 0:
+                # At least one repair is still in progress
+                cursor.execute("UPDATE job_orders SET status = 'repairing' WHERE id = %s", (job_order_id,))
             db.commit()
         
         return {"message": f"Repair status updated to {status}"}
@@ -313,23 +323,19 @@ def add_part_usage(
     db = get_db()
     cursor = db.cursor(dictionary=True)
     try:
-        # Check repair order exists
         cursor.execute("SELECT id FROM repair_orders WHERE id = %s", (repair_id,))
         if not cursor.fetchone():
             raise HTTPException(status_code=404, detail="Repair order not found")
         
-        # Get part from parts table
         cursor.execute("SELECT id, cost_price, stock_qty FROM parts WHERE id = %s", (part_id,))
         part = cursor.fetchone()
         
         if not part:
             raise HTTPException(status_code=404, detail=f"Part not found (ID: {part_id})")
         
-        # Check stock
         if part['stock_qty'] < qty:
             raise HTTPException(status_code=400, detail=f"Insufficient stock. Available: {part['stock_qty']}")
         
-        # Add to parts_usage
         cursor.execute("""
             INSERT INTO parts_usage (repair_id, part_id, qty, cost_price, note)
             VALUES (%s, %s, %s, %s, %s)
@@ -337,12 +343,10 @@ def add_part_usage(
         
         usage_id = cursor.lastrowid
         
-        # Update stock (decrease)
         cursor.execute("""
             UPDATE parts SET stock_qty = stock_qty - %s WHERE id = %s
         """, (qty, part['id']))
         
-        # Add stock movement log
         cursor.execute("""
             INSERT INTO stock_movement (part_id, type, qty, ref_type, ref_id, date)
             VALUES (%s, 'OUT', %s, 'repair', %s, NOW())
@@ -377,7 +381,6 @@ def delete_part_usage(
     db = get_db()
     cursor = db.cursor(dictionary=True)
     try:
-        # Get part usage details
         cursor.execute("""
             SELECT part_id, qty FROM parts_usage WHERE id = %s AND repair_id = %s
         """, (usage_id, repair_id))
@@ -385,18 +388,15 @@ def delete_part_usage(
         if not usage:
             raise HTTPException(status_code=404, detail="Part usage not found")
         
-        # Return parts to stock (increase)
         cursor.execute("""
             UPDATE parts SET stock_qty = stock_qty + %s WHERE id = %s
         """, (usage['qty'], usage['part_id']))
         
-        # Add stock movement log
         cursor.execute("""
             INSERT INTO stock_movement (part_id, type, qty, ref_type, ref_id, date)
             VALUES (%s, 'IN', %s, 'repair', %s, NOW())
         """, (usage['part_id'], usage['qty'], repair_id))
         
-        # Delete usage record
         cursor.execute("DELETE FROM parts_usage WHERE id = %s", (usage_id,))
         
         db.commit()
@@ -413,15 +413,20 @@ def delete_part_usage(
         db.close()
 
 
+# ==================== MODIFIED: Pull parts with optional quotation_id ====================
 @router.post("/repair-orders/{repair_id}/pull-quotation-parts")
 def pull_quotation_parts(
     repair_id: int,
+    quotation_id: Optional[int] = Form(None),  # ✅ ສາມາດສົ່ງ quotation_id ມາເປັນ Option
     user: dict = Depends(authenticate_user)
 ):
     """
     Retrieve spare parts data from approved quotation,
     deduct inventory stock, record stock movement as 'OUT', 
     and record in parts_usage.
+    
+    ✅ ຖ້າມີ quotation_id ຈະໃຊ້ quotation ນັ້ນ
+    ✅ ຖ້າບໍ່ມີ ຈະໃຊ້ອັນຫຼ້າສຸດ
     """
     db = get_db()
     cursor = db.cursor(dictionary=True)
@@ -435,17 +440,29 @@ def pull_quotation_parts(
         job_order_id = repair["job_order_id"]
         if not job_order_id:
             raise HTTPException(status_code=400, detail="Repair order is not associated with any Job Order")
-            
-        # 2. Find approved quotation for this job order (most recent one)
-        cursor.execute("SELECT id FROM quotations WHERE job_order_id = %s AND status = 'approved' ORDER BY id DESC LIMIT 1", (job_order_id,))
-        quotation = cursor.fetchone()
-        if not quotation:
-            raise HTTPException(status_code=404, detail="No approved quotation found for this Job Order")
-
-            
+        
+        # 2. Find approved quotation (use specified one or most recent)
+        if quotation_id:
+            cursor.execute("""
+                SELECT id FROM quotations 
+                WHERE id = %s AND job_order_id = %s AND status = 'approved'
+            """, (quotation_id, job_order_id))
+            quotation = cursor.fetchone()
+            if not quotation:
+                raise HTTPException(status_code=404, detail="Specified quotation not found or not approved")
+        else:
+            cursor.execute("""
+                SELECT id FROM quotations 
+                WHERE job_order_id = %s AND status = 'approved' 
+                ORDER BY id DESC LIMIT 1
+            """, (job_order_id,))
+            quotation = cursor.fetchone()
+            if not quotation:
+                raise HTTPException(status_code=404, detail="No approved quotation found for this Job Order")
+        
         quotation_id = quotation["id"]
         
-        # 3. Retrieve all quotation items where part_id is not null, aggregating quantities for duplicates
+        # 3. Retrieve all quotation items where part_id is not null
         cursor.execute("""
             SELECT qi.part_id, SUM(qi.qty) as qty, p.name as part_name, p.cost_price, p.stock_qty
             FROM quotation_items qi
@@ -458,7 +475,7 @@ def pull_quotation_parts(
         if not quoted_parts:
             raise HTTPException(status_code=400, detail="No parts are listed in the approved quotation")
             
-        # 4. Query current parts already recorded in parts_usage for this repair
+        # 4. Query current parts already recorded
         cursor.execute("""
             SELECT part_id, SUM(qty) as used_qty
             FROM parts_usage
@@ -468,7 +485,7 @@ def pull_quotation_parts(
         already_used_rows = cursor.fetchall()
         already_used_map = {row["part_id"]: row["used_qty"] for row in already_used_rows}
         
-        # 5. Process each quoted part and calculate what to withdraw
+        # 5. Calculate what to withdraw
         to_withdraw = []
         for qp in quoted_parts:
             part_id = qp["part_id"]
@@ -505,18 +522,15 @@ def pull_quotation_parts(
             qty = item["qty"]
             cost_price = item["cost_price"]
             
-            # Add to parts_usage
             cursor.execute("""
                 INSERT INTO parts_usage (repair_id, part_id, qty, cost_price, note)
                 VALUES (%s, %s, %s, %s, 'Pulled from quotation')
             """, (repair_id, part_id, qty, cost_price))
             
-            # Deduct stock
             cursor.execute("""
                 UPDATE parts SET stock_qty = stock_qty - %s WHERE id = %s
             """, (qty, part_id))
             
-            # Log stock movement (type='OUT', ref_type='repair')
             cursor.execute("""
                 INSERT INTO stock_movement (part_id, type, qty, ref_type, ref_id, date)
                 VALUES (%s, 'OUT', %s, 'repair', %s, NOW())
@@ -542,13 +556,14 @@ def pull_quotation_parts(
     finally:
         cursor.close()
         db.close()
+
+
 @router.delete("/repair-orders/{repair_id}")
 def delete_repair_order(repair_id: int, user: dict = Depends(authenticate_user)):
-    """Delete a repair order and restore the job order status to 'approved' or 'pending'"""
+    """Delete a repair order and restore the job order status"""
     db = get_db()
     cursor = db.cursor()
     try:
-        # Get job_order_id and status before deleting
         cursor.execute("SELECT job_order_id, status FROM repair_orders WHERE id = %s", (repair_id,))
         row = cursor.fetchone()
         if not row:
@@ -558,13 +573,11 @@ def delete_repair_order(repair_id: int, user: dict = Depends(authenticate_user))
         if status == 'completed':
             raise HTTPException(status_code=400, detail="Cannot delete completed repair orders")
         
-        # 1. Fetch parts used in parts_usage to restore stock
+        # 1. Fetch parts used to restore stock
         cursor.execute("SELECT part_id, qty FROM parts_usage WHERE repair_id = %s", (repair_id,))
         usages = cursor.fetchall()
         for part_id, qty in usages:
-            # Return stock
             cursor.execute("UPDATE parts SET stock_qty = stock_qty + %s WHERE id = %s", (qty, part_id))
-            # Log stock movement (type='IN', ref_type='repair')
             cursor.execute("""
                 INSERT INTO stock_movement (part_id, type, qty, ref_type, ref_id, date)
                 VALUES (%s, 'IN', %s, 'repair', %s, NOW())
@@ -573,7 +586,7 @@ def delete_repair_order(repair_id: int, user: dict = Depends(authenticate_user))
         # 2. Delete repair order
         cursor.execute("DELETE FROM repair_orders WHERE id = %s", (repair_id,))
         
-        # 3. Update job order status based on approved quotation existence
+        # 3. Update job order status
         if job_order_id:
             cursor.execute("SELECT id FROM quotations WHERE job_order_id = %s AND status = 'approved'", (job_order_id,))
             has_approved_quote = cursor.fetchone()

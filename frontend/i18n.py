@@ -1286,11 +1286,17 @@ LO: Dict[str, str] = {
   "records": "ລາຍການ",
   "no_jobs_ready_for_invoice": "ບໍ່ມີໃບຮັບລົດທີ່ພ້ອມສ້າງໃບຮັບເງິນ",
   "complete_repair_first": "ຕ້ອງສ້ອມແປງສຳເລັດກ່ອນ",
+  "selected_mechanic": "ຊ່າງທີ່ເລືອກແລ້ວ",
+  "approved_quotation_items": "ລາຍການໃບສະເໜີທີ່ອະນຸມັດແລ້ວ",
+  "password_min_lenght": "ລະຫັດສັ້ນເກີນໄປ",
   
 }
 
 
 EN: Dict[str, str] = {
+    "password_min_lenght": "Password min lenght",
+      "approved_quotation_items": "Approved quetation items",
+    "selected_mechanic": "Selected mechanic",
     "no_jobs_ready_for_invoice": "No job ready for invoice",
   "complete_repair_first": "Complete repair first",
     "stock_history": "Stock history",

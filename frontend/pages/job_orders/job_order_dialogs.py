@@ -1,5 +1,418 @@
+# pages/job_orders/job_order_dialogs.py
 import flet as ft
+import asyncio
+import threading
+from datetime import datetime
 from i18n import get_text
+
+
+def show_job_order_detail_dialog(order, primary_color, client=None, navigate=None, on_close=None, on_print=None, receipt_url=None):
+    """
+    Show job order detail dialog with all related data (quotations, repairs, invoices)
+    If client and navigate are provided, load additional data and show tables.
+    """
+    # Basic order info
+    order_id = order.get("id")
+    job_no = order.get("job_no", "-")
+    customer_name = order.get("customer_name", "-")
+    customer_phone = order.get("customer_phone", "-")
+    plate_number = order.get("plate_number", "-")
+    brand = order.get("brand", "-")
+    model = order.get("model", "-")
+    receive_date = order.get("receive_date", "")
+    if receive_date:
+        try:
+            receive_date = receive_date.split()[0] if " " in receive_date else receive_date[:10]
+        except:
+            receive_date = "-"
+    else:
+        receive_date = "-"
+    problem = order.get("problem_description", "-")
+    car_defects = order.get("car_defects", "")
+    if not car_defects:
+        car_defects = "-"
+    mileage = order.get("mileage", 0)
+    fuel_level = order.get("fuel_level", "-")
+    status = order.get("status", "pending")
+    created_by = order.get("created_by_name", "-")
+
+    status_colors = {
+        "pending": "#FF9800",
+        "quoting": "#2196F3",
+        "repairing": "#9C27B0",
+        "finished": "#4CAF50",
+        "closed": "#607D8B",
+        "cancelled": "#F44336"
+    }
+    status_color = status_colors.get(status, "#607D8B")
+    status_text = get_text(status)
+
+    status_badge = ft.Container(
+        content=ft.Text(status_text, size=12, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500),
+        bgcolor=status_color,
+        border_radius=12,
+        padding=ft.Padding(left=12, right=12, top=4, bottom=4),
+    )
+
+    # Build basic info controls
+    basic_info = ft.Column([
+        ft.Row([
+            ft.Text(get_text("status"), size=12, color="#64748B", width=100),
+            status_badge,
+        ], spacing=8),
+        ft.Divider(height=1, color=ft.Colors.GREY_100),
+        ft.Text(get_text("customer_information"), size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
+        ft.Row([
+            ft.Column([
+                ft.Text(get_text("customer_name"), size=11, color="#64748B"),
+                ft.Text(customer_name, size=13, weight=ft.FontWeight.W_500),
+            ], spacing=2, expand=True),
+            ft.Column([
+                ft.Text(get_text("customer_phone"), size=11, color="#64748B"),
+                ft.Text(customer_phone, size=13),
+            ], spacing=2, expand=True),
+        ]),
+        ft.Text(get_text("vehicle_information"), size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
+        ft.Row([
+            ft.Column([
+                ft.Text(get_text("plate_number"), size=11, color="#64748B"),
+                ft.Text(plate_number, size=13, weight=ft.FontWeight.W_500),
+            ], spacing=2, expand=True),
+            ft.Column([
+                ft.Text(get_text("car_brand_model"), size=11, color="#64748B"),
+                ft.Text(f"{brand} {model}", size=13),
+            ], spacing=2, expand=True),
+        ]),
+        ft.Text(get_text("job_details"), size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
+        ft.Row([
+            ft.Column([
+                ft.Text(get_text("receive_date"), size=11, color="#64748B"),
+                ft.Text(receive_date, size=12),
+            ], spacing=2, expand=True),
+            ft.Column([
+                ft.Text(get_text("mileage"), size=11, color="#64748B"),
+                ft.Text(f"{mileage} km", size=12),
+            ], spacing=2, expand=True),
+            ft.Column([
+                ft.Text(get_text("fuel_level"), size=11, color="#64748B"),
+                ft.Text(fuel_level, size=12),
+            ], spacing=2, expand=True),
+        ]),
+        ft.Text(get_text("problem_description"), size=11, color="#64748B"),
+        ft.Text(problem, size=12, color="#1E293B"),
+        ft.Divider(height=1, color=ft.Colors.GREY_100),
+        ft.Text("ຕຳນິເດີມຂອງລົດ (Car Defects)", size=11, color="#64748B"),
+        ft.Text(car_defects, size=12, color="#1E293B"),
+        ft.Divider(height=1, color=ft.Colors.GREY_100),
+        ft.Row([
+            ft.Text(get_text("service_advisor"), size=11, color="#64748B"),
+            ft.Text(created_by, size=12, color="#64748B", expand=True),
+        ], spacing=8),
+    ], spacing=10)
+
+    # Add receipt image if available
+    if receipt_url:
+        basic_info.controls.append(ft.Divider(height=1, color=ft.Colors.GREY_100))
+        basic_info.controls.append(ft.Text("ຮູບໃບສັນຍາ (Receipt Image)", size=11, color="#64748B"))
+        basic_info.controls.append(
+            ft.Container(
+                content=ft.Image(src=receipt_url, fit="contain"),
+                border_radius=8,
+                border=ft.Border(
+                    top=ft.BorderSide(1, ft.Colors.GREY_200),
+                    right=ft.BorderSide(1, ft.Colors.GREY_200),
+                    bottom=ft.BorderSide(1, ft.Colors.GREY_200),
+                    left=ft.BorderSide(1, ft.Colors.GREY_200)
+                ),
+                padding=5,
+                height=200,
+                alignment=ft.Alignment(0, 0)
+            )
+        )
+
+    # Build actions row
+    actions_row = ft.Row([
+        ft.TextButton(
+            content=ft.Text(get_text("close"), color="#64748B"),
+            on_click=lambda e: on_close() if on_close else None,
+            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=6)),
+        ),
+    ], spacing=8, alignment=ft.MainAxisAlignment.END)
+
+    if on_print:
+        actions_row.controls.insert(0, ft.TextButton(
+            content=ft.Row([
+                ft.Icon(ft.Icons.PRINT, size=16, color=primary_color),
+                ft.Text(get_text("print"), size=12, color=primary_color),
+            ], spacing=4),
+            on_click=lambda e: on_print(order_id),
+            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=6)),
+        ))
+
+    # Create the dialog content container
+    content_container = ft.Container(
+        content=ft.Column([
+            basic_info,
+            ft.Container(height=8),
+        ], spacing=0, scroll=ft.ScrollMode.AUTO),
+        padding=ft.Padding(left=16, right=16, top=16, bottom=16),
+        width=700,
+        height=500,
+    )
+
+    dialog = ft.AlertDialog(
+        modal=True,
+        shape=ft.RoundedRectangleBorder(radius=14),
+        bgcolor=ft.Colors.WHITE,
+        title=ft.Container(
+            content=ft.Row(
+                [
+                    ft.Container(
+                        content=ft.Icon(ft.Icons.RECEIPT, size=20, color=ft.Colors.WHITE),
+                        bgcolor=primary_color,
+                        border_radius=10,
+                        padding=ft.Padding(left=5, right=5, top=5, bottom=5),
+                    ),
+                    ft.Text(f"{get_text('job_order_detail')}: {job_no}", size=15, weight=ft.FontWeight.BOLD, color="#1E293B"),
+                ],
+                spacing=8,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            ),
+            padding=ft.Padding(left=16, right=16, top=10, bottom=10),
+            border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
+        ),
+        content=content_container,
+        actions=[
+            ft.Container(
+                content=actions_row,
+                padding=ft.Padding(left=16, right=16, top=10, bottom=10),
+                border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_100)),
+            ),
+        ],
+        actions_alignment=ft.MainAxisAlignment.END,
+    )
+
+    # If client is provided, load additional data asynchronously
+    if client and navigate:
+        # Show loading indicator in the content area
+        content_container.content = ft.Column([
+            ft.Container(
+                content=ft.Column([
+                    ft.ProgressRing(width=40, height=40),
+                    ft.Container(height=10),
+                    ft.Text(get_text("loading"), size=14, color="#64748B"),
+                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                alignment=ft.Alignment(0, 0),
+                height=400,
+            ),
+        ], spacing=0)
+
+        # Define async functions for updating UI
+        async def update_content_async(data):
+            # Build the full content with tables
+            quotations = data.get('quotations', [])
+            repairs = data.get('repair_orders', [])
+            invoices = data.get('invoices', [])
+
+            # Build sections
+            sections = [basic_info]
+
+            # Quotations section
+            if quotations:
+                sections.append(ft.Divider(height=1, color=ft.Colors.GREY_200))
+                sections.append(ft.Text("ໃບສະເໜີລາຄາ (Quotations)", size=14, weight=ft.FontWeight.W_600, color="#1E293B"))
+                sections.append(ft.Container(height=6))
+                sections.append(_build_table(
+                    headers=["ID", "Status", "Net Total", "Date"],
+                    rows=[
+                        [
+                            f"QT-{q.get('id', 0):04d}",
+                            _get_status_text(q.get('status', 'draft')),
+                            f"{int(q.get('net_total', 0)):,} KIP",
+                            q.get('created_at', '')[:10] if q.get('created_at') else '-'
+                        ]
+                        for q in quotations[:10]
+                    ],
+                    on_row_click=lambda qid: navigate("quotation_list", job_order_id=order_id) if navigate else None
+                ))
+
+            # Repairs section
+            if repairs:
+                sections.append(ft.Divider(height=1, color=ft.Colors.GREY_200))
+                sections.append(ft.Text("ໃບສ້ອມແປງ (Repair Orders)", size=14, weight=ft.FontWeight.W_600, color="#1E293B"))
+                sections.append(ft.Container(height=6))
+                sections.append(_build_table(
+                    headers=["ID", "Mechanic", "Status", "Start Date", "End Date"],
+                    rows=[
+                        [
+                            f"R{r.get('id', 0):04d}",
+                            r.get('mechanic_name', '-'),
+                            _get_status_text(r.get('status', 'working')),
+                            r.get('start_date', '')[:10] if r.get('start_date') else '-',
+                            r.get('end_date', '')[:10] if r.get('end_date') else '-'
+                        ]
+                        for r in repairs[:10]
+                    ],
+                    on_row_click=lambda rid: navigate("repair_detail", repair_id=rid, read_only=True) if navigate else None
+                ))
+
+            # Invoices section
+            if invoices:
+                sections.append(ft.Divider(height=1, color=ft.Colors.GREY_200))
+                sections.append(ft.Text("ໃບຮັບເງິນ (Invoices)", size=14, weight=ft.FontWeight.W_600, color="#1E293B"))
+                sections.append(ft.Container(height=6))
+                sections.append(_build_table(
+                    headers=["ID", "Method", "Status", "Amount", "Date"],
+                    rows=[
+                        [
+                            f"INV-{inv.get('id', 0):04d}",
+                            _get_payment_method_text(inv.get('payment_method', 'cash')),
+                            _get_payment_status_text(inv.get('payment_status', 'pending')),
+                            f"{int(inv.get('final_total', 0)):,} KIP",
+                            inv.get('paid_date', '')[:10] if inv.get('paid_date') else '-'
+                        ]
+                        for inv in invoices[:10]
+                    ],
+                    on_row_click=lambda iid: navigate("invoice_detail", invoice_id=iid) if navigate else None
+                ))
+
+            # Update content
+            content_container.content = ft.Column(sections, spacing=8, scroll=ft.ScrollMode.AUTO)
+            content_container.height = 500
+            dialog.update()
+
+        async def show_error_async(msg):
+            content_container.content = ft.Column([
+                ft.Container(
+                    content=ft.Column([
+                        ft.Icon(ft.Icons.ERROR_OUTLINE, size=48, color=ft.Colors.RED_400),
+                        ft.Text(f"{get_text('error')}: {msg}", size=14, color=ft.Colors.RED_600),
+                    ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=8),
+                    alignment=ft.Alignment(0, 0),
+                    height=400,
+                ),
+            ], spacing=0)
+            dialog.update()
+
+        # Async load in thread
+        def load_details():
+            try:
+                result = client.get_job_order_all_details(order_id)
+                # Update UI on main thread using async function
+                if dialog.page:
+                    dialog.page.run_task(update_content_async, result)
+            except Exception as e:
+                print(f"Error loading job order details: {e}")
+                if dialog.page:
+                    dialog.page.run_task(show_error_async, str(e))
+
+        # Start loading
+        threading.Thread(target=load_details, daemon=True).start()
+
+    return dialog
+
+
+def _get_status_text(status):
+    """Get status text translation"""
+    status_map = {
+        "pending": get_text("pending"),
+        "quoting": get_text("quoting"),
+        "repairing": get_text("repairing"),
+        "finished": get_text("finished"),
+        "closed": get_text("closed"),
+        "cancelled": get_text("cancelled"),
+        "approved": get_text("approved"),
+        "rejected": get_text("rejected"),
+        "draft": get_text("draft"),
+        "working": get_text("working"),
+        "completed": get_text("completed"),
+    }
+    return status_map.get(status, status)
+
+
+def _get_payment_method_text(method):
+    """Get payment method text translation"""
+    method_map = {
+        "cash": get_text("payment_cash"),
+        "transfer": get_text("payment_transfer"),
+    }
+    return method_map.get(method, method)
+
+
+def _get_payment_status_text(status):
+    """Get payment status text translation"""
+    status_map = {
+        "pending": get_text("status_pending"),
+        "paid": get_text("status_paid"),
+    }
+    return status_map.get(status, status)
+
+
+def _build_table(headers, rows, on_row_click=None):
+    """Helper to build a simple table with clickable rows"""
+    table_cols = []
+    for h in headers:
+        table_cols.append(
+            ft.Container(
+                content=ft.Text(h, size=11, weight=ft.FontWeight.W_600, color="#64748B"),
+                expand=True,
+                alignment=ft.Alignment(0, 0),
+            )
+        )
+
+    header_row = ft.Container(
+        content=ft.Row(table_cols, spacing=4),
+        padding=ft.Padding(left=8, right=8, top=8, bottom=8),
+        bgcolor=ft.Colors.GREY_100,
+        border_radius=ft.BorderRadius.only(top_left=6, top_right=6),
+    )
+
+    rows_controls = []
+    for i, row_data in enumerate(rows):
+        row_cells = []
+        for cell in row_data:
+            row_cells.append(
+                ft.Container(
+                    content=ft.Text(str(cell), size=12, color="#1E293B"),
+                    expand=True,
+                    alignment=ft.Alignment(0, 0),
+                )
+            )
+
+        # Get the ID from the first column for click handler
+        row_id = row_data[0] if row_data else None
+        # If row_id is like "QT-0005" or "INV-0012", extract the numeric part
+        if row_id and isinstance(row_id, str) and '-' in row_id:
+            try:
+                row_id = int(row_id.split('-')[1])
+            except:
+                pass
+
+        row_container = ft.Container(
+            content=ft.Row(row_cells, spacing=4),
+            padding=ft.Padding(left=8, right=8, top=8, bottom=8),
+            bgcolor=ft.Colors.GREY_50 if i % 2 == 0 else ft.Colors.WHITE,
+            ink=True,
+            on_click=lambda e, rid=row_id: on_row_click(rid) if on_row_click and rid else None,
+        )
+        rows_controls.append(row_container)
+        if i < len(rows) - 1:
+            rows_controls.append(ft.Divider(height=1, color=ft.Colors.GREY_200))
+
+    # FIX: Column doesn't accept border, so wrap it in a Container
+    return ft.Container(
+        content=ft.Column(
+            [header_row] + rows_controls,
+            spacing=0,
+        ),
+        border=ft.Border(
+            top=ft.BorderSide(1, ft.Colors.GREY_200),
+            right=ft.BorderSide(1, ft.Colors.GREY_200),
+            bottom=ft.BorderSide(1, ft.Colors.GREY_200),
+            left=ft.BorderSide(1, ft.Colors.GREY_200)
+        ),
+        border_radius=6,
+    )
 
 
 def show_create_job_order_dialog(primary_color, customers, vehicles_by_customer, on_save, on_close, page):
@@ -867,183 +1280,6 @@ def show_create_job_order_dialog(primary_color, customers, vehicles_by_customer,
         page.overlay.append(add_dialog)
         add_dialog.open = True
         page.update()
-    
-    return dialog
-
-
-def show_job_order_detail_dialog(order, primary_color, on_close, on_print=None, receipt_url=None):
-    """Show job order detail dialog with print button"""
-    
-    order_id = order.get("id")
-    job_no = order.get("job_no", "-")
-    customer_name = order.get("customer_name", "-")
-    customer_phone = order.get("customer_phone", "-")
-    plate_number = order.get("plate_number", "-")
-    brand = order.get("brand", "-")
-    model = order.get("model", "-")
-    receive_date = order.get("receive_date", "")
-    if receive_date:
-        try:
-            receive_date = receive_date.split()[0] if " " in receive_date else receive_date[:10]
-        except:
-            receive_date = "-"
-    else:
-        receive_date = "-"
-    problem = order.get("problem_description", "-")
-    car_defects = order.get("car_defects", "")
-    if not car_defects:
-        car_defects = "-"
-    mileage = order.get("mileage", 0)
-    fuel_level = order.get("fuel_level", "-")
-    status = order.get("status", "pending")
-    created_by = order.get("created_by_name", "-")
-    
-    status_colors = {
-        "pending": "#FF9800",
-        "quoting": "#2196F3",
-        "repairing": "#9C27B0",
-        "finished": "#4CAF50",
-        "closed": "#607D8B",
-        "cancelled": "#F44336"
-    }
-    status_color = status_colors.get(status, "#607D8B")
-    status_text = get_text(status)
-    
-    status_badge = ft.Container(
-        content=ft.Text(status_text, size=12, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500),
-        bgcolor=status_color,
-        border_radius=12,
-        padding=ft.Padding(left=12, right=12, top=4, bottom=4),
-    )
-    
-    actions_row = ft.Row([
-        ft.TextButton(
-            content=ft.Text(get_text("close"), color="#64748B"),
-            on_click=lambda e: on_close(),
-            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=6)),
-        ),
-    ], spacing=8, alignment=ft.MainAxisAlignment.END)
-    
-    if on_print:
-        actions_row.controls.insert(0, ft.TextButton(
-            content=ft.Row([
-                ft.Icon(ft.Icons.PRINT, size=16, color=primary_color),
-                ft.Text(get_text("print"), size=12, color=primary_color),
-            ], spacing=4),
-            on_click=lambda e: on_print(order_id),
-            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=6)),
-        ))
-    
-    content_controls = [
-        ft.Row([
-            ft.Text(get_text("status"), size=12, color="#64748B", width=100),
-            status_badge,
-        ], spacing=8),
-        ft.Divider(height=1, color=ft.Colors.GREY_100),
-        ft.Text(get_text("customer_information"), size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
-        ft.Row([
-            ft.Column([
-                ft.Text(get_text("customer_name"), size=11, color="#64748B"),
-                ft.Text(customer_name, size=13, weight=ft.FontWeight.W_500),
-            ], spacing=2, expand=True),
-            ft.Column([
-                ft.Text(get_text("customer_phone"), size=11, color="#64748B"),
-                ft.Text(customer_phone, size=13),
-            ], spacing=2, expand=True),
-        ]),
-        ft.Text(get_text("vehicle_information"), size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
-        ft.Row([
-            ft.Column([
-                ft.Text(get_text("plate_number"), size=11, color="#64748B"),
-                ft.Text(plate_number, size=13, weight=ft.FontWeight.W_500),
-            ], spacing=2, expand=True),
-            ft.Column([
-                ft.Text(get_text("car_brand_model"), size=11, color="#64748B"),
-                ft.Text(f"{brand} {model}", size=13),
-            ], spacing=2, expand=True),
-        ]),
-        ft.Text(get_text("job_details"), size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
-        ft.Row([
-            ft.Column([
-                ft.Text(get_text("receive_date"), size=11, color="#64748B"),
-                ft.Text(receive_date, size=12),
-            ], spacing=2, expand=True),
-            ft.Column([
-                ft.Text(get_text("mileage"), size=11, color="#64748B"),
-                ft.Text(f"{mileage} km", size=12),
-            ], spacing=2, expand=True),
-            ft.Column([
-                ft.Text(get_text("fuel_level"), size=11, color="#64748B"),
-                ft.Text(fuel_level, size=12),
-            ], spacing=2, expand=True),
-        ]),
-        ft.Text(get_text("problem_description"), size=11, color="#64748B"),
-        ft.Text(problem, size=12, color="#1E293B"),
-        ft.Divider(height=1, color=ft.Colors.GREY_100),
-        ft.Text("ຕຳນິເດີມຂອງລົດ (Car Defects)", size=11, color="#64748B"),
-        ft.Text(car_defects, size=12, color="#1E293B"),
-        ft.Divider(height=1, color=ft.Colors.GREY_100),
-        ft.Row([
-            ft.Text(get_text("service_advisor"), size=11, color="#64748B"),
-            ft.Text(created_by, size=12, color="#64748B", expand=True),
-        ], spacing=8),
-    ]
-
-    if receipt_url:
-        content_controls.append(ft.Divider(height=1, color=ft.Colors.GREY_100))
-        content_controls.append(ft.Text("ຮູບໃບສັນຍາ (Receipt Image)", size=11, color="#64748B"))
-        content_controls.append(
-            ft.Container(
-                content=ft.Image(src=receipt_url, fit="contain"),
-                border_radius=8,
-                border=ft.Border(
-                    top=ft.BorderSide(1, ft.Colors.GREY_200), 
-                    right=ft.BorderSide(1, ft.Colors.GREY_200), 
-                    bottom=ft.BorderSide(1, ft.Colors.GREY_200), 
-                    left=ft.BorderSide(1, ft.Colors.GREY_200)
-                ),
-                padding=5,
-                height=200,
-                alignment=ft.Alignment(0, 0)
-            )
-        )
-
-    dialog = ft.AlertDialog(
-        modal=True,
-        shape=ft.RoundedRectangleBorder(radius=14),
-        bgcolor=ft.Colors.WHITE,
-        title=ft.Container(
-            content=ft.Row(
-                [
-                    ft.Container(
-                        content=ft.Icon(ft.Icons.RECEIPT, size=20, color=ft.Colors.WHITE),
-                        bgcolor=primary_color,
-                        border_radius=10,
-                        padding=ft.Padding(left=5, right=5, top=5, bottom=5),
-                    ),
-                    ft.Text(f"{get_text('job_order_detail')}: {job_no}", size=15, weight=ft.FontWeight.BOLD, color="#1E293B"),
-                ],
-                spacing=8,
-                vertical_alignment=ft.CrossAxisAlignment.CENTER,
-            ),
-            padding=ft.Padding(left=16, right=16, top=10, bottom=10),
-            border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
-        ),
-        content=ft.Container(
-            content=ft.Column(content_controls, spacing=12, scroll=ft.ScrollMode.AUTO),
-            padding=ft.Padding(left=16, right=16, top=16, bottom=16),
-            width=450,
-            height=480,
-        ),
-        actions=[
-            ft.Container(
-                content=actions_row,
-                padding=ft.Padding(left=16, right=16, top=10, bottom=10),
-                border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_100)),
-            ),
-        ],
-        actions_alignment=ft.MainAxisAlignment.END,
-    )
     
     return dialog
 
