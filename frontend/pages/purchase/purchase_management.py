@@ -2,7 +2,8 @@
 import flet as ft
 from flet import Alignment
 from typing import Dict, Callable
-import asyncio  # เพิ่ม import asyncio
+import asyncio
+from datetime import datetime
 
 from i18n import get_text
 
@@ -30,16 +31,23 @@ class PurchaseManagementContent:
         self.notification_button = None
         self.header_container = None
         self.current_dialog = None
+        self.kpi_container = None
+        self.date_from_field = None
+        self.date_to_field = None
 
     def build(self):
         header = self._build_header()
-        
+        self.kpi_container = ft.Container(
+            content=ft.Row([], spacing=12),
+            padding=ft.Padding(left=0, right=0, top=8, bottom=8),
+        )
         search_bar = self._build_search_bar()
         table = self._build_table()
         self.pagination_container = ft.Container(padding=ft.Padding(left=20, right=20, top=12, bottom=12))
         
         content_area = ft.Container(
             content=ft.Column([
+                self.kpi_container,
                 search_bar,
                 table,
                 self.pagination_container,
@@ -50,7 +58,7 @@ class PurchaseManagementContent:
         )
         
         main_content = ft.Container(
-            content=ft.Column([header, content_area], expand=True),
+            content=ft.Column([header, content_area], expand=True, scroll=ft.ScrollMode.AUTO),
             expand=True,
             bgcolor="#F5F7FA",
         )
@@ -182,6 +190,108 @@ class PurchaseManagementContent:
             )
             self.page.update()
     
+    # ─────────────────────────── KPI CARDS ───────────────────────────
+    def _build_kpi_cards(self):
+        statuses = [
+            ("ordering", "#2196F3", ft.Icons.PENDING),
+            ("partial", "#FF9800", ft.Icons.HOURGLASS_TOP),
+            ("completed", "#4CAF50", ft.Icons.CHECK_CIRCLE),
+            ("cancelled", "#F44336", ft.Icons.CANCEL),
+        ]
+        status_texts = {
+            "ordering": get_text("ordering") if get_text("ordering") else "Ordering",
+            "partial": get_text("partial") if get_text("partial") else "Partial",
+            "completed": get_text("completed") if get_text("completed") else "Completed",
+            "cancelled": get_text("cancelled") if get_text("cancelled") else "Cancelled",
+        }
+        counts = {s: 0 for s, _, __ in statuses}
+        for r in self.purchase_orders:
+            st = r.get("status", "ordering")
+            if st in counts:
+                counts[st] += 1
+
+        cards = []
+        for status, color, icon in statuses:
+            count = counts[status]
+            label = status_texts.get(status, status)
+            is_active = self.current_status_filter == status
+            card = ft.Container(
+                content=ft.Row(
+                    [
+                        ft.Container(
+                            content=ft.Icon(icon, size=22, color=ft.Colors.WHITE),
+                            bgcolor=color,
+                            border_radius=10,
+                            padding=ft.Padding(left=8, right=8, top=8, bottom=8),
+                        ),
+                        ft.Column(
+                            [
+                                ft.Text(str(count), size=22, weight=ft.FontWeight.BOLD, color="#1E293B"),
+                                ft.Text(label, size=11, color="#64748B"),
+                            ],
+                            spacing=1,
+                        ),
+                    ],
+                    spacing=10,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                ),
+                padding=ft.Padding(left=14, right=14, top=10, bottom=10),
+                bgcolor=ft.Colors.WHITE,
+                border_radius=12,
+                border=ft.Border(top=ft.BorderSide(2, color), right=ft.BorderSide(2, color), bottom=ft.BorderSide(2, color), left=ft.BorderSide(2, color)) if is_active else ft.Border(top=ft.BorderSide(1, "#E2E8F0"), right=ft.BorderSide(1, "#E2E8F0"), bottom=ft.BorderSide(1, "#E2E8F0"), left=ft.BorderSide(1, "#E2E8F0")),
+                expand=True,
+                ink=True,
+                on_click=lambda e, s=status: self._kpi_filter(s),
+                shadow=ft.BoxShadow(
+                    blur_radius=4,
+                    color=ft.Colors.with_opacity(0.06, ft.Colors.BLACK),
+                ),
+            )
+            cards.append(card)
+
+        total = len(self.purchase_orders)
+        is_all = self.current_status_filter == "all"
+        all_card = ft.Container(
+            content=ft.Row(
+                [
+                    ft.Container(
+                        content=ft.Icon(ft.Icons.LIST_ALT, size=22, color=ft.Colors.WHITE),
+                        bgcolor="#607D8B",
+                        border_radius=10,
+                        padding=ft.Padding(left=8, right=8, top=8, bottom=8),
+                    ),
+                    ft.Column(
+                        [
+                            ft.Text(str(total), size=22, weight=ft.FontWeight.BOLD, color="#1E293B"),
+                            ft.Text(get_text("all_status"), size=11, color="#64748B"),
+                        ],
+                        spacing=1,
+                    ),
+                ],
+                spacing=10,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            ),
+            padding=ft.Padding(left=14, right=14, top=10, bottom=10),
+            bgcolor=ft.Colors.WHITE,
+            border_radius=12,
+            border=ft.Border(top=ft.BorderSide(2, "#607D8B"), right=ft.BorderSide(2, "#607D8B"), bottom=ft.BorderSide(2, "#607D8B"), left=ft.BorderSide(2, "#607D8B")) if is_all else ft.Border(top=ft.BorderSide(1, "#E2E8F0"), right=ft.BorderSide(1, "#E2E8F0"), bottom=ft.BorderSide(1, "#E2E8F0"), left=ft.BorderSide(1, "#E2E8F0")),
+            expand=True,
+            ink=True,
+            on_click=lambda e: self._kpi_filter("all"),
+            shadow=ft.BoxShadow(
+                blur_radius=4,
+                color=ft.Colors.with_opacity(0.06, ft.Colors.BLACK),
+            ),
+        )
+
+        return ft.Row([all_card] + cards, spacing=12, expand=True)
+
+    def _kpi_filter(self, status: str):
+        self.current_status_filter = status
+        self.current_page = 1
+        
+        self.apply_filters()
+    
     def _load_status_chips(self):
         """Load status filter chips"""
         if not self.status_chips:
@@ -214,12 +324,12 @@ class PurchaseManagementContent:
     
     def filter_by_status(self, status_id):
         self.current_status_filter = status_id
-        self._load_status_chips()
+        
         self.apply_filters()
     
     def _build_search_bar(self):
         self.status_chips = ft.Row(spacing=8, scroll=ft.ScrollMode.AUTO)
-        self._load_status_chips()
+        
         
         self.search_field = ft.TextField(
             hint_text=get_text("search_purchase_order"),
@@ -242,15 +352,107 @@ class PurchaseManagementContent:
                 side=ft.BorderSide(1, ft.Colors.GREY_300),
             ),
         )
+
+        def clear_date_from(e):
+            self.date_from_field.value = ""
+            self.page.update()
+            self.apply_filters()
+
+        def clear_date_to(e):
+            self.date_to_field.value = ""
+            self.page.update()
+            self.apply_filters()
+
+        self.date_from_field = ft.TextField(
+            hint_text=get_text("date_from"),
+            border_radius=12,
+            bgcolor=ft.Colors.WHITE,
+            filled=True,
+            prefix_icon=ft.Icons.CALENDAR_TODAY,
+            suffix=ft.IconButton(icon=ft.Icons.CLOSE, on_click=clear_date_from, icon_size=16),
+            content_padding=ft.Padding(left=12, right=12, top=12, bottom=12),
+            expand=True,
+            border_color=ft.Colors.GREY_200,
+            focused_border_color=self.primary_color,
+            read_only=True,
+            on_focus=self._pick_date_from,
+        )
+
+        self.date_to_field = ft.TextField(
+            hint_text=get_text("date_to"),
+            border_radius=12,
+            bgcolor=ft.Colors.WHITE,
+            filled=True,
+            prefix_icon=ft.Icons.CALENDAR_TODAY,
+            suffix=ft.IconButton(icon=ft.Icons.CLOSE, on_click=clear_date_to, icon_size=16),
+            content_padding=ft.Padding(left=12, right=12, top=12, bottom=12),
+            expand=True,
+            border_color=ft.Colors.GREY_200,
+            focused_border_color=self.primary_color,
+            read_only=True,
+            on_focus=self._pick_date_to,
+        )
         
         return ft.Container(
             content=ft.Column([
                 ft.Row([self.search_field, refresh_button], spacing=10),
-                ft.Container(height=12),
+                ft.Container(height=8),
+                ft.Row([self.date_from_field, self.date_to_field], spacing=10),
+                ft.Container(height=8),
                 self.status_chips,
             ], spacing=0),
             margin=ft.Margin(left=0, right=0, top=0, bottom=16),
         )
+    
+    def _pick_date_from(self, e):
+        if getattr(self, 'ignore_from_focus', False):
+            self.ignore_from_focus = False
+            return
+            
+        def on_date_selected(e):
+            self.ignore_from_focus = True
+            if e.control.value:
+                self.date_from_field.value = e.control.value.strftime("%Y-%m-%d")
+                self.page.update()
+                self.apply_filters()
+                
+        def on_dismiss(e):
+            self.ignore_from_focus = True
+        
+        date_picker = ft.DatePicker(
+            on_change=on_date_selected,
+            on_dismiss=on_dismiss,
+            first_date=datetime(2020, 1, 1),
+            last_date=datetime.now(),
+        )
+        self.page.overlay.append(date_picker)
+        date_picker.open = True
+        self.page.update()
+        
+    def _pick_date_to(self, e):
+        if getattr(self, 'ignore_to_focus', False):
+            self.ignore_to_focus = False
+            return
+            
+        def on_date_selected(e):
+            self.ignore_to_focus = True
+            if e.control.value:
+                self.date_to_field.value = e.control.value.strftime("%Y-%m-%d")
+                self.page.update()
+                self.apply_filters()
+                
+        def on_dismiss(e):
+            self.ignore_to_focus = True
+        
+        date_picker = ft.DatePicker(
+            on_change=on_date_selected,
+            on_dismiss=on_dismiss,
+            first_date=datetime(2020, 1, 1),
+            last_date=datetime.now(),
+        )
+        self.page.overlay.append(date_picker)
+        date_picker.open = True
+        self.page.update()
     
     def _build_table(self):
         table_header = ft.Container(
@@ -270,9 +472,10 @@ class PurchaseManagementContent:
                     width=95,
                     alignment=ft.Alignment(0, 0),
                 ),
+                # ປ່ຽນຈາກ total_amount ເປັນ items count
                 ft.Container(
-                    content=ft.Text(get_text("total_amount"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
-                    width=100,
+                    content=ft.Text(get_text("items"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
+                    width=70,
                     alignment=ft.Alignment(1, 0),
                     padding=ft.Padding(left=0, right=8, top=0, bottom=0),
                 ),
@@ -444,8 +647,8 @@ class PurchaseManagementContent:
                     parts_list,
                 ]),
                 padding=ft.Padding(left=20, right=20, top=20, bottom=20),
-                width=450,
-                height=450,
+                width=420,
+                height=360,
             ),
             actions=[
                 ft.TextButton(get_text("close"), on_click=lambda e: self._close_dialog(dialog)),
@@ -550,9 +753,24 @@ class PurchaseManagementContent:
         
         try:
             orders = self.client.get_purchase_orders()
+            # ຄຳນວນຈຳນວນລາຍການຂອງແຕ່ລະ PO
+            for order in orders:
+                try:
+                    po_id = order.get('id')
+                    if po_id:
+                        po_detail = self.client.get_purchase_order(po_id)
+                        if po_detail:
+                            items = po_detail.get('items', [])
+                            order['items_count'] = len(items)
+                        else:
+                            order['items_count'] = 0
+                except:
+                    order['items_count'] = 0
+            
             self.purchase_orders = orders
             self.filtered_orders = orders.copy()
-            self.display_orders()
+            self.kpi_container.content = self._build_kpi_cards()
+            self.apply_filters()
         except Exception as ex:
             print(f"Error loading purchase orders: {ex}")
             self.table_rows.controls.append(
@@ -575,9 +793,11 @@ class PurchaseManagementContent:
         
         filtered = self.purchase_orders.copy()
         
+        # Apply status filter
         if selected_status and selected_status != "all":
             filtered = [o for o in filtered if o.get("status") == selected_status]
         
+        # Apply search filter
         if keyword:
             filtered = [
                 o for o in filtered
@@ -585,9 +805,50 @@ class PurchaseManagementContent:
                 or keyword in o.get("supplier_name", "").lower()
             ]
         
+        # Apply date filter
+        self._apply_date_filter(filtered)
+        
         self.filtered_orders = filtered
         self.current_page = 1
         self.display_orders()
+    
+    def _apply_date_filter(self, filtered_list):
+        """Apply date range filter to the filtered list"""
+        date_from_str = self.date_from_field.value.strip() if self.date_from_field and self.date_from_field.value else ""
+        date_to_str = self.date_to_field.value.strip() if self.date_to_field and self.date_to_field.value else ""
+        
+        try:
+            date_from = datetime.strptime(date_from_str, "%Y-%m-%d").date() if date_from_str else None
+        except ValueError:
+            date_from = None
+        
+        try:
+            date_to = datetime.strptime(date_to_str, "%Y-%m-%d").date() if date_to_str else None
+        except ValueError:
+            date_to = None
+        
+        if not date_from and not date_to:
+            return
+        
+        # Filter in-place
+        result = []
+        for r in filtered_list:
+            order_date = r.get("order_date", "")
+            if not order_date:
+                continue
+            try:
+                date_obj = datetime.strptime(str(order_date)[:10], "%Y-%m-%d").date()
+                if date_from and date_obj < date_from:
+                    continue
+                if date_to and date_obj > date_to:
+                    continue
+                result.append(r)
+            except ValueError:
+                continue
+        
+        # Replace the list content
+        filtered_list.clear()
+        filtered_list.extend(result)
     
     def display_orders(self):
         self.table_rows.controls.clear()
@@ -634,7 +895,7 @@ class PurchaseManagementContent:
             order_date = order_date[:10] if " " in order_date else order_date[:10]
         else:
             order_date = "-"
-        total_amount = order.get("total_amount", 0)
+        items_count = order.get("items_count", 0)  # ຈຳນວນລາຍການ
         status = order.get("status", "pending")
         created_by = order.get("created_by_name", "-")
         
@@ -701,9 +962,10 @@ class PurchaseManagementContent:
                     width=95,
                     alignment=ft.Alignment(0, 0),
                 ),
+                # ສະແດງຈຳນວນລາຍການແທນຍອດເງິນ
                 ft.Container(
-                    content=ft.Text(f"{int(total_amount):,}", size=13, weight=ft.FontWeight.W_500, color=ft.Colors.GREEN_700),
-                    width=100,
+                    content=ft.Text(f"{items_count}", size=13, weight=ft.FontWeight.W_500, color="#1E293B"),
+                    width=70,
                     alignment=ft.Alignment(1, 0),
                     padding=ft.Padding(left=0, right=8, top=0, bottom=0),
                 ),

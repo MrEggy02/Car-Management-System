@@ -121,14 +121,14 @@ class SidebarManager:
         """สร้างเมนู Data Management และซับเมนู (Dropdown)"""
         data_menu_items = [
             {"label": get_text("nav_employees"), "index": 1},
-            {"label": get_text("nav_suppliers"), "index": 2},
-            {"label": get_text("nav_services"), "index": 3},
-            {"label": get_text("nav_parts"), "index": 4},
-            {"label": get_text("nav_shop"), "index": 5},
+            {"label": get_text("nav_services"), "index": 2},
+            {"label": get_text("nav_suppliers"), "index": 3},
+            {"label": get_text("nav_shop"), "index": 4},
+            {"label": get_text("nav_parts"), "index": 5},
             {"label": get_text("nav_promotions"), "index": 6},
-            {"label": get_text("brands"), "index": 7},
+            {"label": get_text("part_categories"), "index": 7},
             {"label": get_text("units"), "index": 8},
-            {"label": get_text("part_categories"), "index": 9},
+            {"label": get_text("brands"), "index": 9},
         ]
         
         data_menu_container = ft.Container(

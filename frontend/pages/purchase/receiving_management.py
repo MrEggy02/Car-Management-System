@@ -2,7 +2,8 @@
 import flet as ft
 from flet import Alignment
 from typing import Dict, Callable
-import asyncio  # เพิ่ม import asyncio
+import asyncio
+from datetime import datetime, timedelta
 
 from i18n import get_text
 
@@ -22,17 +23,26 @@ class ReceivingManagementContent:
         self.items_per_page = 10
         self.total_pages = 1
         self.search_field = None
+        self.date_from_field = None
+        self.date_to_field = None
         self.table_rows = None
         self.pagination_container = None
+        self.kpi_container = None
+        self.current_date_filter = "all"  # all, today, week, month
 
     def build(self):
         header = self._build_header()
+        self.kpi_container = ft.Container(
+            content=ft.Row([], spacing=12),
+            padding=ft.Padding(left=0, right=0, top=8, bottom=8),
+        )
         search_bar = self._build_search_bar()
         table = self._build_table()
         self.pagination_container = ft.Container(padding=ft.Padding(left=20, right=20, top=12, bottom=12))
         
         content_area = ft.Container(
             content=ft.Column([
+                self.kpi_container,
                 search_bar,
                 table,
                 self.pagination_container,
@@ -64,7 +74,7 @@ class ReceivingManagementContent:
                                 weight=ft.FontWeight.BOLD,
                                 color=ft.Colors.WHITE,
                             ),
-                        ],
+                        ],      
                         spacing=2,
                     ),
                     ft.Container(expand=True),
@@ -94,6 +104,125 @@ class ReceivingManagementContent:
             border_radius=ft.BorderRadius.only(bottom_left=20, bottom_right=20),
         )
     
+    # ─────────────────────────── KPI CARDS ───────────────────────────
+    def _build_kpi_cards(self):
+        """Build KPI cards for receipt statistics"""
+        total = len(self.receipts)
+        
+        # Calculate today's receipts
+        today = datetime.now().date()
+        today_count = sum(1 for r in self.receipts if self._get_receipt_date(r) == today)
+        
+        # Calculate this week's receipts
+        week_start = today - timedelta(days=today.weekday())
+        week_count = sum(1 for r in self.receipts 
+                        if week_start <= self._get_receipt_date(r) <= today)
+        
+        # Calculate this month's receipts
+        month_start = today.replace(day=1)
+        month_count = sum(1 for r in self.receipts 
+                         if month_start <= self._get_receipt_date(r) <= today)
+        
+        cards = [
+            {
+                "label": get_text("total") if get_text("total") else "ທັງໝົດ",
+                "count": total,
+                "icon": ft.Icons.LIST_ALT,
+                "color": "#607D8B",
+                "filter": "all"
+            },
+            {
+                "label": get_text("today") if get_text("today") else "ມື້ນີ້",
+                "count": today_count,
+                "icon": ft.Icons.TODAY,
+                "color": "#2196F3",
+                "filter": "today"
+            },
+            {
+                "label": get_text("this_week") if get_text("this_week") else "ອາທິດນີ້",
+                "count": week_count,
+                "icon": ft.Icons.CALENDAR_VIEW_WEEK,
+                "color": "#4CAF50",
+                "filter": "week"
+            },
+            {
+                "label": get_text("this_month") if get_text("this_month") else "ເດືອນນີ້",
+                "count": month_count,
+                "icon": ft.Icons.CALENDAR_MONTH,
+                "color": "#FF9800",
+                "filter": "month"
+            },
+        ]
+        
+        kpi_cards = []
+        for card in cards:
+            is_active = self.current_date_filter == card["filter"]
+            kpi_cards.append(
+                ft.Container(
+                    content=ft.Row(
+                        [
+                            ft.Container(
+                                content=ft.Icon(card["icon"], size=22, color=ft.Colors.WHITE),
+                                bgcolor=card["color"],
+                                border_radius=10,
+                                padding=ft.Padding(left=8, right=8, top=8, bottom=8),
+                            ),
+                            ft.Column(
+                                [
+                                    ft.Text(str(card["count"]), size=22, weight=ft.FontWeight.BOLD, color="#1E293B"),
+                                    ft.Text(card["label"], size=11, color="#64748B"),
+                                ],
+                                spacing=1,
+                            ),
+                        ],
+                        spacing=10,
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                    ),
+                    padding=ft.Padding(left=14, right=14, top=10, bottom=10),
+                    bgcolor=ft.Colors.WHITE,
+                    border_radius=12,
+                    border=ft.Border(
+                        top=ft.BorderSide(2 if is_active else 1, card["color"] if is_active else "#E2E8F0"),
+                        right=ft.BorderSide(2 if is_active else 1, card["color"] if is_active else "#E2E8F0"),
+                        bottom=ft.BorderSide(2 if is_active else 1, card["color"] if is_active else "#E2E8F0"),
+                        left=ft.BorderSide(2 if is_active else 1, card["color"] if is_active else "#E2E8F0"),
+                    ),
+                    expand=True,
+                    ink=True,
+                    on_click=lambda e, f=card["filter"]: self._kpi_filter(f),
+                    shadow=ft.BoxShadow(
+                        blur_radius=4,
+                        color=ft.Colors.with_opacity(0.06, ft.Colors.BLACK),
+                    ),
+                )
+            )
+        
+        return ft.Row(kpi_cards, spacing=12, expand=True)
+    
+    def _get_receipt_date(self, receipt: Dict) -> datetime.date:
+        """Extract date from receipt"""
+        receipt_date = receipt.get("receipt_date", "")
+        if not receipt_date:
+            return datetime.now().date()
+        try:
+            return datetime.strptime(str(receipt_date)[:10], "%Y-%m-%d").date()
+        except:
+            return datetime.now().date()
+    
+    def _kpi_filter(self, filter_type: str):
+        """Filter receipts by date range from KPI cards"""
+        self.current_date_filter = filter_type
+        self.current_page = 1
+        self._update_kpi_cards()
+        self.apply_filters()
+    
+    def _update_kpi_cards(self):
+        """Update KPI cards highlight"""
+        if self.kpi_container:
+            self.kpi_container.content = self._build_kpi_cards()
+            self.page.update()
+    
+    # ─────────────────────────── SEARCH BAR ───────────────────────────
     def _build_search_bar(self):
         self.search_field = ft.TextField(
             hint_text=get_text("search_purchase_order") + " / " + get_text("goods_receipt_no"),
@@ -101,10 +230,42 @@ class ReceivingManagementContent:
             bgcolor=ft.Colors.WHITE,
             filled=True,
             prefix_icon=ft.Icons.SEARCH,
-            content_padding=ft.Padding(left=16, right=16, top=14, bottom=14),
+            content_padding=ft.Padding(left=16, right=16, top=12, bottom=12),
             expand=True,
         )
         self.search_field.on_change = self.on_search_change
+        
+        # Date from field
+        self.date_from_field = ft.TextField(
+            hint_text=get_text("date_from"),
+            border_radius=12,
+            bgcolor=ft.Colors.WHITE,
+            filled=True,
+            prefix_icon=ft.Icons.CALENDAR_TODAY,
+            suffix=ft.IconButton(icon=ft.Icons.CLOSE, on_click=self._clear_date_from, icon_size=16),
+            content_padding=ft.Padding(left=12, right=12, top=10, bottom=10),
+            width=140,
+            border_color=ft.Colors.GREY_200,
+            focused_border_color=self.primary_color,
+            read_only=True,
+            on_focus=self._pick_date_from,
+        )
+
+        # Date to field
+        self.date_to_field = ft.TextField(
+            hint_text=get_text("date_to"),
+            border_radius=12,
+            bgcolor=ft.Colors.WHITE,
+            filled=True,
+            prefix_icon=ft.Icons.CALENDAR_TODAY,
+            suffix=ft.IconButton(icon=ft.Icons.CLOSE, on_click=self._clear_date_to, icon_size=16),
+            content_padding=ft.Padding(left=12, right=12, top=10, bottom=10),
+            width=140,
+            border_color=ft.Colors.GREY_200,
+            focused_border_color=self.primary_color,
+            read_only=True,
+            on_focus=self._pick_date_to,
+        )
         
         refresh_button = ft.IconButton(
             icon=ft.Icons.REFRESH,
@@ -118,10 +279,87 @@ class ReceivingManagementContent:
         )
         
         return ft.Container(
-            content=ft.Row([self.search_field, refresh_button], spacing=10),
+            content=ft.Column([
+                ft.Row([
+                    self.search_field,
+                    self.date_from_field,
+                    self.date_to_field,
+                    refresh_button,
+                ], spacing=8, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+            ], spacing=0),
             margin=ft.Margin(left=0, right=0, top=0, bottom=16),
         )
     
+    # ─────────────────────────── DATE PICKER METHODS ───────────────────────────
+    def _clear_date_from(self, e):
+        self.date_from_field.value = ""
+        self.current_date_filter = "all"
+        self.page.update()
+        self.apply_filters()
+        self._update_kpi_cards()
+
+    def _clear_date_to(self, e):
+        self.date_to_field.value = ""
+        self.current_date_filter = "all"
+        self.page.update()
+        self.apply_filters()
+        self._update_kpi_cards()
+
+    def _pick_date_from(self, e):
+        if getattr(self, 'ignore_from_focus', False):
+            self.ignore_from_focus = False
+            return
+            
+        def on_date_selected(e):
+            self.ignore_from_focus = True
+            if e.control.value:
+                self.date_from_field.value = e.control.value.strftime("%Y-%m-%d")
+                self.current_date_filter = "all"
+                self.page.update()
+                self.apply_filters()
+                self._update_kpi_cards()
+                
+        def on_dismiss(e):
+            self.ignore_from_focus = True
+        
+        date_picker = ft.DatePicker(
+            on_change=on_date_selected,
+            on_dismiss=on_dismiss,
+            first_date=datetime(2020, 1, 1),
+            last_date=datetime.now(),
+        )
+        self.page.overlay.append(date_picker)
+        date_picker.open = True
+        self.page.update()
+        
+    def _pick_date_to(self, e):
+        if getattr(self, 'ignore_to_focus', False):
+            self.ignore_to_focus = False
+            return
+            
+        def on_date_selected(e):
+            self.ignore_to_focus = True
+            if e.control.value:
+                self.date_to_field.value = e.control.value.strftime("%Y-%m-%d")
+                self.current_date_filter = "all"
+                self.page.update()
+                self.apply_filters()
+                self._update_kpi_cards()
+                
+        def on_dismiss(e):
+            self.ignore_to_focus = True
+        
+        date_picker = ft.DatePicker(
+            on_change=on_date_selected,
+            on_dismiss=on_dismiss,
+            first_date=datetime(2020, 1, 1),
+            last_date=datetime.now(),
+        )
+        self.page.overlay.append(date_picker)
+        date_picker.open = True
+        self.page.update()
+    
+    # ─────────────────────────── TABLE ───────────────────────────
     def _build_table(self):
         table_header = ft.Container(
             content=ft.Row([
@@ -189,6 +427,7 @@ class ReceivingManagementContent:
             expand=True,
         )
     
+    # ─────────────────────────── LOAD & FILTER DATA ───────────────────────────
     def load_receipts(self):
         self.table_rows.controls.clear()
         self.page.update()
@@ -197,6 +436,7 @@ class ReceivingManagementContent:
             receipts = self.client.get_goods_receipts()
             self.receipts = receipts
             self.filtered_receipts = receipts.copy()
+            self.kpi_container.content = self._build_kpi_cards()
             self.display_receipts()
         except Exception as ex:
             print(f"Error loading goods receipts: {ex}")
@@ -210,22 +450,69 @@ class ReceivingManagementContent:
                 )
             )
             self.page.update()
-            
-    def on_search_change(self, e):
+    
+    def apply_filters(self):
+        """Apply all filters (search, date range, KPI date filter)"""
         keyword = self.search_field.value.lower() if self.search_field.value else ""
+        
+        # Start with all receipts
+        filtered = self.receipts.copy()
+        
+        # Apply KPI date filter
+        if self.current_date_filter == "today":
+            today = datetime.now().date()
+            filtered = [r for r in filtered if self._get_receipt_date(r) == today]
+        elif self.current_date_filter == "week":
+            today = datetime.now().date()
+            week_start = today - timedelta(days=today.weekday())
+            filtered = [r for r in filtered if week_start <= self._get_receipt_date(r) <= today]
+        elif self.current_date_filter == "month":
+            today = datetime.now().date()
+            month_start = today.replace(day=1)
+            filtered = [r for r in filtered if month_start <= self._get_receipt_date(r) <= today]
+        
+        # Apply search filter
         if keyword:
-            self.filtered_receipts = [
-                r for r in self.receipts
+            filtered = [
+                r for r in filtered
                 if keyword in r.get("receipt_no", "").lower()
                 or keyword in r.get("po_no", "").lower()
                 or keyword in r.get("supplier_name", "").lower()
             ]
-        else:
-            self.filtered_receipts = self.receipts.copy()
-            
+        
+        # Apply date range filter
+        date_from_str = self.date_from_field.value.strip() if self.date_from_field and self.date_from_field.value else ""
+        date_to_str = self.date_to_field.value.strip() if self.date_to_field and self.date_to_field.value else ""
+        
+        try:
+            date_from = datetime.strptime(date_from_str, "%Y-%m-%d").date() if date_from_str else None
+        except ValueError:
+            date_from = None
+        
+        try:
+            date_to = datetime.strptime(date_to_str, "%Y-%m-%d").date() if date_to_str else None
+        except ValueError:
+            date_to = None
+        
+        if date_from or date_to:
+            result = []
+            for r in filtered:
+                receipt_date = self._get_receipt_date(r)
+                if date_from and receipt_date < date_from:
+                    continue
+                if date_to and receipt_date > date_to:
+                    continue
+                result.append(r)
+            filtered = result
+        
+        self.filtered_receipts = filtered
         self.current_page = 1
         self.display_receipts()
-        
+            
+    def on_search_change(self, e):
+        self.apply_filters()
+    
+    # ─────────────────────────── DISPLAY ───────────────────────────
     def display_receipts(self):
         self.table_rows.controls.clear()
         total_items = len(self.filtered_receipts)
@@ -330,7 +617,8 @@ class ReceivingManagementContent:
             row,
             ft.Divider(height=1, color=ft.Colors.GREY_200),
         ], spacing=0)
-        
+    
+    # ─────────────────────────── DIALOG ───────────────────────────
     def show_receipt_detail_dialog(self, receipt_id: int):
         try:
             detail = self.client.get_goods_receipt(receipt_id)
@@ -439,7 +727,8 @@ class ReceivingManagementContent:
     def _close_dialog(self, dialog):
         dialog.open = False
         self.page.update()
-        
+    
+    # ─────────────────────────── PAGINATION ───────────────────────────
     def update_pagination(self):
         prev_disabled = self.current_page <= 1
         next_disabled = self.current_page >= self.total_pages
@@ -491,7 +780,8 @@ class ReceivingManagementContent:
         if self.current_page < self.total_pages:
             self.current_page += 1
             self.display_receipts()
-            
+    
+    # ─────────────────────────── SNACK BAR ───────────────────────────
     def show_snack_bar(self, message: str, type="success"):
         """Show snackbar notification - Bottom center with auto width"""
         

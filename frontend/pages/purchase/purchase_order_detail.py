@@ -2,7 +2,7 @@
 import flet as ft
 from flet import Alignment
 from typing import Dict, Callable
-import asyncio  # เพิ่ม import asyncio
+import asyncio
 import os
 
 from i18n import get_text
@@ -152,8 +152,10 @@ class PurchaseOrderDetailContent:
             received_at = received_at[:16] if len(received_at) > 16 else received_at
         else:
             received_at = '-'
-        total_amount = data.get('total_amount', 0)
         items = data.get('items', [])
+        
+        # ຄຳນວນຈຳນວນລາຍການທັງໝົດ
+        total_items = sum(item.get('qty', 0) for item in items)
         
         status_colors = {
             "ordering": "#2196F3",
@@ -201,17 +203,17 @@ class PurchaseOrderDetailContent:
             margin=ft.Margin(left=0, right=0, top=0, bottom=12),
         )
         
-        # Total Amount Card
+        # Total Items Card - ປ່ຽນຈາກ total_amount ເປັນ ຈຳນວນລາຍການທັງໝົດ
         total_card = ft.Container(
             content=ft.Column([
                 ft.Row([
-                    ft.Icon(ft.Icons.ATTACH_MONEY, size=18, color=self.success_color),
+                    ft.Icon(ft.Icons.INVENTORY, size=18, color=self.primary_color),
                     ft.Text(get_text("total_amount"), size=15, weight=ft.FontWeight.W_600, color="#1E293B"),
                     ft.Container(expand=True),
                     ft.Container(
-                        content=ft.Text(f"{int(total_amount):,} KIP", size=20, weight=ft.FontWeight.W_800, color=self.success_color),
+                        content=ft.Text(f"{total_items} {get_text('items')}", size=20, weight=ft.FontWeight.W_800, color=self.primary_color),
                         padding=ft.Padding(left=12, right=12, top=6, bottom=6),
-                        bgcolor=ft.Colors.with_opacity(0.1, self.success_color),
+                        bgcolor=ft.Colors.with_opacity(0.1, self.primary_color),
                         border_radius=16,
                     ),
                 ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
@@ -229,15 +231,13 @@ class PurchaseOrderDetailContent:
         )
         
         # ========== RIGHT COLUMN ==========
-        # Items Card
+        # Items Card - ເອົາຄໍລຳລາຄາອອກ
         items_list = ft.Column(spacing=0)
         
         if items and len(items) > 0:
             for idx, item in enumerate(items):
                 part_name = item.get('part_name', '-')
                 qty = item.get('qty', 0)
-                unit_cost = item.get('unit_cost', 0)
-                total_line = item.get('total_line', qty * unit_cost)
                 received_qty = item.get('received_qty', 0)
                 
                 border_bottom = ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_50)) if idx < len(items) - 1 else None
@@ -256,15 +256,13 @@ class PurchaseOrderDetailContent:
                     content=ft.Row([
                         ft.Text(f"{idx+1}", size=12, color="#64748B", width=30),
                         ft.Text(part_name, size=12, color="#1E293B", expand=True, max_lines=2),
-                        ft.Text(f"x{qty}", size=12, color="#64748B", width=45, text_align=ft.TextAlign.CENTER),
-                        ft.Text(f"{int(unit_cost):,}", size=12, color="#64748B", width=90, text_align=ft.TextAlign.RIGHT),
-                        ft.Text(f"{int(total_line):,}", size=12, weight=ft.FontWeight.W_600, color=self.primary_color, width=110, text_align=ft.TextAlign.RIGHT),
+                        ft.Text(f"x{qty}", size=12, color="#64748B", width=60, text_align=ft.TextAlign.CENTER),
                         ft.Container(
                             content=ft.Text(f"{received_qty}/{qty}", size=10, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500),
                             bgcolor=received_color,
                             border_radius=12,
                             padding=ft.Padding(left=8, right=8, top=3, bottom=3),
-                            width=65,
+                            width=80,
                             alignment=ft.Alignment(0, 0),
                         ),
                     ], spacing=6, vertical_alignment=ft.CrossAxisAlignment.CENTER),
@@ -273,11 +271,12 @@ class PurchaseOrderDetailContent:
                 )
                 items_list.controls.append(item_row)
             
+            # ສະແດງຈຳນວນລາຍການທັງໝົດ ແທນຍອດເງິນ
             total_row = ft.Container(
                 content=ft.Row([
                     ft.Container(expand=True),
-                    ft.Text(get_text("total") + ":", size=13, weight=ft.FontWeight.W_600, color="#1E293B"),
-                    ft.Text(f"{int(total_amount):,} KIP", size=14, weight=ft.FontWeight.W_700, color=self.success_color),
+                    ft.Text(get_text("total_qty") + ":", size=13, weight=ft.FontWeight.W_600, color="#1E293B"),
+                    ft.Text(f"{total_items} {get_text('items')}", size=14, weight=ft.FontWeight.W_700, color=self.primary_color),
                 ], spacing=12),
                 padding=ft.Padding(left=0, right=0, top=8, bottom=8),
                 bgcolor="#F8FAFC",
@@ -297,6 +296,7 @@ class PurchaseOrderDetailContent:
                 )
             )
         
+        # ຫົວຂໍ້ຕາຕະລາງ - ບໍ່ມີຄໍລຳ price ແລະ total
         items_card = ft.Container(
             content=ft.Column([
                 ft.Row([
@@ -308,10 +308,8 @@ class PurchaseOrderDetailContent:
                 ft.Row([
                     ft.Text("#", size=10, weight=ft.FontWeight.W_600, color="#64748B", width=30),
                     ft.Text(get_text("part_name"), size=10, weight=ft.FontWeight.W_600, color="#64748B", expand=True),
-                    ft.Text(get_text("qty"), size=10, weight=ft.FontWeight.W_600, color="#64748B", width=45, text_align=ft.TextAlign.CENTER),
-                    ft.Text(get_text("price"), size=10, weight=ft.FontWeight.W_600, color="#64748B", width=90, text_align=ft.TextAlign.RIGHT),
-                    ft.Text(get_text("total"), size=10, weight=ft.FontWeight.W_600, color="#64748B", width=110, text_align=ft.TextAlign.RIGHT),
-                    ft.Text(get_text("received"), size=10, weight=ft.FontWeight.W_600, color="#64748B", width=65, text_align=ft.TextAlign.CENTER),
+                    ft.Text(get_text("qty"), size=10, weight=ft.FontWeight.W_600, color="#64748B", width=60, text_align=ft.TextAlign.CENTER),
+                    ft.Text(get_text("received"), size=10, weight=ft.FontWeight.W_600, color="#64748B", width=80, text_align=ft.TextAlign.CENTER),
                 ], spacing=6),
                 ft.Divider(height=1, color=ft.Colors.GREY_200),
                 items_list,
@@ -324,7 +322,7 @@ class PurchaseOrderDetailContent:
         
         right_column = ft.Container(
             content=ft.Column([items_card], spacing=0),
-            width=500,
+            width=450,
             expand=True,
         )
         

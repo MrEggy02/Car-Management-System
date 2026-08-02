@@ -3,7 +3,8 @@ import flet as ft
 from flet import Alignment
 from typing import Dict, Callable
 import os
-import asyncio  # เพิ่ม import asyncio
+import asyncio
+from datetime import datetime, timedelta
 
 from i18n import get_text
 
@@ -26,12 +27,20 @@ class DeliveryNoteListContent:
         self.items_per_page = 10
         self.total_pages = 1
         self.search_field = None
+        self.date_from_field = None
+        self.date_to_field = None
         self.table_rows = None
         self.pagination_container = None
         self.current_dialog = None
+        self.kpi_container = None
+        self.current_date_filter = "all"  # all, today, week, month
 
     def build(self):
         header = self._build_header()
+        self.kpi_container = ft.Container(
+            content=ft.Row([], spacing=12),
+            padding=ft.Padding(left=0, right=0, top=8, bottom=8),
+        )
         search_bar = self._build_search_bar()
         table = self._build_table()
         self.pagination_container = ft.Container(
@@ -40,8 +49,14 @@ class DeliveryNoteListContent:
 
         content_area = ft.Container(
             content=ft.Column(
-                [search_bar, table, self.pagination_container],
+                [
+                    self.kpi_container,
+                    search_bar,
+                    table,
+                    self.pagination_container,
+                ],
                 expand=True,
+                scroll=ft.ScrollMode.AUTO,
             ),
             expand=True,
             padding=ft.Padding(left=24, right=24, top=24, bottom=24),
@@ -49,7 +64,11 @@ class DeliveryNoteListContent:
         )
 
         main_content = ft.Container(
-            content=ft.Column([header, content_area]),
+            content=ft.Column(
+                [header, content_area],
+                expand=True,
+                scroll=ft.ScrollMode.AUTO,
+            ),
             expand=True,
             bgcolor="#F5F7FA",
         )
@@ -90,6 +109,7 @@ class DeliveryNoteListContent:
                         ],
                         spacing=2,
                     ),
+                    ft.Container(expand=True),
                 ],
                 spacing=16,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -104,6 +124,126 @@ class DeliveryNoteListContent:
         )
 
     # ─────────────────────────────────────────────────────────────
+    # KPI Cards
+    # ─────────────────────────────────────────────────────────────
+    def _build_kpi_cards(self):
+        """Build KPI cards showing count of delivery notes"""
+        total = len(self.invoices)
+        
+        # Calculate today's deliveries
+        today = datetime.now().date()
+        today_count = sum(1 for inv in self.invoices if self._get_paid_date(inv) == today)
+        
+        # Calculate this week's deliveries
+        week_start = today - timedelta(days=today.weekday())
+        week_count = sum(1 for inv in self.invoices 
+                        if week_start <= self._get_paid_date(inv) <= today)
+        
+        # Calculate this month's deliveries
+        month_start = today.replace(day=1)
+        month_count = sum(1 for inv in self.invoices 
+                         if month_start <= self._get_paid_date(inv) <= today)
+        
+        cards = [
+            {
+                "label": "ທັງໝົດ",
+                "count": total,
+                "icon": ft.Icons.LIST_ALT,
+                "color": "#607D8B",
+                "filter": "all"
+            },
+            {
+                "label": "ມື້ນີ້",
+                "count": today_count,
+                "icon": ft.Icons.TODAY,
+                "color": "#2196F3",
+                "filter": "today"
+            },
+            {
+                "label": "ອາທິດນີ້",
+                "count": week_count,
+                "icon": ft.Icons.CALENDAR_VIEW_WEEK,
+                "color": "#4CAF50",
+                "filter": "week"
+            },
+            {
+                "label": "ເດືອນນີ້",
+                "count": month_count,
+                "icon": ft.Icons.CALENDAR_MONTH,
+                "color": "#FF9800",
+                "filter": "month"
+            },
+        ]
+        
+        kpi_cards = []
+        for card in cards:
+            is_active = self.current_date_filter == card["filter"]
+            kpi_cards.append(
+                ft.Container(
+                    content=ft.Row(
+                        [
+                            ft.Container(
+                                content=ft.Icon(card["icon"], size=22, color=ft.Colors.WHITE),
+                                bgcolor=card["color"],
+                                border_radius=10,
+                                padding=ft.Padding(left=8, right=8, top=8, bottom=8),
+                            ),
+                            ft.Column(
+                                [
+                                    ft.Text(str(card["count"]), size=22, weight=ft.FontWeight.BOLD, color="#1E293B"),
+                                    ft.Text(card["label"], size=11, color="#64748B"),
+                                ],
+                                spacing=1,
+                            ),
+                        ],
+                        spacing=10,
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                    ),
+                    padding=ft.Padding(left=14, right=14, top=10, bottom=10),
+                    bgcolor=ft.Colors.WHITE,
+                    border_radius=12,
+                    border=ft.Border(
+                        top=ft.BorderSide(2 if is_active else 1, card["color"] if is_active else "#E2E8F0"),
+                        right=ft.BorderSide(2 if is_active else 1, card["color"] if is_active else "#E2E8F0"),
+                        bottom=ft.BorderSide(2 if is_active else 1, card["color"] if is_active else "#E2E8F0"),
+                        left=ft.BorderSide(2 if is_active else 1, card["color"] if is_active else "#E2E8F0"),
+                    ),
+                    expand=True,
+                    ink=True,
+                    on_click=lambda e, f=card["filter"]: self._kpi_filter(f),
+                    shadow=ft.BoxShadow(
+                        blur_radius=4,
+                        color=ft.Colors.with_opacity(0.06, ft.Colors.BLACK),
+                    ),
+                )
+            )
+        
+        return ft.Row(kpi_cards, spacing=12, expand=True)
+    
+    def _get_paid_date(self, invoice: Dict) -> datetime.date:
+        """Extract paid date from invoice"""
+        paid_date = invoice.get("paid_date", "")
+        if not paid_date:
+            return datetime.now().date()
+        try:
+            return datetime.strptime(str(paid_date)[:10], "%Y-%m-%d").date()
+        except:
+            return datetime.now().date()
+    
+    def _kpi_filter(self, filter_type: str):
+        """Filter invoices by date range from KPI cards"""
+        self.current_date_filter = filter_type
+        self.current_page_num = 1
+        self._update_kpi_cards()
+        self.apply_filters()
+    
+    def _update_kpi_cards(self):
+        """Update KPI cards highlight"""
+        if self.kpi_container:
+            self.kpi_container.content = self._build_kpi_cards()
+            self.page.update()
+
+    # ─────────────────────────────────────────────────────────────
     # Search bar
     # ─────────────────────────────────────────────────────────────
     def _build_search_bar(self):
@@ -113,7 +253,7 @@ class DeliveryNoteListContent:
             bgcolor=ft.Colors.WHITE,
             filled=True,
             prefix_icon=ft.Icons.SEARCH,
-            content_padding=ft.Padding(left=16, right=16, top=14, bottom=14),
+            content_padding=ft.Padding(left=16, right=16, top=12, bottom=12),
             expand=True,
             border_color=ft.Colors.GREY_200,
             focused_border_color=self.primary_color,
@@ -131,10 +271,113 @@ class DeliveryNoteListContent:
             ),
         )
 
+        def clear_date_from(e):
+            self.date_from_field.value = ""
+            self.current_date_filter = "all"
+            self.page.update()
+            self.apply_filters()
+            self._update_kpi_cards()
+
+        def clear_date_to(e):
+            self.date_to_field.value = ""
+            self.current_date_filter = "all"
+            self.page.update()
+            self.apply_filters()
+            self._update_kpi_cards()
+
+        self.date_from_field = ft.TextField(
+            hint_text=get_text("date_from"),
+            border_radius=12,
+            bgcolor=ft.Colors.WHITE,
+            filled=True,
+            prefix_icon=ft.Icons.CALENDAR_TODAY,
+            suffix=ft.IconButton(icon=ft.Icons.CLOSE, on_click=clear_date_from, icon_size=16),
+            content_padding=ft.Padding(left=12, right=12, top=10, bottom=10),
+            width=140,
+            border_color=ft.Colors.GREY_200,
+            focused_border_color=self.primary_color,
+            read_only=True,
+            on_focus=self._pick_date_from,
+        )
+
+        self.date_to_field = ft.TextField(
+            hint_text=get_text("date_to"),
+            border_radius=12,
+            bgcolor=ft.Colors.WHITE,
+            filled=True,
+            prefix_icon=ft.Icons.CALENDAR_TODAY,
+            suffix=ft.IconButton(icon=ft.Icons.CLOSE, on_click=clear_date_to, icon_size=16),
+            content_padding=ft.Padding(left=12, right=12, top=10, bottom=10),
+            width=140,
+            border_color=ft.Colors.GREY_200,
+            focused_border_color=self.primary_color,
+            read_only=True,
+            on_focus=self._pick_date_to,
+        )
+
         return ft.Container(
-            content=ft.Row([self.search_field, refresh_button], spacing=10),
+            content=ft.Row([
+                self.search_field,
+                self.date_from_field,
+                self.date_to_field,
+                refresh_button,
+            ], spacing=8, vertical_alignment=ft.CrossAxisAlignment.CENTER),
             margin=ft.Margin(left=0, right=0, top=0, bottom=16),
         )
+    
+    def _pick_date_from(self, e):
+        if getattr(self, 'ignore_from_focus', False):
+            self.ignore_from_focus = False
+            return
+            
+        def on_date_selected(e):
+            self.ignore_from_focus = True
+            if e.control.value:
+                self.date_from_field.value = e.control.value.strftime("%Y-%m-%d")
+                self.current_date_filter = "all"
+                self.page.update()
+                self.apply_filters()
+                self._update_kpi_cards()
+                
+        def on_dismiss(e):
+            self.ignore_from_focus = True
+        
+        date_picker = ft.DatePicker(
+            on_change=on_date_selected,
+            on_dismiss=on_dismiss,
+            first_date=datetime(2020, 1, 1),
+            last_date=datetime.now(),
+        )
+        self.page.overlay.append(date_picker)
+        date_picker.open = True
+        self.page.update()
+        
+    def _pick_date_to(self, e):
+        if getattr(self, 'ignore_to_focus', False):
+            self.ignore_to_focus = False
+            return
+            
+        def on_date_selected(e):
+            self.ignore_to_focus = True
+            if e.control.value:
+                self.date_to_field.value = e.control.value.strftime("%Y-%m-%d")
+                self.current_date_filter = "all"
+                self.page.update()
+                self.apply_filters()
+                self._update_kpi_cards()
+                
+        def on_dismiss(e):
+            self.ignore_to_focus = True
+        
+        date_picker = ft.DatePicker(
+            on_change=on_date_selected,
+            on_dismiss=on_dismiss,
+            first_date=datetime(2020, 1, 1),
+            last_date=datetime.now(),
+        )
+        self.page.overlay.append(date_picker)
+        date_picker.open = True
+        self.page.update()
 
     # ─────────────────────────────────────────────────────────────
     # Table
@@ -266,7 +509,8 @@ class DeliveryNoteListContent:
                 inv for inv in all_invoices if inv.get("payment_status") == "paid"
             ]
             self.filtered_invoices = self.invoices.copy()
-            self.display_invoices()
+            self.kpi_container.content = self._build_kpi_cards()
+            self.apply_filters()
         except Exception as ex:
             print(f"Error loading invoices: {ex}")
             self.table_rows.controls.append(
@@ -293,17 +537,59 @@ class DeliveryNoteListContent:
         keyword = (
             self.search_field.value.lower() if self.search_field.value else ""
         )
+        
+        filtered = self.invoices.copy()
+        
+        # Apply KPI date filter
+        if self.current_date_filter == "today":
+            today = datetime.now().date()
+            filtered = [inv for inv in filtered if self._get_paid_date(inv) == today]
+        elif self.current_date_filter == "week":
+            today = datetime.now().date()
+            week_start = today - timedelta(days=today.weekday())
+            filtered = [inv for inv in filtered if week_start <= self._get_paid_date(inv) <= today]
+        elif self.current_date_filter == "month":
+            today = datetime.now().date()
+            month_start = today.replace(day=1)
+            filtered = [inv for inv in filtered if month_start <= self._get_paid_date(inv) <= today]
+        
+        # Apply search filter
         if keyword:
-            self.filtered_invoices = [
+            filtered = [
                 inv
-                for inv in self.invoices
+                for inv in filtered
                 if keyword in f"INV-{inv.get('id', 0):04d}".lower()
                 or keyword in inv.get("customer_name", "").lower()
                 or keyword in inv.get("plate_number", "").lower()
                 or keyword in inv.get("job_no", "").lower()
             ]
-        else:
-            self.filtered_invoices = self.invoices.copy()
+        
+        # Apply date range filter
+        date_from_str = self.date_from_field.value.strip() if self.date_from_field and self.date_from_field.value else ""
+        date_to_str = self.date_to_field.value.strip() if self.date_to_field and self.date_to_field.value else ""
+        
+        try:
+            date_from = datetime.strptime(date_from_str, "%Y-%m-%d").date() if date_from_str else None
+        except ValueError:
+            date_from = None
+        
+        try:
+            date_to = datetime.strptime(date_to_str, "%Y-%m-%d").date() if date_to_str else None
+        except ValueError:
+            date_to = None
+        
+        if date_from or date_to:
+            result = []
+            for inv in filtered:
+                paid_date = self._get_paid_date(inv)
+                if date_from and paid_date < date_from:
+                    continue
+                if date_to and paid_date > date_to:
+                    continue
+                result.append(inv)
+            filtered = result
+        
+        self.filtered_invoices = filtered
         self.current_page_num = 1
         self.display_invoices()
 

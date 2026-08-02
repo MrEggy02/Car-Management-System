@@ -1129,7 +1129,11 @@ def generate_quotation_pdf(quotation_id: int) -> bytes:
         qty = item.get('qty', 1)
         unit_price = float(item.get('unit_price', 0) or 0)
         discount_amount = float(item.get('discount_amount', 0) or 0)
-        total = float(item.get('total', 0) or 0)
+        # Compute row total after discount to ensure the PDF shows the discounted total
+        total_from_db = float(item.get('total', 0) or 0)
+        row_total = (qty * unit_price) - discount_amount
+        if row_total < 0:
+            row_total = 0.0
         stock_qty = item.get('stock_qty')  # may be None for non-part items
         item_type = item.get('item_type')
 
@@ -1146,7 +1150,7 @@ def generate_quotation_pdf(quotation_id: int) -> bytes:
             Paragraph(f"{qty} {item.get('unit_name') or ''}".strip(), table_cell_center_style),
             Paragraph(f"{int(unit_price):,}", table_cell_right_style),
             Paragraph(f"{int(discount_amount):,}", table_cell_right_style),
-            Paragraph(f"{int(total):,}", table_cell_right_style)
+            Paragraph(f"{int(row_total):,}", table_cell_right_style)
         ])
         stock_warnings.append(is_warning)
 

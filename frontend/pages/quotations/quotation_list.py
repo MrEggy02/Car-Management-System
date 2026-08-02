@@ -7,7 +7,7 @@ import os
 import webbrowser
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from i18n import get_text, get_current_language
 from pages.quotations.quotation_dialogs import (
@@ -33,7 +33,10 @@ class QuotationListContent:
         self.selected_quotation = None
         self.detail_dialog = None
         self.search_field = None
+        self.date_from_field = None
+        self.date_to_field = None
         self.status_filter = "all"
+        self.current_date_filter = "all"  # all, today, week, month
         self.current_page = 1
         self.items_per_page = 10
         self.total_pages = 1
@@ -91,18 +94,50 @@ class QuotationListContent:
             padding=ft.Padding(left=0, right=0, top=8, bottom=8),
         )
         
-        # ช่องค้นหา
+        # ─── Search Bar with Date Filters in one row ───
         self.search_field = ft.TextField(
             hint_text=get_text("search_quotation"),
             border_radius=12,
             bgcolor=ft.Colors.WHITE,
             filled=True,
             prefix_icon=ft.Icons.SEARCH,
-            content_padding=ft.Padding(left=16, right=16, top=14, bottom=14),
+            content_padding=ft.Padding(left=16, right=16, top=12, bottom=12),
             expand=True,
             on_change=self.filter_quotations,
             border_color=ft.Colors.GREY_200,
             focused_border_color=self.primary_color,
+        )
+        
+        # Date from field
+        self.date_from_field = ft.TextField(
+            hint_text=get_text("date_from"),
+            border_radius=12,
+            bgcolor=ft.Colors.WHITE,
+            filled=True,
+            prefix_icon=ft.Icons.CALENDAR_TODAY,
+            suffix=ft.IconButton(icon=ft.Icons.CLOSE, on_click=self._clear_date_from, icon_size=16),
+            content_padding=ft.Padding(left=12, right=12, top=10, bottom=10),
+            width=140,
+            border_color=ft.Colors.GREY_200,
+            focused_border_color=self.primary_color,
+            read_only=True,
+            on_focus=self._pick_date_from,
+        )
+
+        # Date to field
+        self.date_to_field = ft.TextField(
+            hint_text=get_text("date_to"),
+            border_radius=12,
+            bgcolor=ft.Colors.WHITE,
+            filled=True,
+            prefix_icon=ft.Icons.CALENDAR_TODAY,
+            suffix=ft.IconButton(icon=ft.Icons.CLOSE, on_click=self._clear_date_to, icon_size=16),
+            content_padding=ft.Padding(left=12, right=12, top=10, bottom=10),
+            width=140,
+            border_color=ft.Colors.GREY_200,
+            focused_border_color=self.primary_color,
+            read_only=True,
+            on_focus=self._pick_date_to,
         )
         
         refresh_button = ft.IconButton(
@@ -116,20 +151,24 @@ class QuotationListContent:
             ),
         )
         
-        # สร้างส่วนหัวตาราง
-        table_header = self._create_table_header()
+        # ─── Filter row (all in one line) ───
+        filter_row = ft.Row([
+            self.search_field,
+            self.date_from_field,
+            self.date_to_field,
+            refresh_button,
+        ], spacing=8, vertical_alignment=ft.CrossAxisAlignment.CENTER)
         
-        # ส่วนแสดงแถวตาราง
+        # ─── Table ───
+        table_header = self._create_table_header()
         self.table_rows = ft.Column(spacing=0, scroll=ft.ScrollMode.AUTO, expand=True)
         
-        # Table content with header and rows
         table_content = ft.Column([
             table_header,
             ft.Divider(height=1, color=ft.Colors.GREY_300),
             self.table_rows,
         ], spacing=0, expand=True)
 
-        # Table scroll container - allows horizontal scroll
         table_scroll_container = ft.Container(
             content=table_content,
             bgcolor=ft.Colors.WHITE,
@@ -137,7 +176,6 @@ class QuotationListContent:
             expand=True,
         )
 
-        # Table Container with both horizontal and vertical scroll
         table_container = ft.Container(
             content=ft.Row([table_scroll_container], scroll=ft.ScrollMode.AUTO, expand=True),
             margin=ft.Margin(left=20, right=20, top=0, bottom=0),
@@ -155,13 +193,13 @@ class QuotationListContent:
             height=600,
         )
         
-        # ส่วนแบ่งหน้า
+        # ─── Pagination ───
         self.pagination_container = ft.Container(
             padding=ft.Padding(left=20, right=20, top=12, bottom=12),
             bgcolor="#F5F7FA",
         )
         
-        # ตัวโหลด
+        # ─── Loading & Empty State ───
         self.loading_indicator = ft.Container(
             content=ft.Column([
                 ft.ProgressRing(width=40, height=40, stroke_width=4),
@@ -173,7 +211,6 @@ class QuotationListContent:
             visible=False,
         )
         
-        # สถานะไม่มีข้อมูล
         self.empty_state = ft.Container(
             content=ft.Column([
                 ft.Icon(ft.Icons.REQUEST_QUOTE, size=64, color=ft.Colors.GREY_300),
@@ -195,26 +232,23 @@ class QuotationListContent:
             visible=False,
         )
         
-        # ส่วนเนื้อหาหลัก - ปรับ padding
+        # ─── Main Content Area (with vertical scroll) ───
         content_area = ft.Container(
             content=ft.Column([
                 self.kpi_container,
-                ft.Container(
-                    content=ft.Row([self.search_field, refresh_button], spacing=10),
-                    margin=ft.Margin(left=0, right=0, top=0, bottom=12),
-                ),
+                filter_row,  # All filters in one row
                 table_container,
                 self.pagination_container,
                 self.loading_indicator,
                 self.empty_state,
-            ], expand=True),
+            ], expand=True, spacing=12, scroll=ft.ScrollMode.AUTO),  # Enable vertical scroll
             expand=True,
-            padding=ft.Padding(left=20, right=20, top=10, bottom=10),  # ลด padding
+            padding=ft.Padding(left=20, right=20, top=10, bottom=10),
             bgcolor="#F5F7FA",
         )
         
         main_content = ft.Container(
-            content=ft.Column([header, content_area]),
+            content=ft.Column([header, content_area], expand=True, scroll=ft.ScrollMode.AUTO),  # Enable scroll on main too
             expand=True,
             bgcolor="#F5F7FA",
         )
@@ -227,6 +261,86 @@ class QuotationListContent:
         await asyncio.sleep(0.1)
         await asyncio.to_thread(self.load_quotations)
     
+    # ─────────────────────────────────────────────────────────────
+    # DATE PICKER METHODS
+    # ─────────────────────────────────────────────────────────────
+    def _clear_date_from(self, e):
+        self.date_from_field.value = ""
+        self.current_date_filter = "all"
+        self.page.update()
+        self.filter_quotations(None)
+        self._update_kpi_cards()
+
+    def _clear_date_to(self, e):
+        self.date_to_field.value = ""
+        self.current_date_filter = "all"
+        self.page.update()
+        self.filter_quotations(None)
+        self._update_kpi_cards()
+
+    def _pick_date_from(self, e):
+        if getattr(self, 'ignore_from_focus', False):
+            self.ignore_from_focus = False
+            return
+            
+        def on_date_selected(e):
+            self.ignore_from_focus = True
+            if e.control.value:
+                self.date_from_field.value = e.control.value.strftime("%Y-%m-%d")
+                self.current_date_filter = "all"
+                self.page.update()
+                self.filter_quotations(None)
+                self._update_kpi_cards()
+                
+        def on_dismiss(e):
+            self.ignore_from_focus = True
+        
+        date_picker = ft.DatePicker(
+            on_change=on_date_selected,
+            on_dismiss=on_dismiss,
+            first_date=datetime(2020, 1, 1),
+            last_date=datetime.now(),
+        )
+        self.page.overlay.append(date_picker)
+        date_picker.open = True
+        self.page.update()
+        
+    def _pick_date_to(self, e):
+        if getattr(self, 'ignore_to_focus', False):
+            self.ignore_to_focus = False
+            return
+            
+        def on_date_selected(e):
+            self.ignore_to_focus = True
+            if e.control.value:
+                self.date_to_field.value = e.control.value.strftime("%Y-%m-%d")
+                self.current_date_filter = "all"
+                self.page.update()
+                self.filter_quotations(None)
+                self._update_kpi_cards()
+                
+        def on_dismiss(e):
+            self.ignore_to_focus = True
+        
+        date_picker = ft.DatePicker(
+            on_change=on_date_selected,
+            on_dismiss=on_dismiss,
+            first_date=datetime(2020, 1, 1),
+            last_date=datetime.now(),
+        )
+        self.page.overlay.append(date_picker)
+        date_picker.open = True
+        self.page.update()
+
+    def _update_kpi_cards(self):
+        """Update KPI cards highlight"""
+        if self.kpi_container:
+            self.kpi_container.content = self._build_kpi_cards()
+            self.page.update()
+    
+    # ─────────────────────────────────────────────────────────────
+    # KPI CARDS
+    # ─────────────────────────────────────────────────────────────
     def _build_kpi_cards(self):
         statuses = [
             ("draft",    "#FF9800", ft.Icons.EDIT_DOCUMENT),
@@ -325,6 +439,9 @@ class QuotationListContent:
         self.current_page = 1
         self.filter_quotations(None)
     
+    # ─────────────────────────────────────────────────────────────
+    # TABLE
+    # ─────────────────────────────────────────────────────────────
     def _create_table_header(self):
         """สร้างส่วนหัวตาราง"""
         return ft.Container(
@@ -517,6 +634,9 @@ class QuotationListContent:
             ft.Divider(height=1, color=ft.Colors.GREY_200),
         ], spacing=0)
     
+    # ─────────────────────────────────────────────────────────────
+    # DATA LOADING & FILTERING
+    # ─────────────────────────────────────────────────────────────
     def load_quotations(self):
         """โหลดข้อมูลใบเสนอราคาจาก API"""
         self.loading_indicator.visible = True
@@ -535,21 +655,44 @@ class QuotationListContent:
             self.loading_indicator.visible = False
             self.page.update()
     
+    def _get_quote_date(self, quote: Dict) -> datetime.date:
+        """Extract date from quotation"""
+        created_at = quote.get("created_at", "")
+        if not created_at:
+            return datetime.now().date()
+        try:
+            return datetime.strptime(str(created_at)[:10], "%Y-%m-%d").date()
+        except:
+            return datetime.now().date()
+    
     def filter_quotations(self, e):
-        """กรองใบเสนอราคาตามคำค้นหาและสถานะ"""
+        """กรองใบเสนอราคาตามคำค้นหา สถานะ และวันที่"""
         keyword = self.search_field.value.lower() if self.search_field and self.search_field.value else ""
         self.current_page = 1
         
-        status = self.status_filter
-        if status and status != "all":
-            filtered = [q for q in self.quotations if q.get("status") == status]
-        else:
-            filtered = self.quotations.copy()
+        # Start with all quotations
+        filtered = self.quotations.copy()
         
-        if not keyword:
-            self.filtered_quotations = filtered
-        else:
-            self.filtered_quotations = [
+        # Apply status filter
+        if self.status_filter and self.status_filter != "all":
+            filtered = [q for q in filtered if q.get("status") == self.status_filter]
+        
+        # Apply KPI date filter (if any)
+        if self.current_date_filter == "today":
+            today = datetime.now().date()
+            filtered = [q for q in filtered if self._get_quote_date(q) == today]
+        elif self.current_date_filter == "week":
+            today = datetime.now().date()
+            week_start = today - timedelta(days=today.weekday())
+            filtered = [q for q in filtered if week_start <= self._get_quote_date(q) <= today]
+        elif self.current_date_filter == "month":
+            today = datetime.now().date()
+            month_start = today.replace(day=1)
+            filtered = [q for q in filtered if month_start <= self._get_quote_date(q) <= today]
+        
+        # Apply search filter
+        if keyword:
+            filtered = [
                 q for q in filtered
                 if keyword in f"QT-{q.get('id', 0):04d}".lower()
                 or keyword in q.get("customer_name", "").lower()
@@ -557,8 +700,32 @@ class QuotationListContent:
                 or keyword in (q.get("job_no") or "").lower()
             ]
         
-        if self.kpi_container:
-            self.kpi_container.content = self._build_kpi_cards()
+        # Apply date range filter
+        date_from_str = self.date_from_field.value.strip() if self.date_from_field and self.date_from_field.value else ""
+        date_to_str = self.date_to_field.value.strip() if self.date_to_field and self.date_to_field.value else ""
+        
+        try:
+            date_from = datetime.strptime(date_from_str, "%Y-%m-%d").date() if date_from_str else None
+        except ValueError:
+            date_from = None
+        
+        try:
+            date_to = datetime.strptime(date_to_str, "%Y-%m-%d").date() if date_to_str else None
+        except ValueError:
+            date_to = None
+        
+        if date_from or date_to:
+            result = []
+            for q in filtered:
+                quote_date = self._get_quote_date(q)
+                if date_from and quote_date < date_from:
+                    continue
+                if date_to and quote_date > date_to:
+                    continue
+                result.append(q)
+            filtered = result
+        
+        self.filtered_quotations = filtered
         self.display_quotations()
     
     def display_quotations(self):
@@ -642,6 +809,9 @@ class QuotationListContent:
             self.current_page += 1
             self.display_quotations()
     
+    # ─────────────────────────────────────────────────────────────
+    # ACTIONS
+    # ─────────────────────────────────────────────────────────────
     def show_quotation_detail(self, quotation_id: int):
         """แสดงรายละเอียดใบเสนอราคาใน dialog"""
         self.loading_indicator.visible = True
@@ -751,6 +921,9 @@ class QuotationListContent:
             print(f"Error printing quotation: {ex}")
             self.show_snack_bar(f"{get_text('pdf_export_failed')}: {str(ex)}", "error")
 
+    # ─────────────────────────────────────────────────────────────
+    # DIALOG HELPERS
+    # ─────────────────────────────────────────────────────────────
     def _open_dialog(self, dialog):
         try:
             if self.current_dialog:
@@ -774,6 +947,9 @@ class QuotationListContent:
         except Exception as ex:
             print(f"DEBUG: Error closing dialog: {ex}")
     
+    # ─────────────────────────────────────────────────────────────
+    # SNACK BAR
+    # ─────────────────────────────────────────────────────────────
     def show_snack_bar(self, message: str, type="success"):
         """Show snackbar notification - Bottom center with auto width"""
         

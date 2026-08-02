@@ -35,26 +35,34 @@ class InvoiceListContent:
         self.pagination_container = None
         self.current_dialog = None
         self._dialog_stack = []
+        self.kpi_container = None
+        self.date_from_field = None
+        self.date_to_field = None
 
     def build(self):
         header = self._build_header()
+        self.kpi_container = ft.Container(
+            content=ft.Row([], spacing=12),
+            padding=ft.Padding(left=0, right=0, top=8, bottom=8),
+        )
         search_bar = self._build_search_bar()
         table = self._build_table()
         self.pagination_container = ft.Container(padding=ft.Padding(left=20, right=20, top=12, bottom=12))
 
         content_area = ft.Container(
             content=ft.Column([
+                self.kpi_container,
                 search_bar,
                 table,
                 self.pagination_container,
-            ], expand=True),
+            ], expand=True, scroll=ft.ScrollMode.AUTO),
             expand=True,
             padding=ft.Padding(left=24, right=24, top=24, bottom=24),
             bgcolor="#F5F7FA",
         )
 
         main_content = ft.Container(
-            content=ft.Column([header, content_area]),
+            content=ft.Column([header, content_area], expand=True, scroll=ft.ScrollMode.AUTO),
             expand=True,
             bgcolor="#F5F7FA",
         )
@@ -104,6 +112,104 @@ class InvoiceListContent:
             ),
             border_radius=ft.BorderRadius.only(bottom_left=20, bottom_right=20),
         )
+
+    # ─────────────────────────── KPI CARDS ───────────────────────────
+    def _build_kpi_cards(self):
+        statuses = [
+            ("pending", "#FF9800", ft.Icons.HOURGLASS_EMPTY),
+            ("paid", "#4CAF50", ft.Icons.CHECK_CIRCLE),
+        ]
+        status_texts = {
+            "pending": get_text("status_pending"),
+            "paid": get_text("status_paid"),
+        }
+        counts = {s: 0 for s, _, __ in statuses}
+        for r in self.invoices:
+            st = r.get("payment_status", "pending")
+            if st in counts:
+                counts[st] += 1
+
+        cards = []
+        for status, color, icon in statuses:
+            count = counts[status]
+            label = status_texts.get(status, status)
+            is_active = self.current_status_filter == status
+            card = ft.Container(
+                content=ft.Row(
+                    [
+                        ft.Container(
+                            content=ft.Icon(icon, size=22, color=ft.Colors.WHITE),
+                            bgcolor=color,
+                            border_radius=10,
+                            padding=ft.Padding(left=8, right=8, top=8, bottom=8),
+                        ),
+                        ft.Column(
+                            [
+                                ft.Text(str(count), size=22, weight=ft.FontWeight.BOLD, color="#1E293B"),
+                                ft.Text(label, size=11, color="#64748B"),
+                            ],
+                            spacing=1,
+                        ),
+                    ],
+                    spacing=10,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                ),
+                padding=ft.Padding(left=14, right=14, top=10, bottom=10),
+                bgcolor=ft.Colors.WHITE,
+                border_radius=12,
+                border=ft.Border(top=ft.BorderSide(2, color), right=ft.BorderSide(2, color), bottom=ft.BorderSide(2, color), left=ft.BorderSide(2, color)) if is_active else ft.Border(top=ft.BorderSide(1, "#E2E8F0"), right=ft.BorderSide(1, "#E2E8F0"), bottom=ft.BorderSide(1, "#E2E8F0"), left=ft.BorderSide(1, "#E2E8F0")),
+                expand=True,
+                ink=True,
+                on_click=lambda e, s=status: self._kpi_filter(s),
+                shadow=ft.BoxShadow(
+                    blur_radius=4,
+                    color=ft.Colors.with_opacity(0.06, ft.Colors.BLACK),
+                ),
+            )
+            cards.append(card)
+
+        total = len(self.invoices)
+        is_all = self.current_status_filter == "all"
+        all_card = ft.Container(
+            content=ft.Row(
+                [
+                    ft.Container(
+                        content=ft.Icon(ft.Icons.LIST_ALT, size=22, color=ft.Colors.WHITE),
+                        bgcolor="#607D8B",
+                        border_radius=10,
+                        padding=ft.Padding(left=8, right=8, top=8, bottom=8),
+                    ),
+                    ft.Column(
+                        [
+                            ft.Text(str(total), size=22, weight=ft.FontWeight.BOLD, color="#1E293B"),
+                            ft.Text(get_text("all_status"), size=11, color="#64748B"),
+                        ],
+                        spacing=1,
+                    ),
+                ],
+                spacing=10,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            ),
+            padding=ft.Padding(left=14, right=14, top=10, bottom=10),
+            bgcolor=ft.Colors.WHITE,
+            border_radius=12,
+            border=ft.Border(top=ft.BorderSide(2, "#607D8B"), right=ft.BorderSide(2, "#607D8B"), bottom=ft.BorderSide(2, "#607D8B"), left=ft.BorderSide(2, "#607D8B")) if is_all else ft.Border(top=ft.BorderSide(1, "#E2E8F0"), right=ft.BorderSide(1, "#E2E8F0"), bottom=ft.BorderSide(1, "#E2E8F0"), left=ft.BorderSide(1, "#E2E8F0")),
+            expand=True,
+            ink=True,
+            on_click=lambda e: self._kpi_filter("all"),
+            shadow=ft.BoxShadow(
+                blur_radius=4,
+                color=ft.Colors.with_opacity(0.06, ft.Colors.BLACK),
+            ),
+        )
+
+        return ft.Row([all_card] + cards, spacing=12, expand=True)
+
+    def _kpi_filter(self, status: str):
+        self.current_status_filter = status
+        self.current_page = 1
+        self._load_status_chips()
+        self.apply_filters()
 
     def _load_status_chips(self):
         """Load status filter chips"""
@@ -168,14 +274,106 @@ class InvoiceListContent:
             ),
         )
 
+        def clear_date_from(e):
+            self.date_from_field.value = ""
+            self.page.update()
+            self.apply_filters()
+
+        def clear_date_to(e):
+            self.date_to_field.value = ""
+            self.page.update()
+            self.apply_filters()
+
+        self.date_from_field = ft.TextField(
+            hint_text=get_text("date_from"),
+            border_radius=12,
+            bgcolor=ft.Colors.WHITE,
+            filled=True,
+            prefix_icon=ft.Icons.CALENDAR_TODAY,
+            suffix=ft.IconButton(icon=ft.Icons.CLOSE, on_click=clear_date_from, icon_size=16),
+            content_padding=ft.Padding(left=12, right=12, top=12, bottom=12),
+            expand=True,
+            border_color=ft.Colors.GREY_200,
+            focused_border_color=self.primary_color,
+            read_only=True,
+            on_focus=self._pick_date_from,
+        )
+
+        self.date_to_field = ft.TextField(
+            hint_text=get_text("date_to"),
+            border_radius=12,
+            bgcolor=ft.Colors.WHITE,
+            filled=True,
+            prefix_icon=ft.Icons.CALENDAR_TODAY,
+            suffix=ft.IconButton(icon=ft.Icons.CLOSE, on_click=clear_date_to, icon_size=16),
+            content_padding=ft.Padding(left=12, right=12, top=12, bottom=12),
+            expand=True,
+            border_color=ft.Colors.GREY_200,
+            focused_border_color=self.primary_color,
+            read_only=True,
+            on_focus=self._pick_date_to,
+        )
+
         return ft.Container(
             content=ft.Column([
                 ft.Row([self.search_field, refresh_button], spacing=10),
-                ft.Container(height=12),
+                ft.Container(height=8),
+                ft.Row([self.date_from_field, self.date_to_field], spacing=10),
+                ft.Container(height=8),
                 self.status_chips,
             ], spacing=0),
             margin=ft.Margin(left=0, right=0, top=0, bottom=16),
         )
+
+    def _pick_date_from(self, e):
+        if getattr(self, 'ignore_from_focus', False):
+            self.ignore_from_focus = False
+            return
+            
+        def on_date_selected(e):
+            self.ignore_from_focus = True
+            if e.control.value:
+                self.date_from_field.value = e.control.value.strftime("%Y-%m-%d")
+                self.page.update()
+                self.apply_filters()
+                
+        def on_dismiss(e):
+            self.ignore_from_focus = True
+        
+        date_picker = ft.DatePicker(
+            on_change=on_date_selected,
+            on_dismiss=on_dismiss,
+            first_date=datetime(2020, 1, 1),
+            last_date=datetime.now(),
+        )
+        self.page.overlay.append(date_picker)
+        date_picker.open = True
+        self.page.update()
+        
+    def _pick_date_to(self, e):
+        if getattr(self, 'ignore_to_focus', False):
+            self.ignore_to_focus = False
+            return
+            
+        def on_date_selected(e):
+            self.ignore_to_focus = True
+            if e.control.value:
+                self.date_to_field.value = e.control.value.strftime("%Y-%m-%d")
+                self.page.update()
+                self.apply_filters()
+                
+        def on_dismiss(e):
+            self.ignore_to_focus = True
+        
+        date_picker = ft.DatePicker(
+            on_change=on_date_selected,
+            on_dismiss=on_dismiss,
+            first_date=datetime(2020, 1, 1),
+            last_date=datetime.now(),
+        )
+        self.page.overlay.append(date_picker)
+        date_picker.open = True
+        self.page.update()
 
     def _build_table(self):
         table_header = ft.Container(
@@ -263,7 +461,8 @@ class InvoiceListContent:
             print(f"DEBUG: Loaded {len(invoices)} invoices")
             self.invoices = invoices
             self.filtered_invoices = invoices.copy()
-            self.display_invoices()
+            self.kpi_container.content = self._build_kpi_cards()
+            self.apply_filters()
         except Exception as ex:
             print(f"Error loading invoices: {ex}")
             self.table_rows.controls.append(
@@ -302,9 +501,50 @@ class InvoiceListContent:
                 or keyword in i.get("plate_number", "").lower()
             ]
 
+        # Apply date filter
+        self._apply_date_filter(filtered)
+
         self.filtered_invoices = filtered
         self.current_page = 1
         self.display_invoices()
+
+    def _apply_date_filter(self, filtered_list):
+        """Apply date range filter to the filtered list"""
+        date_from_str = self.date_from_field.value.strip() if self.date_from_field and self.date_from_field.value else ""
+        date_to_str = self.date_to_field.value.strip() if self.date_to_field and self.date_to_field.value else ""
+        
+        try:
+            date_from = datetime.strptime(date_from_str, "%Y-%m-%d").date() if date_from_str else None
+        except ValueError:
+            date_from = None
+        
+        try:
+            date_to = datetime.strptime(date_to_str, "%Y-%m-%d").date() if date_to_str else None
+        except ValueError:
+            date_to = None
+        
+        if not date_from and not date_to:
+            return
+        
+        # Filter in-place
+        result = []
+        for r in filtered_list:
+            paid_date = r.get("paid_date", "")
+            if not paid_date:
+                continue
+            try:
+                date_obj = datetime.strptime(str(paid_date)[:10], "%Y-%m-%d").date()
+                if date_from and date_obj < date_from:
+                    continue
+                if date_to and date_obj > date_to:
+                    continue
+                result.append(r)
+            except ValueError:
+                continue
+        
+        # Replace the list content
+        filtered_list.clear()
+        filtered_list.extend(result)
 
     def display_invoices(self):
         self.table_rows.controls.clear()
@@ -604,8 +844,7 @@ class InvoiceListContent:
                         inv['change_amount'] = invoice_data.get('change_amount', 0)
                         inv['paid_date'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                         break
-                # Also update in filtered_invoices if present
-                for inv in self.filtered_invoices:
+                # Also update in filtered_invoices if present                for inv in self.filtered_invoices:
                     if inv.get('id') == invoice_id:
                         inv['payment_status'] = 'paid'
                         inv['payment_method'] = invoice_data.get('payment_method', 'cash')

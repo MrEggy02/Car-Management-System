@@ -2,7 +2,7 @@
 import flet as ft
 from flet import Alignment
 from typing import Dict, Callable, List
-import asyncio  # เพิ่ม import asyncio
+import asyncio
 
 from i18n import get_text
 
@@ -263,9 +263,6 @@ class PurchaseOrderCreateContent:
                 ft.Container(content=ft.Text("#", size=11, weight=ft.FontWeight.BOLD, color="#64748B"), width=35, alignment=ft.Alignment(0, 0)),
                 ft.Container(content=ft.Text(get_text("item_name"), size=11, weight=ft.FontWeight.BOLD, color="#64748B"), expand=True, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=6, right=0, top=0, bottom=0)),
                 ft.Container(content=ft.Text(get_text("qty"), size=11, weight=ft.FontWeight.BOLD, color="#64748B"), width=60, alignment=ft.Alignment(0, 0)),
-                ft.Container(content=ft.Text(get_text("unit_cost"), size=11, weight=ft.FontWeight.BOLD, color="#64748B"), width=100, alignment=ft.Alignment(1, 0), padding=ft.Padding(left=0, right=6, top=0, bottom=0)),
-                ft.Container(content=ft.Text(get_text("total"), size=11, weight=ft.FontWeight.BOLD, color="#64748B"), width=110, alignment=ft.Alignment(1, 0), padding=ft.Padding(left=0, right=6, top=0, bottom=0)),
-                ft.Container(content=ft.Text("", size=11), width=35),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
             padding=ft.Padding(left=10, right=10, top=8, bottom=8),
             bgcolor=ft.Colors.GREY_100,
@@ -486,46 +483,26 @@ class PurchaseOrderCreateContent:
         qty_field = ft.TextField(
             label=get_text("order_qty"),
             value="1",
-            width=180,
+            width=200,
             input_filter=ft.NumbersOnlyInputFilter(),
             border_radius=10,
             bgcolor=ft.Colors.WHITE,
             filled=True,
             content_padding=ft.Padding(left=14, right=14, top=10, bottom=10),
-        )
-        
-        selected_part = next((p for p in self.parts if p.get('id') == part_id), None)
-        # Use cost_price (purchase/import price) as the default, not sell_price
-        default_cost = selected_part.get('cost_price', 0) if selected_part else 0
-        
-        cost_field = ft.TextField(
-            label=get_text("unit_cost"),
-            value=str(default_cost),
-            width=180,
-            input_filter=ft.NumbersOnlyInputFilter(),
-            border_radius=10,
-            bgcolor=ft.Colors.WHITE,
-            filled=True,
-            content_padding=ft.Padding(left=14, right=14, top=10, bottom=10),
+            expand=True,
         )
         
         def confirm_add(e):
             qty = int(qty_field.value) if qty_field.value else 1
-            unit_cost = float(cost_field.value) if cost_field.value else 0
             
             if qty <= 0:
                 self.show_snack_bar(get_text("quantity_must_be_positive"), is_error=True)
                 return
             
-            if unit_cost <= 0:
-                self.show_snack_bar(get_text("please_enter_unit_cost"), is_error=True)
-                return
-            
+            # Check if part already in list
             for i, item in enumerate(self.items):
                 if item['part_id'] == part_id:
                     self.items[i]['qty'] = qty
-                    self.items[i]['unit_cost'] = unit_cost
-                    self.items[i]['total'] = qty * unit_cost
                     dialog.open = False
                     self.update_items_display()
                     self.show_snack_bar(get_text("part_updated_success"), is_error=False)
@@ -535,22 +512,22 @@ class PurchaseOrderCreateContent:
                 'part_id': part_id,
                 'part_name': part_name,
                 'qty': qty,
-                'unit_cost': unit_cost,
-                'total': qty * unit_cost
             })
             dialog.open = False
             self.update_items_display()
             
             # Auto-select supplier from the added part (if not already set)
-            if not self.selected_supplier_id and selected_part:
-                auto_supplier_id = selected_part.get('supplier_id')
-                if auto_supplier_id:
-                    self.selected_supplier_id = auto_supplier_id
-                    if self.supplier_dropdown:
-                        self.supplier_dropdown.value = str(auto_supplier_id)
-                    if self.parts_search:
-                        self.parts_search.value = ""
-                    self.search_parts(None)
+            if not self.selected_supplier_id:
+                selected_part = next((p for p in self.parts if p.get('id') == part_id), None)
+                if selected_part:
+                    auto_supplier_id = selected_part.get('supplier_id')
+                    if auto_supplier_id:
+                        self.selected_supplier_id = auto_supplier_id
+                        if self.supplier_dropdown:
+                            self.supplier_dropdown.value = str(auto_supplier_id)
+                        if self.parts_search:
+                            self.parts_search.value = ""
+                        self.search_parts(None)
             
             # Lock supplier dropdown while items exist
             if self.supplier_dropdown and self.items:
@@ -588,13 +565,11 @@ class PurchaseOrderCreateContent:
                 content=ft.Column([
                     ft.Text(part_name, size=13, weight=ft.FontWeight.W_500, color=self.primary_color),
                     ft.Container(height=10),
-                    qty_field,
-                    ft.Container(height=10),
-                    cost_field,
+                    ft.Row([qty_field], expand=True),
                 ]),
                 padding=ft.Padding(left=20, right=20, top=20, bottom=20),
                 width=320,
-                height=180,
+                height=140,
             ),
             actions=[
                 ft.TextButton(get_text("cancel"), on_click=lambda e: self._close_dialog(dialog), style=ft.ButtonStyle(color="#64748B")),
@@ -634,8 +609,6 @@ class PurchaseOrderCreateContent:
                     ft.Container(content=ft.Text(str(idx + 1), size=12, color="#64748B"), width=35, alignment=ft.Alignment(0, 0)),
                     ft.Container(content=ft.Text(item.get('part_name', '-'), size=12, weight=ft.FontWeight.W_500, color="#1E293B", max_lines=1), expand=True, padding=ft.Padding(left=6, right=0, top=0, bottom=0)),
                     ft.Container(content=ft.Text(f"x{item.get('qty', 1)}", size=12, color="#1E293B"), width=60, alignment=ft.Alignment(0, 0)),
-                    ft.Container(content=ft.Text(f"{int(item.get('unit_cost', 0)):,}", size=12, color="#64748B"), width=100, alignment=ft.Alignment(1, 0), padding=ft.Padding(left=0, right=6, top=0, bottom=0)),
-                    ft.Container(content=ft.Text(f"{int(item.get('total', 0)):,}", size=12, weight=ft.FontWeight.W_600, color=self.success_color), width=110, alignment=ft.Alignment(1, 0), padding=ft.Padding(left=0, right=6, top=0, bottom=0)),
                     ft.IconButton(
                         icon=ft.Icons.DELETE_OUTLINE,
                         icon_size=16,
@@ -648,20 +621,20 @@ class PurchaseOrderCreateContent:
                 bgcolor=bg_color,
             )
             self.items_list.controls.append(row)
-            total += item.get('total', 0)
+            total += item.get('qty', 0)
         
         subtotal_row = ft.Container(
             content=ft.Row([
                 ft.Container(expand=True),
-                ft.Text(get_text("subtotal") + ":", size=12, weight=ft.FontWeight.W_500, color="#64748B"),
-                ft.Text(f"{int(total):,} KIP", size=12, weight=ft.FontWeight.W_600, color="#1E293B"),
+                ft.Text(get_text("total_qty") + ":", size=12, weight=ft.FontWeight.W_500, color="#64748B"),
+                ft.Text(f"{total} {get_text('items')}", size=12, weight=ft.FontWeight.W_600, color="#1E293B"),
             ], spacing=6),
             padding=ft.Padding(left=10, right=10, top=5, bottom=5),
             bgcolor=ft.Colors.GREY_100,
         )
         self.items_list.controls.append(subtotal_row)
         
-        self.total_text.value = f"{int(total):,} KIP"
+        self.total_text.value = f"{total} {get_text('items')}"
         self.page.update()
     
     def remove_item(self, index):
@@ -700,7 +673,7 @@ class PurchaseOrderCreateContent:
             items_data.append({
                 "part_id": item['part_id'],
                 "qty": item['qty'],
-                "unit_cost": item['unit_cost']
+                "unit_cost": 0  # ສົ່ງ 0 ເພາະບໍ່ມີການປ້ອນລາຄາ
             })
         
         try:

@@ -24,21 +24,21 @@ class ContentManager:
         elif index == 1:
             content = self._get_employees_content()
         elif index == 2:
-            content = self._get_suppliers_content()
-        elif index == 3:
             content = self._get_services_content()
+        elif index == 3:
+            content = self._get_suppliers_content()
         elif index == 4:
-            content = self._get_parts_content()
-        elif index == 5:
             content = self._get_shop_content()
+        elif index == 5:
+            content = self._get_parts_content()
         elif index == 6:
             content = self._get_promotions_content()
         elif index == 7:  # Brands page
-            content = self._get_brands_content()
+            content = self._get_part_categories_content()
         elif index == 8:  # Units page
             content = self._get_units_content()
         elif index == 9:  # Part Categories page
-            content = self._get_part_categories_content()
+            content = self._get_brands_content()
         elif index == 11:
             content = self._get_customer_list_content()
         elif index == 12:

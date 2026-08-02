@@ -1259,11 +1259,12 @@ LO: Dict[str, str] = {
 "no_low_stock_parts": "ບໍ່ມີອາໄຫຼ່ໃກ້ໝົດ",
 "collapse": "ຍຸບ",
 "job_no": "ລາຍການວຽກ",
+"closed": "ຍົກເລີກແລ້ວ",
 "applied_best": "ນຳໃຊ້ແລ້ວ (ດີທີ່ສຸດ)",
 "available": "ສາມາດໃຊ້ໄດ້",
 "add_custom_service": "ເພີ່ມບໍລິການພິເສດ",
 "custom_service": "ບໍລິການພິເສດ",
-"receiving": "ນຳເຂົ້າ",
+"receiving": "ນຳເຂົ້າອາໄຫຼ່",
   "given": "ມອບໃຫ້",
   "collected": "ຮັບໄປແລ້ວ",
   "parts_cost": "ຄ່າອະໄຫຼ່",
@@ -1288,10 +1289,12 @@ LO: Dict[str, str] = {
   "complete_repair_first": "ຕ້ອງສ້ອມແປງສຳເລັດກ່ອນ",
   "selected_mechanic": "ຊ່າງທີ່ເລືອກແລ້ວ",
   "approved_quotation_items": "ລາຍການໃບສະເໜີທີ່ອະນຸມັດແລ້ວ",
+  "total_qty": "ຈຳນວນທັງໝົດ",
 }
 
 
 EN: Dict[str, str] = {
+    "total_qty": "Total Qty",
     "approved_quotation_items": "Approved quetation items",
     "selected_mechanic": "Selected mechanic",
     "no_jobs_ready_for_invoice": "No job ready for invoice",
@@ -2548,6 +2551,7 @@ EN: Dict[str, str] = {
     "edit_vehicle": "Edit Vehicle",
     "applied_best": "Applied (Best Value)",
     "available": "Available",
+    "closed": "closed",
     "add_custom_service": "Add Custom Service",
     "custom_service": "Custom Service",
     # Repair - New UI improvements

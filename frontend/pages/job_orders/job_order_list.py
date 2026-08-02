@@ -35,6 +35,13 @@ class JobOrderListContent:
         self.current_page = 1
         self.items_per_page = 10
         self.total_pages = 1
+        self.date_from_field = None
+        self.date_to_field = None
+        self.kpi_container = None
+        self.table_rows = None
+        self.pagination_container = None
+        self.loading_indicator = None
+        self.empty_state = None
         
         self.current_upload_order_id = None
         
@@ -65,9 +72,6 @@ class JobOrderListContent:
             "closed": get_text("closed"),
             "cancelled": get_text("cancelled")
         }
-        
-        self.table_rows = ft.Column(spacing=0, scroll=ft.ScrollMode.AUTO, expand=True)
-        self.pagination_container = ft.Container()
 
     async def trigger_upload(self, order_id):
         self.current_upload_order_id = order_id
@@ -198,7 +202,81 @@ class JobOrderListContent:
 
     def build(self):
 
-        header = ft.Container(
+        header = self._build_header()
+        self.kpi_container = ft.Container(
+            content=ft.Row([], spacing=12),
+            padding=ft.Padding(left=0, right=0, top=8, bottom=8),
+        )
+        search_bar = self._build_search_bar()
+        table = self._build_table()
+        self.pagination_container = ft.Container(
+            padding=ft.Padding(left=20, right=20, top=12, bottom=12)
+        )
+        
+        self.loading_indicator = ft.Container(
+            content=ft.Column([
+                ft.ProgressRing(width=40, height=40, stroke_width=4),
+                ft.Container(height=16),
+                ft.Text(get_text("loading"), size=14, color="#64748B"),
+            ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+            alignment=Alignment.CENTER,
+            padding=ft.Padding(left=40, right=40, top=40, bottom=40),
+            visible=False,
+        )
+        
+        self.empty_state = ft.Container(
+            content=ft.Column([
+                ft.Icon(ft.Icons.RECEIPT_OUTLINED, size=64, color=ft.Colors.GREY_300),
+                ft.Container(height=16),
+                ft.Text(get_text("no_orders_found"), size=18, weight=ft.FontWeight.W_500, color="#64748B"),
+                ft.Text(get_text("click_add_to_register"), size=13, color="#94A3B8"),
+                ft.Container(height=20),
+                ft.ElevatedButton(
+                    content=ft.Text(get_text("new_job_order"), color=ft.Colors.WHITE, size=14),
+                    on_click=lambda e: self.navigate("job_order_create"),
+                    style=ft.ButtonStyle(
+                        bgcolor=self.primary_color,
+                        shape=ft.RoundedRectangleBorder(radius=10),
+                    ),
+                ),
+            ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+            alignment=Alignment.CENTER,
+            padding=ft.Padding(left=60, right=60, top=60, bottom=60),
+            visible=False,
+        )
+        
+        content_area = ft.Container(
+            content=ft.Column([
+                self.kpi_container,
+                search_bar,
+                table,
+                self.pagination_container,
+                self.loading_indicator,
+                self.empty_state,
+            ], expand=True, scroll=ft.ScrollMode.AUTO),
+            expand=True,
+            padding=ft.Padding(left=24, right=24, top=24, bottom=24),
+            bgcolor="#F5F7FA",
+        )
+        
+        main_content = ft.Container(
+            content=ft.Column([header, content_area], expand=True, scroll=ft.ScrollMode.AUTO),
+            expand=True,
+            bgcolor="#F5F7FA",
+        )
+        
+        # Load orders using new fast API
+        self.page.run_task(self._load_data_async)
+        
+        return main_content
+
+    async def _load_data_async(self):
+        await asyncio.sleep(0.1)
+        await asyncio.to_thread(self.load_orders)
+    
+    # ─────────────────────────── HEADER ───────────────────────────
+    def _build_header(self):
+        return ft.Container(
             content=ft.Row(
                 [
                     ft.Column(
@@ -238,8 +316,106 @@ class JobOrderListContent:
             ),
             border_radius=ft.BorderRadius.only(bottom_left=20, bottom_right=20),
         )
-        
-        # Search Bar
+    
+    # ─────────────────────────── KPI CARDS ───────────────────────────
+    def _build_kpi_cards(self):
+        statuses = [
+            ("pending", "#FF9800", ft.Icons.HOURGLASS_EMPTY),
+            ("quoting", "#2196F3", ft.Icons.CALCULATE),
+            ("repairing", "#9C27B0", ft.Icons.BUILD),
+            ("finished", "#4CAF50", ft.Icons.CHECK_CIRCLE),
+            ("closed", "#607D8B", ft.Icons.LOCK),
+            ("cancelled", "#F44336", ft.Icons.CANCEL),
+        ]
+        counts = {s: 0 for s, _, __ in statuses}
+        for r in self.job_orders:
+            st = r.get("status", "pending")
+            if st in counts:
+                counts[st] += 1
+
+        cards = []
+        for status, color, icon in statuses:
+            count = counts[status]
+            label = self.status_texts.get(status, status)
+            is_active = self.current_status_filter == status
+            card = ft.Container(
+                content=ft.Row(
+                    [
+                        ft.Container(
+                            content=ft.Icon(icon, size=22, color=ft.Colors.WHITE),
+                            bgcolor=color,
+                            border_radius=10,
+                            padding=ft.Padding(left=8, right=8, top=8, bottom=8),
+                        ),
+                        ft.Column(
+                            [
+                                ft.Text(str(count), size=22, weight=ft.FontWeight.BOLD, color="#1E293B"),
+                                ft.Text(label, size=11, color="#64748B"),
+                            ],
+                            spacing=1,
+                        ),
+                    ],
+                    spacing=10,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                ),
+                padding=ft.Padding(left=14, right=14, top=10, bottom=10),
+                bgcolor=ft.Colors.WHITE,
+                border_radius=12,
+                border=ft.Border(top=ft.BorderSide(2, color), right=ft.BorderSide(2, color), bottom=ft.BorderSide(2, color), left=ft.BorderSide(2, color)) if is_active else ft.Border(top=ft.BorderSide(1, "#E2E8F0"), right=ft.BorderSide(1, "#E2E8F0"), bottom=ft.BorderSide(1, "#E2E8F0"), left=ft.BorderSide(1, "#E2E8F0")),
+                expand=True,
+                ink=True,
+                on_click=lambda e, s=status: self._kpi_filter(s),
+                shadow=ft.BoxShadow(
+                    blur_radius=4,
+                    color=ft.Colors.with_opacity(0.06, ft.Colors.BLACK),
+                ),
+            )
+            cards.append(card)
+
+        total = len(self.job_orders)
+        is_all = self.current_status_filter == "all"
+        all_card = ft.Container(
+            content=ft.Row(
+                [
+                    ft.Container(
+                        content=ft.Icon(ft.Icons.LIST_ALT, size=22, color=ft.Colors.WHITE),
+                        bgcolor="#607D8B",
+                        border_radius=10,
+                        padding=ft.Padding(left=8, right=8, top=8, bottom=8),
+                    ),
+                    ft.Column(
+                        [
+                            ft.Text(str(total), size=22, weight=ft.FontWeight.BOLD, color="#1E293B"),
+                            ft.Text(get_text("all_status"), size=11, color="#64748B"),
+                        ],
+                        spacing=1,
+                    ),
+                ],
+                spacing=10,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            ),
+            padding=ft.Padding(left=14, right=14, top=10, bottom=10),
+            bgcolor=ft.Colors.WHITE,
+            border_radius=12,
+            border=ft.Border(top=ft.BorderSide(2, "#607D8B"), right=ft.BorderSide(2, "#607D8B"), bottom=ft.BorderSide(2, "#607D8B"), left=ft.BorderSide(2, "#607D8B")) if is_all else ft.Border(top=ft.BorderSide(1, "#E2E8F0"), right=ft.BorderSide(1, "#E2E8F0"), bottom=ft.BorderSide(1, "#E2E8F0"), left=ft.BorderSide(1, "#E2E8F0")),
+            expand=True,
+            ink=True,
+            on_click=lambda e: self._kpi_filter("all"),
+            shadow=ft.BoxShadow(
+                blur_radius=4,
+                color=ft.Colors.with_opacity(0.06, ft.Colors.BLACK),
+            ),
+        )
+
+        return ft.Row([all_card] + cards, spacing=12, expand=True)
+
+    def _kpi_filter(self, status: str):
+        self.current_status_filter = status
+        self.current_page = 1
+        self.apply_filters()
+
+    # ─────────────────────────── SEARCH BAR ───────────────────────────
+    def _build_search_bar(self):
         self.search_field = ft.TextField(
             hint_text=get_text("search_job_order"),
             border_radius=12,
@@ -263,15 +439,123 @@ class JobOrderListContent:
                 side=ft.BorderSide(1, ft.Colors.GREY_300),
             ),
         )
-        
-        # Control bar with search only
-        control_bar = ft.Container(
-            content=ft.Row([self.search_field, refresh_button], spacing=10),
-            padding=ft.Padding(left=20, right=20, top=20, bottom=20),
-            bgcolor="#F5F7FA",
+
+        def clear_date_from(e):
+            self.date_from_field.value = ""
+            self.page.update()
+            self.apply_filters()
+
+        def clear_date_to(e):
+            self.date_to_field.value = ""
+            self.page.update()
+            self.apply_filters()
+
+        self.date_from_field = ft.TextField(
+            hint_text=get_text("date_from"),
+            border_radius=12,
+            bgcolor=ft.Colors.WHITE,
+            filled=True,
+            prefix_icon=ft.Icons.CALENDAR_TODAY,
+            suffix=ft.IconButton(icon=ft.Icons.CLOSE, on_click=clear_date_from, icon_size=16),
+            content_padding=ft.Padding(left=12, right=12, top=12, bottom=12),
+            expand=True,
+            border_color=ft.Colors.GREY_200,
+            focused_border_color=self.primary_color,
+            read_only=True,
+            on_focus=self._pick_date_from,
         )
+
+        self.date_to_field = ft.TextField(
+            hint_text=get_text("date_to"),
+            border_radius=12,
+            bgcolor=ft.Colors.WHITE,
+            filled=True,
+            prefix_icon=ft.Icons.CALENDAR_TODAY,
+            suffix=ft.IconButton(icon=ft.Icons.CLOSE, on_click=clear_date_to, icon_size=16),
+            content_padding=ft.Padding(left=12, right=12, top=12, bottom=12),
+            expand=True,
+            border_color=ft.Colors.GREY_200,
+            focused_border_color=self.primary_color,
+            read_only=True,
+            on_focus=self._pick_date_to,
+        )
+
+        return ft.Container(
+            content=ft.Column([
+                ft.Row([self.search_field, refresh_button], spacing=10),
+                ft.Container(height=8),
+                ft.Row([self.date_from_field, self.date_to_field], spacing=10),
+            ], spacing=0),
+            margin=ft.Margin(left=0, right=0, top=0, bottom=16),
+        )
+    
+    def _pick_date_from(self, e):
+        if getattr(self, 'ignore_from_focus', False):
+            self.ignore_from_focus = False
+            return
+            
+        def on_date_selected(e):
+            self.ignore_from_focus = True
+            if e.control.value:
+                self.date_from_field.value = e.control.value.strftime("%Y-%m-%d")
+                self.page.update()
+                self.apply_filters()
+                
+        def on_dismiss(e):
+            self.ignore_from_focus = True
         
-        table_header = self._create_table_header()
+        date_picker = ft.DatePicker(
+            on_change=on_date_selected,
+            on_dismiss=on_dismiss,
+            first_date=datetime(2020, 1, 1),
+            last_date=datetime.now(),
+        )
+        self.page.overlay.append(date_picker)
+        date_picker.open = True
+        self.page.update()
+        
+    def _pick_date_to(self, e):
+        if getattr(self, 'ignore_to_focus', False):
+            self.ignore_to_focus = False
+            return
+            
+        def on_date_selected(e):
+            self.ignore_to_focus = True
+            if e.control.value:
+                self.date_to_field.value = e.control.value.strftime("%Y-%m-%d")
+                self.page.update()
+                self.apply_filters()
+                
+        def on_dismiss(e):
+            self.ignore_to_focus = True
+        
+        date_picker = ft.DatePicker(
+            on_change=on_date_selected,
+            on_dismiss=on_dismiss,
+            first_date=datetime(2020, 1, 1),
+            last_date=datetime.now(),
+        )
+        self.page.overlay.append(date_picker)
+        date_picker.open = True
+        self.page.update()
+
+    # ─────────────────────────── TABLE ───────────────────────────
+    def _build_table(self):
+        self.table_rows = ft.Column(spacing=0, scroll=ft.ScrollMode.AUTO, expand=True)
+        
+        table_header = ft.Container(
+            content=ft.Row([
+                ft.Container(content=ft.Text(get_text("job_no"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=140, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=10, right=0, top=0, bottom=0)),
+                ft.Container(content=ft.Text(get_text("customer_name"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=200, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=10, right=0, top=0, bottom=0)),
+                ft.Container(content=ft.Text(get_text("plate_number"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=130, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=10, right=0, top=0, bottom=0)),
+                ft.Container(content=ft.Text(get_text("receive_date"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=120, alignment=ft.Alignment(0, 0)),
+                ft.Container(content=ft.Text(get_text("status"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=100, alignment=ft.Alignment(0, 0)),
+                ft.Container(content=ft.Text(get_text("actions"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), expand=True, alignment=ft.Alignment(0, 0)),
+            ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
+            padding=ft.Padding(left=10, right=10, top=14, bottom=14),
+            bgcolor=ft.Colors.GREY_100,
+            border_radius=ft.BorderRadius.only(top_left=12, top_right=12),
+        )
         
         table_scroll_container = ft.Container(
             content=self.table_rows,
@@ -293,78 +577,9 @@ class JobOrderListContent:
             expand=True,
         )
         
-        self.loading_indicator = ft.Container(
-            content=ft.Column([
-                ft.ProgressRing(width=40, height=40, stroke_width=4),
-                ft.Container(height=16),
-                ft.Text(get_text("loading"), size=14, color="#64748B"),
-            ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-            alignment=Alignment.CENTER,
-            padding=ft.Padding(left=40, right=40, top=40, bottom=40),
-            visible=False,
-        )
-        
-        self.empty_state = ft.Container(
-            content=ft.Column([
-                ft.Icon(ft.Icons.RECEIPT_OUTLINED, size=64, color=ft.Colors.GREY_300),
-                ft.Container(height=16),
-                ft.Text(get_text("no_orders_found"), size=18, weight=ft.FontWeight.W_500, color="#64748B"),
-                ft.Text(get_text("click_add_to_register"), size=13, color="#94A3B8"),
-                ft.Container(height=20),
-                ft.ElevatedButton(
-                    content=ft.Text(get_text("new_job_order"), color=ft.Colors.WHITE, size=14),
-                    on_click=lambda e: self.navigate("job_order_create"),
-                    style=ft.ButtonStyle(
-                        bgcolor=self.primary_color,
-                        shape=ft.RoundedRectangleBorder(radius=10),
-                    ),
-                ),
-            ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-            alignment=Alignment.CENTER,
-            padding=ft.Padding(left=60, right=60, top=60, bottom=60),
-            visible=False,
-        )
-        
-        content_area = ft.Container(
-            content=ft.Column([
-                control_bar,
-                table_container,
-                self.pagination_container,
-                self.loading_indicator,
-                self.empty_state,
-            ], expand=True),
-            expand=True,
-            padding=ft.Padding(left=24, right=24, top=0, bottom=24),
-            bgcolor="#F5F7FA",
-        )
-        
-        main_content = ft.Container(
-            content=ft.Column([header, content_area]),
-            expand=True,
-            bgcolor="#F5F7FA",
-        )
-        
-        # Load orders using new fast API
-        self.page.run_task(self._load_data_async)
-        
-        return main_content
-
-    async def _load_data_async(self):
-        await asyncio.sleep(0.1)
-        await asyncio.to_thread(self.load_orders)
-    
-    def _create_table_header(self):
         return ft.Container(
-            content=ft.Row([
-                ft.Container(content=ft.Text(get_text("job_no"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=140, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=10, right=0, top=0, bottom=0)),
-                ft.Container(content=ft.Text(get_text("customer_name"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=200, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=10, right=0, top=0, bottom=0)),
-                ft.Container(content=ft.Text(get_text("plate_number"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=130, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=10, right=0, top=0, bottom=0)),
-                ft.Container(content=ft.Text(get_text("receive_date"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), width=120, alignment=ft.Alignment(0, 0)),
-                ft.Container(content=ft.Text(get_text("actions"), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600), expand=True, alignment=ft.Alignment(0, 0)),
-            ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
-            padding=ft.Padding(left=10, right=10, top=14, bottom=14),
-            bgcolor=ft.Colors.GREY_100,
-            border_radius=ft.BorderRadius.only(top_left=12, top_right=12),
+            content=ft.Row([table_container], scroll=ft.ScrollMode.AUTO, expand=True),
+            expand=True,
         )
     
     def _create_table_row(self, order: Dict, index: int):
@@ -373,6 +588,7 @@ class JobOrderListContent:
         customer_name = order.get("customer_name", "-")
         plate_number = order.get("plate_number", "-")
         receive_date = order.get("receive_date", "")
+        status = order.get("status", "pending")
         
         if receive_date:
             try:
@@ -383,6 +599,19 @@ class JobOrderListContent:
             receive_date = "-"
         
         row_bg = ft.Colors.GREY_50 if index % 2 == 0 else ft.Colors.WHITE
+        
+        # Status badge
+        status_color = self.status_colors.get(status, "#607D8B")
+        status_text = self.status_texts.get(status, status)
+        status_badge = ft.Container(
+            content=ft.Row([
+                ft.Icon(ft.Icons.CIRCLE, size=8, color=ft.Colors.WHITE),
+                ft.Text(status_text, size=11, color=ft.Colors.WHITE),
+            ], spacing=4),
+            bgcolor=status_color,
+            border_radius=12,
+            padding=ft.Padding(left=8, right=8, top=4, bottom=4),
+        )
         
         view_btn = ft.Container(
             content=ft.Row([ft.Icon(ft.Icons.VISIBILITY_OUTLINED, size=16, color=self.primary_color), ft.Text(get_text("view"), size=12, color=self.primary_color)], spacing=4),
@@ -437,6 +666,7 @@ class JobOrderListContent:
                 ft.Container(content=ft.Text(customer_name, size=13, color="#1E293B", max_lines=1), width=200, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=10, right=0, top=0, bottom=0)),
                 ft.Container(content=ft.Text(plate_number, size=12, color="#64748B", max_lines=1), width=130, alignment=ft.Alignment(-1, 0), padding=ft.Padding(left=10, right=0, top=0, bottom=0)),
                 ft.Container(content=ft.Text(receive_date, size=12, color="#64748B"), width=120, alignment=ft.Alignment(0, 0)),
+                ft.Container(content=status_badge, width=100, alignment=ft.Alignment(0, 0)),
                 ft.Container(content=actions_row, expand=True, alignment=ft.Alignment(-1, 0)),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
             padding=ft.Padding(left=10, right=10, top=12, bottom=12),
@@ -463,6 +693,7 @@ class JobOrderListContent:
                 self.job_orders = []
             
             self.filtered_orders = self.job_orders.copy()
+            self.kpi_container.content = self._build_kpi_cards()
             self.apply_filters()
             
         except Exception as ex:
@@ -472,6 +703,7 @@ class JobOrderListContent:
                 orders = self.client.get_job_orders()
                 self.job_orders = orders or []
                 self.filtered_orders = self.job_orders.copy()
+                self.kpi_container.content = self._build_kpi_cards()
                 self.apply_filters()
             except Exception as ex2:
                 print(f"Error loading orders via fallback: {ex2}")
@@ -573,9 +805,15 @@ class JobOrderListContent:
     
     def apply_filters(self):
         keyword = self.search_field.value.lower() if self.search_field and self.search_field.value else ""
+        selected_status = self.current_status_filter if self.current_status_filter else "all"
         
         filtered = self.job_orders.copy()
         
+        # Apply status filter
+        if selected_status and selected_status != "all":
+            filtered = [o for o in filtered if o.get("status") == selected_status]
+        
+        # Apply search filter
         if keyword:
             filtered = [
                 o for o in filtered
@@ -584,9 +822,50 @@ class JobOrderListContent:
                 or keyword in o.get("plate_number", "").lower()
             ]
         
+        # Apply date filter
+        self._apply_date_filter(filtered)
+        
         self.filtered_orders = filtered
         self.current_page = 1
         self.display_orders()
+    
+    def _apply_date_filter(self, filtered_list):
+        """Apply date range filter to the filtered list"""
+        date_from_str = self.date_from_field.value.strip() if self.date_from_field and self.date_from_field.value else ""
+        date_to_str = self.date_to_field.value.strip() if self.date_to_field and self.date_to_field.value else ""
+        
+        try:
+            date_from = datetime.strptime(date_from_str, "%Y-%m-%d").date() if date_from_str else None
+        except ValueError:
+            date_from = None
+        
+        try:
+            date_to = datetime.strptime(date_to_str, "%Y-%m-%d").date() if date_to_str else None
+        except ValueError:
+            date_to = None
+        
+        if not date_from and not date_to:
+            return
+        
+        # Filter in-place
+        result = []
+        for r in filtered_list:
+            date_str = r.get("receive_date", "")
+            if not date_str:
+                continue
+            try:
+                date_obj = datetime.strptime(str(date_str)[:10], "%Y-%m-%d").date()
+                if date_from and date_obj < date_from:
+                    continue
+                if date_to and date_obj > date_to:
+                    continue
+                result.append(r)
+            except ValueError:
+                continue
+        
+        # Replace the list content
+        filtered_list.clear()
+        filtered_list.extend(result)
     
     def show_detail_dialog(self, order_id):
         order = next((o for o in self.job_orders if o.get("id") == order_id), None)
