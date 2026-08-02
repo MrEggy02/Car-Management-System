@@ -2,7 +2,6 @@
 import flet as ft
 from typing import Callable, Dict, List
 import asyncio
-from datetime import datetime
 
 from i18n import get_text
 
@@ -20,7 +19,6 @@ class ReceivingPoListContent:
 
         # State
         self.all_orders: List[Dict] = []
-        self.filtered_orders: List[Dict] = []
         self.selected_po: Dict = None
         self.receive_items: List[Dict] = []
         self.qty_fields: Dict[int, ft.TextField] = {}
@@ -29,26 +27,19 @@ class ReceivingPoListContent:
         # UI refs
         self.po_list_column = None
         self.search_field = None
-        self.date_from_field = None
-        self.date_to_field = None
         self.right_panel = None
         self.empty_right = None
         self.items_column = None
         self.po_header_text = None
         self.supplier_text = None
-        self.refresh_button = None
 
     # ──────────────────────────────────────────────
     #  BUILD
     # ──────────────────────────────────────────────
     def build(self):
         header = self._build_header()
-        
-        # Left panel with search and date filters in one row
-        left_panel = self._build_left_panel()
-        
         body = ft.Row([
-            left_panel,
+            self._build_left_panel(),
             self._build_right_panel(),
         ], spacing=0, expand=True, vertical_alignment=ft.CrossAxisAlignment.START)
 
@@ -95,7 +86,7 @@ class ReceivingPoListContent:
         )
 
     # ──────────────────────────────────────────────
-    #  LEFT PANEL – PO list with search + date filters in one row
+    #  LEFT PANEL – PO list
     # ──────────────────────────────────────────────
     def _build_left_panel(self):
         self.search_field = ft.TextField(
@@ -104,159 +95,32 @@ class ReceivingPoListContent:
             border_radius=12,
             bgcolor=ft.Colors.WHITE,
             filled=True,
-            content_padding=ft.Padding(left=14, right=14, top=10, bottom=10),
-            expand=True,
+            content_padding=ft.Padding(left=14, right=14, top=12, bottom=12),
             on_change=self._on_search,
-        )
-        self.search_field.on_change = self._on_search
-
-        # Date from field
-        self.date_from_field = ft.TextField(
-            hint_text=get_text("date_from"),
-            border_radius=12,
-            bgcolor=ft.Colors.WHITE,
-            filled=True,
-            prefix_icon=ft.Icons.CALENDAR_TODAY,
-            suffix=ft.IconButton(
-                icon=ft.Icons.CLOSE, 
-                on_click=self._clear_date_from, 
-                icon_size=16
-            ),
-            content_padding=ft.Padding(left=12, right=12, top=10, bottom=10),
-            width=130,
-            border_color=ft.Colors.GREY_200,
-            focused_border_color=self.primary_color,
-            read_only=True,
-            on_focus=self._pick_date_from,
-        )
-
-        # Date to field
-        self.date_to_field = ft.TextField(
-            hint_text=get_text("date_to"),
-            border_radius=12,
-            bgcolor=ft.Colors.WHITE,
-            filled=True,
-            prefix_icon=ft.Icons.CALENDAR_TODAY,
-            suffix=ft.IconButton(
-                icon=ft.Icons.CLOSE, 
-                on_click=self._clear_date_to, 
-                icon_size=16
-            ),
-            content_padding=ft.Padding(left=12, right=12, top=10, bottom=10),
-            width=130,
-            border_color=ft.Colors.GREY_200,
-            focused_border_color=self.primary_color,
-            read_only=True,
-            on_focus=self._pick_date_to,
-        )
-
-        # Refresh button
-        self.refresh_button = ft.IconButton(
-            icon=ft.Icons.REFRESH,
-            icon_size=22,
-            tooltip=get_text("refresh"),
-            on_click=lambda e: self.refresh_all(),
-            style=ft.ButtonStyle(
-                shape=ft.RoundedRectangleBorder(radius=10),
-                side=ft.BorderSide(1, ft.Colors.GREY_300),
-            ),
-        )
-
-        # Filter row: search + date_from + date_to + refresh (all in one row)
-        filter_row = ft.Row([
-            self.search_field,
-            self.date_from_field,
-            self.date_to_field,
-            self.refresh_button,
-        ], spacing=8, vertical_alignment=ft.CrossAxisAlignment.CENTER)
-
-        # Section title
-        section_title = ft.Container(
-            content=ft.Row([
-                ft.Icon(ft.Icons.LIST_ALT_ROUNDED, color=self.primary_color, size=20),
-                ft.Text("ລາຍການໃບສັ່ງຊື້", size=15, weight=ft.FontWeight.BOLD, color="#1E293B"),
-            ], spacing=8),
-            padding=ft.Padding(left=0, right=0, top=0, bottom=8),
         )
 
         self.po_list_column = ft.Column(spacing=8, scroll=ft.ScrollMode.AUTO, expand=True)
 
         return ft.Container(
             content=ft.Column([
-                section_title,
-                filter_row,  # All filters in one row
+                # Section title
+                ft.Container(
+                    content=ft.Row([
+                        ft.Icon(ft.Icons.LIST_ALT_ROUNDED, color=self.primary_color, size=20),
+                        ft.Text("ລາຍການໃບສັ່ງຊື້", size=15, weight=ft.FontWeight.BOLD, color="#1E293B"),
+                    ], spacing=8),
+                    padding=ft.Padding(left=0, right=0, top=0, bottom=8),
+                ),
+                self.search_field,
                 ft.Container(height=12),
                 self.po_list_column,
             ], spacing=0, expand=True),
-            width=380,
+            width=340,
             padding=24,
             bgcolor="#F8FAFC",
             border=ft.Border(right=ft.BorderSide(1, "#E2E8F0")),
             expand=False,
         )
-
-    # ──────────────────────────────────────────────
-    #  DATE PICKER METHODS
-    # ──────────────────────────────────────────────
-    def _clear_date_from(self, e):
-        self.date_from_field.value = ""
-        self.page.update()
-        self.apply_filters()
-
-    def _clear_date_to(self, e):
-        self.date_to_field.value = ""
-        self.page.update()
-        self.apply_filters()
-
-    def _pick_date_from(self, e):
-        if getattr(self, 'ignore_from_focus', False):
-            self.ignore_from_focus = False
-            return
-            
-        def on_date_selected(e):
-            self.ignore_from_focus = True
-            if e.control.value:
-                self.date_from_field.value = e.control.value.strftime("%Y-%m-%d")
-                self.page.update()
-                self.apply_filters()
-                
-        def on_dismiss(e):
-            self.ignore_from_focus = True
-        
-        date_picker = ft.DatePicker(
-            on_change=on_date_selected,
-            on_dismiss=on_dismiss,
-            first_date=datetime(2020, 1, 1),
-            last_date=datetime.now(),
-        )
-        self.page.overlay.append(date_picker)
-        date_picker.open = True
-        self.page.update()
-        
-    def _pick_date_to(self, e):
-        if getattr(self, 'ignore_to_focus', False):
-            self.ignore_to_focus = False
-            return
-            
-        def on_date_selected(e):
-            self.ignore_to_focus = True
-            if e.control.value:
-                self.date_to_field.value = e.control.value.strftime("%Y-%m-%d")
-                self.page.update()
-                self.apply_filters()
-                
-        def on_dismiss(e):
-            self.ignore_to_focus = True
-        
-        date_picker = ft.DatePicker(
-            on_change=on_date_selected,
-            on_dismiss=on_dismiss,
-            first_date=datetime(2020, 1, 1),
-            last_date=datetime.now(),
-        )
-        self.page.overlay.append(date_picker)
-        date_picker.open = True
-        self.page.update()
 
     # ──────────────────────────────────────────────
     #  RIGHT PANEL – PO items / receive form
@@ -290,65 +154,10 @@ class ReceivingPoListContent:
     def load_purchase_orders(self):
         try:
             orders = self.client.get_purchase_orders()
-            # Filter only ordering and partial status
             self.all_orders = [o for o in orders if o.get("status") in ["ordering", "partial"]]
-            self.filtered_orders = self.all_orders.copy()
-            self._render_po_list(self.filtered_orders)
+            self._render_po_list(self.all_orders)
         except Exception as ex:
             self._show_snack(f"ໂຫຼດຂໍ້ມູນບໍ່ສຳເລັດ: {ex}", "error")
-
-    def refresh_all(self):
-        """Refresh all data"""
-        self.load_purchase_orders()
-        self._show_snack("ອັບເດດຂໍ້ມູນສຳເລັດ", "success")
-
-    def apply_filters(self):
-        """Apply search and date filters to the order list"""
-        keyword = self.search_field.value.lower() if self.search_field.value else ""
-        date_from_str = self.date_from_field.value.strip() if self.date_from_field and self.date_from_field.value else ""
-        date_to_str = self.date_to_field.value.strip() if self.date_to_field and self.date_to_field.value else ""
-        
-        # Parse dates
-        try:
-            date_from = datetime.strptime(date_from_str, "%Y-%m-%d").date() if date_from_str else None
-        except ValueError:
-            date_from = None
-        
-        try:
-            date_to = datetime.strptime(date_to_str, "%Y-%m-%d").date() if date_to_str else None
-        except ValueError:
-            date_to = None
-        
-        filtered = self.all_orders.copy()
-        
-        # Apply search filter
-        if keyword:
-            filtered = [
-                o for o in filtered
-                if keyword in o.get("po_no", "").lower()
-                or keyword in o.get("supplier_name", "").lower()
-            ]
-        
-        # Apply date filter
-        if date_from or date_to:
-            result = []
-            for order in filtered:
-                order_date = order.get("order_date", "")
-                if not order_date:
-                    continue
-                try:
-                    date_obj = datetime.strptime(str(order_date)[:10], "%Y-%m-%d").date()
-                    if date_from and date_obj < date_from:
-                        continue
-                    if date_to and date_obj > date_to:
-                        continue
-                    result.append(order)
-                except ValueError:
-                    continue
-            filtered = result
-        
-        self.filtered_orders = filtered
-        self._render_po_list(filtered)
 
     def _render_po_list(self, orders: List[Dict]):
         self.po_list_column.controls.clear()
@@ -393,7 +202,7 @@ class ReceivingPoListContent:
                     ),
                 ], spacing=8),
                 ft.Text(supplier, size=12, color="#64748B"),
-                ft.Text(f"ລວມ: {int(total):,} ₭", size=12, color=self.accent_green, weight=ft.FontWeight.W_600),
+               
             ], spacing=4),
             padding=14,
             bgcolor=ft.Colors.with_opacity(0.12, self.primary_color) if is_selected else ft.Colors.WHITE,
@@ -418,16 +227,10 @@ class ReceivingPoListContent:
                 return
 
             self.selected_po = po_data
-            self._render_po_list(self.filtered_orders)   # refresh to highlight selected
+            self._render_po_list(self.all_orders)   # refresh to highlight selected
             self._render_right_panel(po_data)
         except Exception as ex:
             self._show_snack(f"ໂຫຼດລາຍການບໍ່ສຳເລັດ: {ex}", "error")
-
-    # ──────────────────────────────────────────────
-    #  SEARCH
-    # ──────────────────────────────────────────────
-    def _on_search(self, e):
-        self.apply_filters()
 
     # ──────────────────────────────────────────────
     #  RIGHT PANEL render
@@ -476,8 +279,9 @@ class ReceivingPoListContent:
             )
             self.qty_fields[idx_r] = qty_field
 
+            # ─── ປ່ຽນ: ສະແດງ 0 ແທນທີ່ຈະດຶງລາຄາຈາກ PO ───
             cost_field = ft.TextField(
-                value=str(int(entry['unit_cost'])),
+                value="0",  # ສະແດງ 0 ໃຫ້ຜູ້ໃຊ້ປ້ອນເອງ
                 width=140,
                 text_align=ft.TextAlign.RIGHT,
                 input_filter=ft.NumbersOnlyInputFilter(),
@@ -487,6 +291,7 @@ class ReceivingPoListContent:
                 focused_border_color=self.primary_color,
                 content_padding=ft.Padding(left=12, right=12, top=10, bottom=10),
                 text_size=14,
+                hint_text="ປ້ອນລາຄາ",
             )
             self.cost_fields[idx_r] = cost_field
 
@@ -532,7 +337,7 @@ class ReceivingPoListContent:
                         ], spacing=6),
                     ], spacing=6, expand=True),
                     ft.Column([
-                        ft.Text("ລາຄາທຶນ/ໜ່ວຍ (₭)", size=11, color="#64748B", text_align=ft.TextAlign.CENTER),
+                        ft.Text("ປ້ອນລາຄາ (₭)", size=11, color="#64748B", text_align=ft.TextAlign.CENTER),
                         cost_field,
                     ], spacing=4, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
                     ft.Column([
@@ -664,6 +469,17 @@ class ReceivingPoListContent:
             expand=True,
             alignment=ft.Alignment(0, 0),
         )
+
+    # ──────────────────────────────────────────────
+    #  SEARCH
+    # ──────────────────────────────────────────────
+    def _on_search(self, e):
+        kw = self.search_field.value.lower() if self.search_field.value else ""
+        filtered = [
+            o for o in self.all_orders
+            if kw in o.get("po_no", "").lower() or kw in o.get("supplier_name", "").lower()
+        ] if kw else self.all_orders
+        self._render_po_list(filtered)
 
     # ──────────────────────────────────────────────
     #  SNACK
